@@ -1,0 +1,1 @@
+import { wsConnections } from '../../utils/wsManager'; export default defineEventHandler(() => { const cons = []; for (const info of wsConnections.values()) { cons.push({ t: info.tenantSlug, p: info.endpointPath, regex: (globalThis as any).__wsRegexCache?.keys() }); } return cons; });

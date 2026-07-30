@@ -1,0 +1,1125 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import os from 'node:os';
+import bcrypt from 'bcryptjs';
+import { createRequire } from 'node:module';
+import { EventEmitter } from 'node:events';
+import Database from 'better-sqlite3';
+import type { H3Event } from 'h3';
+import { resolveTenant } from './tenantResolver';
+import duckdb from 'duckdb';
+import { getDataDir } from './appRoot';
+
+export function mapDuckDbRow(row: any) {
+  const obj: any = { ...row };
+  for (const col of Object.keys(obj)) {
+    let val = obj[col];
+    if (typeof val === 'bigint') {
+      val = Number(val);
+    } else if (typeof val === 'string' && val.length > 0 && ((val.startsWith('[') && val.endsWith(']')) || (val.startsWith('{') && val.endsWith('}')))) {
+      try { val = JSON.parse(val); } catch { }
+    }
+    obj[col] = val;
+  }
+  return obj;
+}
+
+export const getDbDir = () => {
+  return getDataDir();
+}
+export const TenantEventManager = new EventEmitter();
+interface TenantDbRefs {
+  sqlite: any;
+  sqliteRead: any;
+  duckDbInst: duckdb.Database | null;
+  duckDbConn: duckdb.Connection | null;
+  duckDbDevicesDirty: boolean;
+  lastAccessed: number;
+  activeOperations: number;
+  mutex: Promise<void>;
+}
+const POOL_LIMIT = 200;
+const tenantPool: Map<string, TenantDbRefs> = (globalThis as any).__tenantPool || new Map<string, TenantDbRefs>();
+(globalThis as any).__tenantPool = tenantPool;
+const tenantInitPromises = new Map<string, Promise<TenantDbRefs>>();
+let masterDb: any = (globalThis as any).__masterDb || null;
+export const initMasterDb = () => {
+  if (!masterDb) {
+    const dbPath = path.join(getDbDir(), 'master.db');
+    masterDb = new Database(dbPath);
+    (globalThis as any).__masterDb = masterDb;
+    masterDb.pragma('busy_timeout = 5000');
+    masterDb.exec('PRAGMA journal_mode = WAL;');
+    masterDb.exec('PRAGMA synchronous = NORMAL;');
+    masterDb.exec('PRAGMA foreign_keys = ON;');
+
+    masterDb.exec(`
+      CREATE TABLE IF NOT EXISTS tenants (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name VARCHAR(100) NOT NULL,
+        slug VARCHAR(100) UNIQUE NOT NULL,
+        custom_domain VARCHAR(255) UNIQUE,
+        status VARCHAR(50) DEFAULT 'active',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
+
+    try {
+      masterDb.exec('ALTER TABLE tenants ADD COLUMN custom_domain VARCHAR(255) UNIQUE;');
+    } catch (e) {
+      // Column already exists or other error
+    }
+
+    try {
+      masterDb.exec('ALTER TABLE tenants ADD COLUMN hashtags TEXT DEFAULT \'[]\';');
+    } catch (e) {
+      // Column already exists
+    }
+
+    masterDb.exec(`
+      CREATE TABLE IF NOT EXISTS global_users (
+        username VARCHAR(100) UNIQUE NOT NULL,
+        tenant_slug VARCHAR(100) NOT NULL
+      )
+    `);
+  }
+};
+export const getMasterDb = () => {
+  if (!masterDb) initMasterDb();
+
+  const sql: any = (strings: TemplateStringsArray, ...values: any[]) => {
+    let query = '';
+    for (let i = 0; i < strings.length; i++) {
+      query += strings[i];
+      if (i < values.length) {
+        query += '?';
+      }
+    }
+    const stmt = masterDb!.prepare(query);
+    const upperQuery = query.trim().toUpperCase();
+    if (upperQuery.startsWith('SELECT') || upperQuery.startsWith('PRAGMA') || upperQuery.includes('RETURNING')) {
+      return stmt.all(...values);
+    } else {
+      const info = stmt.run(...values);
+      return Object.assign([], { count: info.changes });
+    }
+  };
+  sql.unsafe = async (query: string, params: any[] = []) => {
+    const stmt = masterDb!.prepare(query);
+    const upperQuery = query.trim().toUpperCase();
+    if (upperQuery.startsWith('SELECT') || upperQuery.startsWith('PRAGMA') || upperQuery.includes('RETURNING')) {
+      return stmt.all(...params);
+    } else {
+      const info = stmt.run(...params);
+      return Object.assign([], { count: info.changes });
+    }
+  };
+  return sql;
+};
+export const getTenantRefs = async (tenantSlug: string): Promise<TenantDbRefs> => {
+  if (!tenantSlug) throw new Error("tenantSlug is required for database connection.");
+  if (tenantPool.has(tenantSlug)) {
+    const refs = tenantPool.get(tenantSlug)!;
+    refs.lastAccessed = Date.now();
+    return refs;
+  }
+  
+  if (tenantInitPromises.has(tenantSlug)) {
+    return tenantInitPromises.get(tenantSlug)!;
+  }
+
+  let resolveInit!: (val: TenantDbRefs) => void;
+  let rejectInit!: (err: any) => void;
+  const initPromise = new Promise<TenantDbRefs>((res, rej) => {
+    resolveInit = res;
+    rejectInit = rej;
+  });
+  tenantInitPromises.set(tenantSlug, initPromise);
+
+  (async () => {
+    try {
+      if (tenantPool.size >= POOL_LIMIT) {
+        let oldestSlug: string | null = null;
+        let oldestTime = Infinity;
+        for (const [slug, refs] of tenantPool.entries()) {
+          if (refs.activeOperations === 0 && refs.lastAccessed < oldestTime) {
+            oldestTime = refs.lastAccessed;
+            oldestSlug = slug;
+          }
+        }
+        if (oldestSlug) {
+          const oldRefs = tenantPool.get(oldestSlug)!;
+          tenantPool.delete(oldestSlug);
+          if (oldRefs.duckDbConn) await new Promise<void>((resolve) => oldRefs.duckDbConn!.close(() => resolve()));
+          if (oldRefs.duckDbInst) await new Promise<void>((resolve) => oldRefs.duckDbInst!.close(() => resolve()));
+          oldRefs.sqlite.close();
+          if (oldRefs.sqliteRead) oldRefs.sqliteRead.close();
+          TenantEventManager.emit('tenant:evict', oldestSlug);
+          console.log(`[LRU Pool] Evicted tenant: ${oldestSlug}`);
+        }
+      }
+      const sqlitePath = path.join(getDbDir(), `${tenantSlug}_app.db`);
+      let isNewDb = !fs.existsSync(sqlitePath);
+
+      const sqlite = new Database(sqlitePath);
+      if (!isNewDb) {
+        try {
+          const c = sqlite.prepare("SELECT count(*) as count FROM pages").get() as any;
+          if (c.count === 0) isNewDb = true;
+        } catch {
+          isNewDb = true;
+        }
+      }
+      sqlite.pragma('busy_timeout = 5000');
+      sqlite.exec('PRAGMA journal_mode = WAL;');
+      sqlite.exec('PRAGMA synchronous = NORMAL;');
+      sqlite.exec('PRAGMA foreign_keys = ON;');
+      const sqliteRead = new Database(sqlitePath, { readonly: true });
+      sqliteRead.pragma('busy_timeout = 5000');
+      sqliteRead.exec('PRAGMA journal_mode = WAL;');
+      sqliteRead.exec('PRAGMA synchronous = NORMAL;');
+      sqliteRead.exec('PRAGMA foreign_keys = ON;');
+      let duckDbInst: duckdb.Database | null = null;
+      let duckDbConn: duckdb.Connection | null = null;
+      const duckPath = path.join(getDbDir(), `${tenantSlug}_telemetry.duckdb`);
+      
+      let runAsync!: (query: string) => Promise<unknown>;
+      
+      const initDuckDbWithRetry = async (retries = 10) => {
+        try {
+          duckDbInst = new duckdb.Database(duckPath);
+          duckDbConn = duckDbInst.connect();
+          runAsync = (query: string) => new Promise((resolve, reject) => {
+            duckDbConn!.run(query, (err: any) => err ? reject(err) : resolve(null));
+          });
+          try {
+            // This will throw if the connection failed due to file lock
+            await runAsync(`PRAGMA memory_limit='128MB';`);
+            await runAsync(`PRAGMA preserve_insertion_order=false;`);
+          } catch (e: any) {
+            if (retries > 0 && e.message && e.message.includes('Connection Error')) {
+              console.warn(`[DuckDB] Lock detected for ${tenantSlug}, retrying in 200ms... (${retries} retries left)`);
+              await new Promise(res => setTimeout(res, 200));
+              await initDuckDbWithRetry(retries - 1);
+            } else {
+              throw e;
+            }
+          }
+        } catch (e: any) {
+          if (retries > 0 && e.message && e.message.includes('Connection Error')) {
+            console.warn(`[DuckDB] Lock detected for ${tenantSlug}, retrying in 200ms... (${retries} retries left)`);
+            await new Promise(res => setTimeout(res, 200));
+            await initDuckDbWithRetry(retries - 1);
+          } else {
+            throw e;
+          }
+        }
+      };
+
+      await initDuckDbWithRetry();
+
+      const tmpDir = path.join(getDbDir(), 'tmp');
+      if (!fs.existsSync(tmpDir)) { try { fs.mkdirSync(tmpDir, { recursive: true }); } catch { } }
+      await runAsync(`PRAGMA temp_directory='${tmpDir.replace(/\\/g, '/')}';`);
+      await runAsync(`PRAGMA threads=1;`);
+      await runAsync(`SET preserve_insertion_order=false;`);
+      await runAsync(`PRAGMA wal_autocheckpoint='16MB';`);
+      await runAsync(`
+        CREATE TABLE IF NOT EXISTS telemetry (
+          device_id VARCHAR,
+          payload JSON,
+          timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+      `);
+      await runAsync(`CREATE INDEX IF NOT EXISTS idx_telemetry_device ON telemetry(device_id);`);
+
+      await runAsync(`
+        CREATE TABLE IF NOT EXISTS devices (
+          device_id VARCHAR,
+          secret_key VARCHAR,
+          schema JSON,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          created_by INTEGER,
+          updated_by INTEGER
+        );
+      `);
+      await runAsync(`CREATE UNIQUE INDEX IF NOT EXISTS idx_devices_id ON devices(device_id);`);
+
+      const refs: TenantDbRefs = {
+        sqlite, sqliteRead, duckDbInst, duckDbConn, duckDbDevicesDirty: true, lastAccessed: Date.now(), activeOperations: 0, mutex: Promise.resolve()
+      };
+
+      await setupTenantDatabase(tenantSlug, refs, isNewDb);
+      tenantPool.set(tenantSlug, refs);
+      resolveInit(refs);
+    } catch (e) {
+      rejectInit(e);
+    } finally {
+      tenantInitPromises.delete(tenantSlug);
+    }
+  })();
+
+  return initPromise;
+};
+export async function evictTenantDb(tenantSlug: string) {
+  if (tenantPool.has(tenantSlug)) {
+    const refs = tenantPool.get(tenantSlug)!;
+    tenantPool.delete(tenantSlug);
+    if (refs.duckDbConn) await new Promise<void>((resolve) => refs.duckDbConn!.close(() => resolve()));
+    if (refs.duckDbInst) await new Promise<void>((resolve) => refs.duckDbInst!.close(() => resolve()));
+    refs.sqlite.close();
+    if (refs.sqliteRead) refs.sqliteRead.close();
+    TenantEventManager.emit('tenant:evict', tenantSlug);
+    console.log(`[LRU Pool] Manually evicted tenant: ${tenantSlug}`);
+  }
+}
+export async function closeDatabases() {
+  for (const [slug, refs] of tenantPool.entries()) {
+    if (refs.duckDbConn) await new Promise<void>((resolve) => refs.duckDbConn!.close(() => resolve()));
+    if (refs.duckDbInst) await new Promise<void>((resolve) => refs.duckDbInst!.close(() => resolve()));
+    refs.sqlite.close();
+    if (refs.sqliteRead) refs.sqliteRead.close();
+  }
+  tenantPool.clear();
+  if (masterDb) {
+    masterDb.close();
+    masterDb = null;
+    (globalThis as any).__masterDb = null;
+  }
+}
+
+export async function closeTenantDb(tenantSlug: string) {
+  if (tenantPool.has(tenantSlug)) {
+    const refs = tenantPool.get(tenantSlug)!;
+    if (refs.duckDbConn) await new Promise<void>((resolve) => refs.duckDbConn!.close(() => resolve()));
+    if (refs.duckDbInst) await new Promise<void>((resolve) => refs.duckDbInst!.close(() => resolve()));
+    refs.sqlite.close();
+    if (refs.sqliteRead) refs.sqliteRead.close();
+    tenantPool.delete(tenantSlug);
+    TenantEventManager.emit('tenant:evict', tenantSlug);
+    console.log(`[LRU Pool] Closed and removed tenant DB: ${tenantSlug}`);
+  }
+}
+import { transpileQueryAndParams } from './sqlTranspiler';
+
+export const executeWithLock = async <T>(tenantSlug: string, fn: (refs: TenantDbRefs) => Promise<T> | T): Promise<T> => {
+  const refs = await getTenantRefs(tenantSlug);
+  
+  if (refs.activeOperations > 1000) {
+    const err: any = new Error(`Database write queue is full for tenant ${tenantSlug}`);
+    err.statusCode = 429;
+    throw err;
+  }
+
+  refs.activeOperations++;
+  let release: (() => void) | undefined;
+  const lock = new Promise<void>(res => { release = res; });
+  const prev = refs.mutex;
+  refs.mutex = prev.then(() => lock);
+  try {
+    await prev.catch(() => { });
+    return await fn(refs);
+  } finally {
+    refs.activeOperations--;
+    if (release) release();
+  }
+};
+export const createEphemeralTelemetryDB = async (tenantSlug?: string) => {
+  let slug = tenantSlug;
+  if (!slug) throw new Error("tenantSlug is required for database connection.");
+  const finalSlug: string = slug;
+  const refs = await getTenantRefs(finalSlug);
+  const ephemeralConn = refs.duckDbInst!.connect();
+  const close = () => {
+    try { ephemeralConn.close(); } catch (e) { console.error('Ephemeral Connection Close Error:', e); }
+  };
+  const sql: any = async (strings: TemplateStringsArray | string, ...values: any[]) => {
+    let query = '';
+    let flatValues: any[] = [];
+    if (typeof strings === 'string') {
+      query = strings;
+      flatValues = values[0] || [];
+    } else {
+      for (let i = 0; i < strings.length; i++) {
+        query += strings[i];
+        if (i < values.length) {
+          flatValues.push(values[i]);
+          query += '?';
+        }
+      }
+    }
+    const transpiled = transpileQueryAndParams(query, flatValues);
+    return new Promise((resolve, reject) => {
+      ephemeralConn.all(transpiled.query, ...transpiled.params, (err: any, res: any) => {
+        if (err) return reject(err);
+        if (Array.isArray(res)) {
+          res = res.map(mapDuckDbRow);
+        }
+        resolve(res);
+      });
+    });
+  };
+  sql.unsafe = async (query: string, params: any[] = []) => {
+    return sql(query, params);
+  };
+  sql.end = async () => close();
+  sql.close = close;
+  return sql;
+};
+export const useTelemetryDB = (tenantSlug?: string) => {
+  let slug = tenantSlug;
+  if (!slug) throw new Error("tenantSlug is required for database connection.");
+  const finalSlug: string = slug;
+  const sql: any = async (strings: TemplateStringsArray, ...values: any[]) => {
+    let flatValues: any[] = [];
+    let query = '';
+    for (let i = 0; i < strings.length; i++) {
+      query += strings[i];
+      if (i < values.length) {
+        flatValues.push(values[i]);
+        query += '?';
+      }
+    }
+    const refs = await getTenantRefs(finalSlug);
+    refs.activeOperations++;
+    try {
+      const transpiled = transpileQueryAndParams(query, flatValues);
+      return await new Promise((resolve, reject) => {
+        refs.duckDbConn!.all(transpiled.query, ...transpiled.params, (err: any, res: any) => {
+          if (err) {
+            console.error('Telemetry SQL Error:', err.message, '| Query:', transpiled.query);
+            return reject(err);
+          }
+          if (Array.isArray(res)) {
+            res = res.map(mapDuckDbRow);
+          }
+          resolve(res);
+        });
+      });
+    } finally {
+      refs.activeOperations--;
+    }
+  };
+  sql.json = (val: any) => JSON.stringify(val);
+  sql.unsafe = async (query: string, params: any[] = []) => {
+    const refs = await getTenantRefs(finalSlug);
+    if (!refs.duckDbConn) {
+      throw new Error(`useTelemetryDB is not supported on tenant ${finalSlug}`);
+    }
+    refs.activeOperations++;
+    try {
+      const transpiled = transpileQueryAndParams(query, params);
+
+      return await new Promise((resolve, reject) => {
+        refs.duckDbConn!.all(transpiled.query, ...transpiled.params, (err: any, res: any) => {
+          if (err) {
+            console.error('DuckDB SQL Error:', err.message, '| Query:', transpiled.query);
+            return reject(err);
+          }
+          if (Array.isArray(res)) {
+            res = res.map(mapDuckDbRow);
+          }
+          resolve(res);
+        });
+      });
+    } finally {
+      refs.activeOperations--;
+    }
+  };
+  sql.begin = async (callback: (tx: any) => Promise<any>) => {
+    const refs = await getTenantRefs(finalSlug);
+    if (!refs.duckDbConn) {
+      throw new Error(`useTelemetryDB is not supported on tenant ${finalSlug}`);
+    }
+    try {
+      await new Promise((res) => refs.duckDbConn!.run('BEGIN TRANSACTION;', res));
+      const result = await callback(sql);
+      await new Promise((res) => refs.duckDbConn!.run('COMMIT;', res));
+      return result;
+    } catch (err) {
+      await new Promise((res) => refs.duckDbConn!.run('ROLLBACK;', res));
+      throw err;
+    }
+  };
+  sql.end = async () => { };
+  return sql;
+};
+export const useDB = (tenantSlug?: string, _internalRefs?: TenantDbRefs) => {
+  let slug = tenantSlug;
+  if (!slug) throw new Error("tenantSlug is required for database connection.");
+  const finalSlug: string = slug;
+  const _internalExecute = async (refs: any, transpiled: any, upperQuery: string, useReadConnection: boolean = false) => {
+    if (upperQuery.includes('INTO TELEMETRY') || upperQuery.includes('FROM TELEMETRY') || upperQuery.includes('UPDATE TELEMETRY')) {
+      if (finalSlug === 'master') throw new Error("Telemetry is not supported on master tenant.");
+      if (refs.duckDbDevicesDirty) {
+        const stmt = refs.sqlite.prepare("SELECT device_id, schema FROM devices");
+        const sqliteDevices = stmt.all();
+        const tDb = useTelemetryDB(finalSlug);
+        await tDb.unsafe("DELETE FROM devices");
+        if (sqliteDevices && sqliteDevices.length > 0) {
+          for (const row of sqliteDevices as any[]) {
+            await tDb.unsafe("INSERT INTO devices (device_id, schema) VALUES ($1, $2)", [row.device_id, row.schema]);
+          }
+        }
+        refs.duckDbDevicesDirty = false;
+      }
+      const tDb = useTelemetryDB(finalSlug);
+      return await tDb.unsafe(transpiled.query, transpiled.params);
+    }
+    const isDeviceUpdate = upperQuery.includes('INTO DEVICES') || upperQuery.includes('UPDATE DEVICES') || (upperQuery.includes('FROM DEVICES') && upperQuery.includes('DELETE'));
+    if (isDeviceUpdate) refs.duckDbDevicesDirty = true;
+    const isSelect = upperQuery.startsWith('SELECT') || upperQuery.startsWith('WITH') || upperQuery.startsWith('PRAGMA');
+    const isReturning = upperQuery.includes('RETURNING');
+    if (isSelect || isReturning) {
+      const dbConn = (useReadConnection && isSelect && !isReturning) ? refs.sqliteRead : refs.sqlite;
+      const stmt = dbConn.prepare(transpiled.query);
+      const rows = stmt.all(...transpiled.params);
+      return rows.map(mapDuckDbRow);
+    } else {
+      const info = refs.sqlite.prepare(transpiled.query).run(...transpiled.params);
+      return Object.assign([], { count: info.changes });
+    }
+  };
+  const createSqlObj = (withLock: boolean, activeRefs?: any) => {
+    const _handleExecute = async (transpiled: any, upperQuery: string) => {
+      const isDuckDb = upperQuery.includes('INTO TELEMETRY') || upperQuery.includes('FROM TELEMETRY') || upperQuery.includes('UPDATE TELEMETRY');
+      const isPureSelect = (upperQuery.startsWith('SELECT') || upperQuery.startsWith('WITH') || upperQuery.startsWith('PRAGMA')) && !upperQuery.includes('RETURNING') && !upperQuery.includes('INTO ');
+      if (withLock) {
+        if (isDuckDb || isPureSelect) {
+          const refs = await getTenantRefs(finalSlug);
+          return _internalExecute(refs, transpiled, upperQuery, isPureSelect);
+        } else {
+          return executeWithLock(finalSlug, async (refs) => {
+            return _internalExecute(refs, transpiled, upperQuery, false);
+          });
+        }
+      } else {
+        return _internalExecute(activeRefs, transpiled, upperQuery, false);
+      }
+    };
+    const sql: any = async (strings: TemplateStringsArray, ...values: any[]) => {
+      let flatValues: any[] = [];
+      let query = '';
+      for (let i = 0; i < strings.length; i++) {
+        query += strings[i];
+        if (i < values.length) {
+          flatValues.push(values[i]);
+          query += '?';
+        }
+      }
+      const transpiled = transpileQueryAndParams(query, flatValues);
+      const upperQuery = transpiled.query.trim().toUpperCase();
+      return _handleExecute(transpiled, upperQuery);
+    };
+    sql.json = (val: any) => JSON.stringify(val);
+    sql.unsafe = async (query: string, params: any[] = []) => {
+      const transpiled = transpileQueryAndParams(query, params);
+      const upperQuery = transpiled.query.trim().toUpperCase();
+      return _handleExecute(transpiled, upperQuery);
+    };
+    sql.begin = async (callback: (tx: any) => Promise<any>) => {
+      if (!withLock) {
+        throw new Error("Cannot nest sql.begin inside another transaction.");
+      }
+      return executeWithLock(finalSlug, async (refs) => {
+        try {
+          refs.sqlite.exec('BEGIN TRANSACTION;');
+          const txSql = createSqlObj(false, refs);
+          const result = await callback(txSql);
+          refs.sqlite.exec('COMMIT;');
+          return result;
+        } catch (err) {
+          try { refs.sqlite.exec('ROLLBACK;'); } catch { }
+          throw err;
+        }
+      });
+    };
+    sql.transactionSync = (queries: { query: string; params?: any[] }[]) => {
+      if (withLock) {
+        return executeWithLock(finalSlug, async (refs) => {
+          refs.sqlite.exec('BEGIN TRANSACTION;');
+          try {
+            const results = [];
+            for (const q of queries) {
+              const transpiled = transpileQueryAndParams(q.query, q.params || []);
+              const upperQuery = transpiled.query.trim().toUpperCase();
+              results.push(await _internalExecute(refs, transpiled, upperQuery));
+            }
+            refs.sqlite.exec('COMMIT;');
+            return results;
+          } catch (err) {
+            try { refs.sqlite.exec('ROLLBACK;'); } catch { }
+            throw err;
+          }
+        });
+      } else {
+        throw new Error("Cannot call transactionSync inside an async transaction.");
+      }
+    };
+    sql.end = async () => { };
+    return sql;
+  };
+  return _internalRefs ? createSqlObj(false, _internalRefs) : createSqlObj(true);
+};
+
+export async function setupTenantDatabase(tenantSlug: string, refs: TenantDbRefs, isNewDb: boolean = false) {
+  try {
+    const mainSql = useDB(tenantSlug, refs);
+    console.log(`[Tenant: ${tenantSlug}] Checking tables and schema...`);
+
+    // --- EARLY MIGRATION SCRIPT: Rename tables before CREATE TABLE statements ---
+    try {
+      const existingTables = await mainSql.unsafe(`SELECT name FROM sqlite_master WHERE type='table'`);
+      const tableNames = existingTables.map((t: any) => t.name);
+
+      // Since pages/utils tables are newly created, we might have an empty new table and data in the old one
+      if (tableNames.includes('custom_pages') && tableNames.includes('pages')) {
+        const pagesCount = await mainSql.unsafe(`SELECT COUNT(*) as c FROM pages`);
+        if (pagesCount[0].c === 0) {
+          await mainSql.unsafe(`DROP TABLE pages`);
+          await mainSql.unsafe(`ALTER TABLE custom_pages RENAME TO pages`);
+          console.log('[Auto-Migration] custom_pages -> pages (dropped empty target)');
+        }
+      } else if (tableNames.includes('custom_pages') && !tableNames.includes('pages')) {
+        await mainSql.unsafe(`ALTER TABLE custom_pages RENAME TO pages`);
+        console.log('[Auto-Migration] custom_pages -> pages');
+      }
+
+      if (tableNames.includes('dynamic_utils') && tableNames.includes('utils')) {
+        const utilsCount = await mainSql.unsafe(`SELECT COUNT(*) as c FROM utils`);
+        if (utilsCount[0].c === 0) {
+          await mainSql.unsafe(`DROP TABLE utils`);
+          await mainSql.unsafe(`ALTER TABLE dynamic_utils RENAME TO utils`);
+          console.log('[Auto-Migration] dynamic_utils -> utils (dropped empty target)');
+        }
+      } else if (tableNames.includes('dynamic_utils') && !tableNames.includes('utils')) {
+        await mainSql.unsafe(`ALTER TABLE dynamic_utils RENAME TO utils`);
+        console.log('[Auto-Migration] dynamic_utils -> utils');
+      }
+    } catch (e: any) {
+      console.error('[Auto-Migration] Early migration error:', e?.message || e);
+    }
+    // --------------------------------------------------------------------------
+
+    console.log('Tablolar ve Güvenlik Altyapısı (Pure JS Memory) Kontrol Ediliyor...');
+    // GÜVENLİK VE ROL YÖNETİMİ TABLOLARI
+    await mainSql.unsafe(`
+      CREATE TABLE IF NOT EXISTS roles (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name VARCHAR(100) UNIQUE NOT NULL,
+        allowed_tags TEXT DEFAULT '[]',
+        hashtags TEXT DEFAULT '[]',
+        home_page VARCHAR(255),
+        menu_list TEXT DEFAULT '[]',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        created_by INTEGER,
+        updated_by INTEGER
+      )
+    `);
+    await mainSql.unsafe(`
+      CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username VARCHAR(100) UNIQUE NOT NULL,
+        password_hash VARCHAR(255) NOT NULL,
+        is_admin BOOLEAN DEFAULT 0,
+        role_id INTEGER REFERENCES roles(id) ON DELETE SET NULL,
+        home_page VARCHAR(255),
+        menu_list TEXT DEFAULT NULL,
+        current_token TEXT,
+        token_expires_at DATETIME,
+        token_tenant VARCHAR(100),
+        profile TEXT DEFAULT '{}',
+        hashtags TEXT DEFAULT '[]',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        created_by INTEGER,
+        updated_by INTEGER
+      )
+    `);
+    // Migration: Add profile column if it doesn't exist
+    const cols = await mainSql.unsafe(`PRAGMA table_info(users)`);
+    const hasProfile = cols.some((c: any) => c.name === 'profile');
+    if (!hasProfile) {
+      await mainSql.unsafe(`ALTER TABLE users ADD COLUMN profile TEXT DEFAULT '{}'`);
+      console.log(`[Tenant: ${tenantSlug}] Migration: Added 'profile' column to users table.`);
+    }
+    // Migration: Add hashtags column if it doesn't exist
+    const hasHashtags = cols.some((c: any) => c.name === 'hashtags');
+    if (!hasHashtags) {
+      await mainSql.unsafe(`ALTER TABLE users ADD COLUMN hashtags TEXT DEFAULT '[]'`);
+      console.log(`[Tenant: ${tenantSlug}] Migration: Added 'hashtags' column to users table.`);
+    }
+    await mainSql.unsafe(`
+      CREATE TABLE IF NOT EXISTS devices (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        device_id VARCHAR(50) UNIQUE NOT NULL,
+        secret_key VARCHAR(64) NOT NULL,
+        schema TEXT DEFAULT '{}',
+        hashtags TEXT DEFAULT '[]',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        created_by INTEGER,
+        updated_by INTEGER
+      )
+    `);
+    await mainSql.unsafe(`
+      CREATE TABLE IF NOT EXISTS entities (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name VARCHAR(100) UNIQUE NOT NULL,
+        slug VARCHAR(100) UNIQUE NOT NULL,
+        schema TEXT NOT NULL,
+        hashtags TEXT DEFAULT '[]',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        created_by INTEGER,
+        updated_by INTEGER
+      )
+    `);
+    await mainSql.unsafe(`
+      CREATE TABLE IF NOT EXISTS languages (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        code VARCHAR(10) UNIQUE NOT NULL,
+        name VARCHAR(100) NOT NULL,
+        dir VARCHAR(10) DEFAULT 'ltr',
+        is_default BOOLEAN DEFAULT 0,
+        is_active BOOLEAN DEFAULT 1,
+        hashtags TEXT DEFAULT '[]',
+        translations TEXT DEFAULT '{}',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        created_by INTEGER,
+        updated_by INTEGER
+      )
+    `);
+    await mainSql.unsafe(`
+      CREATE TABLE IF NOT EXISTS translation_keys (
+        key VARCHAR(255) PRIMARY KEY,
+        hashtags TEXT DEFAULT '[]',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    await mainSql.unsafe(`
+      CREATE TABLE IF NOT EXISTS records (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        entity_id INTEGER NOT NULL REFERENCES entities(id) ON DELETE CASCADE,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        created_by INTEGER,
+        updated_by INTEGER,
+        hashtags TEXT DEFAULT '[]'
+      )
+    `);
+    await mainSql.unsafe(`
+      CREATE TABLE IF NOT EXISTS record_fields (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        record_id INTEGER REFERENCES records(id) ON DELETE CASCADE,
+        key VARCHAR(100) NOT NULL,
+        val_str TEXT,
+        val_num REAL,
+        val_bool BOOLEAN
+      )
+    `);
+    // Records tablosu için kritik performans indeksleri
+    await mainSql.unsafe(`CREATE INDEX IF NOT EXISTS idx_records_entity_id ON records(entity_id)`);
+    await mainSql.unsafe(`CREATE INDEX IF NOT EXISTS idx_records_entity_created ON records(entity_id, created_at DESC)`);
+    await mainSql.unsafe(`CREATE INDEX IF NOT EXISTS idx_rf_record ON record_fields(record_id)`);
+    await mainSql.unsafe(`CREATE INDEX IF NOT EXISTS idx_rf_key_num ON record_fields(key, val_num)`);
+    await mainSql.unsafe(`CREATE INDEX IF NOT EXISTS idx_rf_key_str ON record_fields(key, val_str)`);
+    await mainSql.unsafe(`
+      CREATE TABLE IF NOT EXISTS user_records (
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        record_id INTEGER REFERENCES records(id) ON DELETE CASCADE,
+        PRIMARY KEY (user_id, record_id)
+      )
+    `);
+    await mainSql.unsafe(`
+      CREATE TABLE IF NOT EXISTS utils (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name VARCHAR(255) UNIQUE NOT NULL DEFAULT '',
+        key VARCHAR(255) UNIQUE NOT NULL,
+        target VARCHAR(50) NOT NULL CHECK(target IN ('ui', 'api', 'shared')),
+        code TEXT NOT NULL,
+        scope TEXT DEFAULT '[]',
+        active BOOLEAN DEFAULT 1,
+        hashtags TEXT DEFAULT '[]',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        created_by INTEGER,
+        updated_by INTEGER
+      )
+    `);
+    await mainSql.unsafe(`
+      CREATE TABLE IF NOT EXISTS endpoints (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name VARCHAR(100) UNIQUE NOT NULL,
+        type VARCHAR(20) NOT NULL CHECK(type IN ('http', 'ws', 'mqtt')),
+        route_pattern VARCHAR(255) NOT NULL,
+        code TEXT NOT NULL,
+        priority INTEGER NOT NULL DEFAULT 0,
+        active BOOLEAN DEFAULT 1,
+        is_public BOOLEAN DEFAULT 0,
+        hashtags TEXT DEFAULT '[]',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        created_by INTEGER,
+        updated_by INTEGER
+      )
+    `);
+    await mainSql.unsafe(`
+      CREATE TABLE IF NOT EXISTS workers (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name VARCHAR(100) UNIQUE NOT NULL,
+        type VARCHAR(20) NOT NULL CHECK(type IN ('cron', 'daemon')),
+        code TEXT NOT NULL,
+        cron_expression VARCHAR(50),
+        autostart BOOLEAN DEFAULT 0,
+        active BOOLEAN DEFAULT 1,
+        status VARCHAR(50) DEFAULT 'stopped',
+        error_msg TEXT DEFAULT NULL,
+        last_run_second INTEGER DEFAULT 0,
+        hashtags TEXT DEFAULT '[]',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        created_by INTEGER,
+        updated_by INTEGER
+      )
+    `);
+
+    await mainSql.unsafe(`
+      CREATE TABLE IF NOT EXISTS pages (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          route_pattern VARCHAR(255),
+          priority INTEGER NOT NULL DEFAULT 0,
+          title VARCHAR(200) UNIQUE NOT NULL,
+        page_type VARCHAR(50) DEFAULT 'regular',
+        template_string TEXT DEFAULT '',
+        script_content TEXT DEFAULT '',
+        style_content TEXT DEFAULT '',
+        active BOOLEAN DEFAULT 1,
+        is_public BOOLEAN DEFAULT 0,
+        is_default_layout BOOLEAN DEFAULT 0,
+        is_landing_page BOOLEAN DEFAULT 0,
+        is_login_page BOOLEAN DEFAULT 0,
+        protected BOOLEAN DEFAULT 0,
+        layout_id INTEGER DEFAULT NULL REFERENCES pages(id) ON DELETE SET NULL,
+        hashtags TEXT DEFAULT '[]',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        created_by INTEGER,
+        updated_by INTEGER
+      )
+    `);
+    await mainSql.unsafe(`
+      CREATE TABLE IF NOT EXISTS system_variables (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        key VARCHAR(255) UNIQUE NOT NULL,
+        value TEXT,
+        target VARCHAR(50) NOT NULL DEFAULT 'shared' CHECK(target IN ('ui', 'api', 'shared')),
+        is_public BOOLEAN DEFAULT 0,
+        is_secret BOOLEAN DEFAULT 0,
+        protected BOOLEAN DEFAULT 0,
+        type VARCHAR(50) DEFAULT 'string',
+        description TEXT,
+        hashtags TEXT DEFAULT '[]',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        created_by INTEGER,
+        updated_by INTEGER
+      )
+    `);
+
+    // Create unique indexes to apply UNIQUE constraint retroactively on existing tables
+    await mainSql.unsafe(`CREATE UNIQUE INDEX IF NOT EXISTS idx_endpoints_name ON endpoints(name)`);
+    await mainSql.unsafe(`CREATE UNIQUE INDEX IF NOT EXISTS idx_workers_name ON workers(name)`);
+    await mainSql.unsafe(`CREATE UNIQUE INDEX IF NOT EXISTS idx_pages_title ON pages(title)`);
+    await mainSql.unsafe(`CREATE UNIQUE INDEX IF NOT EXISTS idx_utils_name ON utils(name)`);
+    // MIGRATION SCRIPT
+    try {
+      const endpointsCols = await mainSql.unsafe(`PRAGMA table_info('endpoints')`);
+      const workersCols = await mainSql.unsafe(`PRAGMA table_info('workers')`);
+      if (endpointsCols.length > 0 && workersCols.length > 0) {
+
+        try {
+          const cmCols = await mainSql.unsafe(`PRAGMA table_info('custom_middlewares')`);
+          if (cmCols.length > 0) {
+            await mainSql.unsafe(`INSERT INTO endpoints (name, type, route_pattern, code, priority, active, is_public, hashtags, created_at, updated_at, created_by, updated_by) SELECT name, 'http', route_pattern, code, priority, active, is_public, hashtags, created_at, updated_at, created_by, updated_by FROM custom_middlewares WHERE name NOT IN (SELECT name FROM endpoints)`);
+            await mainSql.unsafe(`DROP TABLE custom_middlewares`);
+            console.log('[Auto-Migration] custom_middlewares -> endpoints taşındı ve tablo silindi.');
+          }
+        } catch (e) { }
+
+        try {
+          const wsCols = await mainSql.unsafe(`PRAGMA table_info('ws_endpoints')`);
+          if (wsCols.length > 0) {
+            await mainSql.unsafe(`INSERT INTO endpoints (name, type, route_pattern, code, priority, active, is_public, hashtags, created_at, updated_at, created_by, updated_by) SELECT name, 'ws', route_pattern, code, priority, 1, is_public, hashtags, created_at, updated_at, created_by, updated_by FROM ws_endpoints WHERE name NOT IN (SELECT name FROM endpoints)`);
+            await mainSql.unsafe(`DROP TABLE ws_endpoints`);
+            console.log('[Auto-Migration] ws_endpoints -> endpoints taşındı ve tablo silindi.');
+          }
+        } catch (e) { }
+
+        try {
+          const msCols = await mainSql.unsafe(`PRAGMA table_info('microservices')`);
+          if (msCols.length > 0) {
+            await mainSql.unsafe(`INSERT INTO workers (name, type, code, autostart, active, status, error_msg, hashtags, created_at, updated_at, created_by, updated_by) SELECT name, 'daemon', code, autostart, active, status, error_msg, hashtags, created_at, updated_at, created_by, updated_by FROM microservices WHERE name NOT IN (SELECT name FROM workers)`);
+            await mainSql.unsafe(`DROP TABLE microservices`);
+            console.log('[Auto-Migration] microservices -> workers taşındı ve tablo silindi.');
+          }
+        } catch (e) { }
+
+        try {
+          const scCols = await mainSql.unsafe(`PRAGMA table_info('schedulers')`);
+          if (scCols.length > 0) {
+            await mainSql.unsafe(`INSERT INTO workers (name, type, code, cron_expression, active, last_run_second, hashtags, created_at, updated_at, created_by, updated_by) SELECT name, 'cron', code, cron_expression, active, last_run_second, hashtags, created_at, updated_at, created_by, updated_by FROM schedulers WHERE name NOT IN (SELECT name FROM workers)`);
+            await mainSql.unsafe(`DROP TABLE schedulers`);
+            console.log('[Auto-Migration] schedulers -> workers taşındı ve tablo silindi.');
+          }
+        } catch (e) { }
+
+        try {
+          const mqttScript = await mainSql.unsafe(`SELECT * FROM system_variables WHERE key = 'mqtt_sandbox_script'`);
+          if (mqttScript.length > 0) {
+            await mainSql.unsafe(`INSERT OR IGNORE INTO endpoints (name, type, route_pattern, code, active) VALUES ('Legacy MQTT Sandbox', 'mqtt', '#', ?, 1)`, [mqttScript[0].value]);
+            await mainSql.unsafe(`DELETE FROM system_variables WHERE key = 'mqtt_sandbox_script'`);
+            console.log('[Auto-Migration] mqtt_sandbox_script -> endpoints taşındı.');
+          }
+        } catch (e) { }
+
+        // Drop language from utils
+        try {
+          const duCols = await mainSql.unsafe(`PRAGMA table_info('utils')`);
+          if (duCols.some((c: any) => c.name === 'language')) {
+            await mainSql.unsafe(`ALTER TABLE utils DROP COLUMN language`);
+            console.log('[Auto-Migration] utils.language silindi.');
+          }
+        } catch (e) { }
+      }
+    } catch (e) {
+      console.error('[Auto-Migration] Veri taşıma hatası:', e);
+    }
+    // AUTO-MIGRATION
+    const tablesToSync = [
+      {
+        name: 'endpoints',
+        columns: [
+          { name: 'is_public', def: "BOOLEAN DEFAULT 0" },
+          { name: 'created_by', def: "INTEGER" },
+          { name: 'updated_by', def: "INTEGER" },
+          { name: 'hashtags', def: "TEXT DEFAULT '[]'" }
+        ]
+      },
+      {
+        name: 'workers',
+        columns: [
+          { name: 'autostart', def: "BOOLEAN DEFAULT 0" },
+          { name: 'active', def: "BOOLEAN DEFAULT 1" },
+          { name: 'status', def: "VARCHAR(50) DEFAULT 'stopped'" },
+          { name: 'error_msg', def: "TEXT DEFAULT NULL" },
+          { name: 'created_at', def: "DATETIME DEFAULT CURRENT_TIMESTAMP" },
+          { name: 'updated_at', def: "DATETIME DEFAULT CURRENT_TIMESTAMP" },
+          { name: 'created_by', def: "INTEGER" },
+          { name: 'updated_by', def: "INTEGER" },
+          { name: 'hashtags', def: "TEXT DEFAULT '[]'" }
+        ]
+      },
+      {
+        name: 'pages',
+        columns: [
+          { name: 'page_type', def: "VARCHAR(50) DEFAULT 'regular'" },
+          { name: 'script_content', def: "TEXT DEFAULT ''" },
+          { name: 'style_content', def: "TEXT DEFAULT ''" },
+          { name: 'active', def: "BOOLEAN DEFAULT 1" },
+          { name: 'is_public', def: "BOOLEAN DEFAULT 0" },
+          { name: 'created_at', def: "DATETIME DEFAULT CURRENT_TIMESTAMP" },
+          { name: 'updated_at', def: "DATETIME DEFAULT CURRENT_TIMESTAMP" },
+          { name: 'created_by', def: "INTEGER" },
+          { name: 'updated_by', def: "INTEGER" },
+          { name: 'hashtags', def: "TEXT DEFAULT '[]'" },
+          { name: 'priority', def: "INTEGER NOT NULL DEFAULT 0" },
+          { name: 'is_default_layout', def: "BOOLEAN DEFAULT 0" },
+          { name: 'protected', def: "BOOLEAN DEFAULT 0" },
+          { name: 'layout_id', def: "INTEGER DEFAULT NULL REFERENCES pages(id) ON DELETE SET NULL" }
+        ]
+      },
+      {
+        name: 'utils',
+        columns: [
+          { name: 'name', def: "VARCHAR(255) DEFAULT ''" },
+          { name: 'key', def: "VARCHAR(255) UNIQUE NOT NULL" },
+          { name: 'target', def: "VARCHAR(50) NOT NULL" },
+          { name: 'code', def: "TEXT NOT NULL" },
+          { name: 'scope', def: "TEXT DEFAULT '[]'" },
+          { name: 'active', def: "BOOLEAN DEFAULT 1" },
+          { name: 'created_by', def: "INTEGER" },
+          { name: 'updated_by', def: "INTEGER" },
+          { name: 'hashtags', def: "TEXT DEFAULT '[]'" }
+        ]
+      },
+      {
+        name: 'records',
+        columns: [
+          { name: 'updated_by', def: "INTEGER" },
+          { name: 'hashtags', def: "TEXT DEFAULT '[]'" }
+        ]
+      },
+      {
+        name: 'system_variables',
+        columns: [
+          { name: 'is_public', def: "BOOLEAN DEFAULT 0" },
+          { name: 'is_secret', def: "BOOLEAN DEFAULT 0" },
+          { name: 'type', def: "VARCHAR(50) DEFAULT 'string'" },
+          { name: 'hashtags', def: "TEXT DEFAULT '[]'" }
+        ]
+      },
+      {
+        name: 'roles',
+        columns: [
+          { name: 'hashtags', def: "TEXT DEFAULT '[]'" }
+        ]
+      },
+      {
+        name: 'users',
+        columns: [
+          { name: 'token_expires_at', def: "DATETIME DEFAULT NULL" },
+          { name: 'token_tenant', def: "VARCHAR(100) DEFAULT NULL" }
+        ]
+      },
+      {
+        name: 'entities',
+        columns: [
+          { name: 'hashtags', def: "TEXT DEFAULT '[]'" }
+        ]
+      },
+      {
+        name: 'devices',
+        columns: [
+          { name: 'hashtags', def: "TEXT DEFAULT '[]'" }
+        ]
+      }
+    ];
+    for (const table of tablesToSync) {
+      try {
+        const cols = await mainSql.unsafe(`PRAGMA table_info('${table.name}')`);
+        const existingColNames = cols.map((c: any) => c.name.toLowerCase());
+        for (const col of table.columns) {
+          if (!existingColNames.includes(col.name.toLowerCase())) {
+            await mainSql.unsafe(`ALTER TABLE ${table.name} ADD COLUMN ${col.name} ${col.def}`);
+            console.log(`[Auto-Migration] Sütun eklendi: ${table.name}.${col.name}`);
+          }
+        }
+        // Sütun ismi değişiklikleri
+        if (table.name === 'pages' && existingColNames.includes('slug') && !existingColNames.includes('route_pattern')) {
+          await mainSql.unsafe(`ALTER TABLE pages RENAME COLUMN slug TO route_pattern`);
+          console.log(`[Auto-Migration] Sütun yeniden adlandırıldı: pages.slug -> route_pattern`);
+        }
+      } catch {
+        // Tablo yoksa PRAGMA hata verebilir, yoksay
+      }
+    }
+        // utils versionless schema migration (drops obsolete columns safely)
+    try {
+      const duCols = await mainSql.unsafe(`PRAGMA table_info('utils')`);
+      const duNames = duCols.map((c: any) => String(c.name).toLowerCase());
+      const hasLegacyCols = ['version', 'published_version', 'description', 'tags', 'published_at'].some((c) => duNames.includes(c));
+      if (hasLegacyCols) {
+        await mainSql.unsafe(`
+          CREATE TABLE IF NOT EXISTS utils_new (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            key VARCHAR(255) UNIQUE NOT NULL,
+            target VARCHAR(50) NOT NULL CHECK(target IN ('ui', 'api', 'shared')),
+            code TEXT NOT NULL,
+            scope TEXT DEFAULT '[]',
+            active BOOLEAN DEFAULT 1,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            created_by INTEGER,
+            updated_by INTEGER
+          )
+        `);
+        await mainSql.unsafe(`
+          INSERT INTO utils_new (id, key, target, code, scope, active, created_at, updated_at, created_by, updated_by)
+          SELECT id, key, target, code, COALESCE(scope, '[]'), COALESCE(active, 1), created_at, updated_at, created_by, updated_by
+          FROM utils
+        `);
+        await mainSql.unsafe(`DROP TABLE utils`);
+        await mainSql.unsafe(`ALTER TABLE utils_new RENAME TO utils`);
+        await mainSql.unsafe(`CREATE UNIQUE INDEX IF NOT EXISTS idx_utils_key ON utils(key)`);
+        console.log('[Auto-Migration] utils versiyonsuz şemaya taşındı.');
+      }
+    } catch (e: any) {
+      console.error('[Auto-Migration] utils şema dönüşüm hatası:', e?.message || e);
+    }
+
+    // system_variables target architecture migration
+    try {
+      const svCols = await mainSql.unsafe(`PRAGMA table_info('system_variables')`);
+      const svNames = svCols.map((c: any) => String(c.name).toLowerCase());
+      if (svNames.includes('is_admin') || !svNames.includes('target') || !svNames.includes('is_public') || !svNames.includes('protected')) {
+        await mainSql.unsafe(`
+          CREATE TABLE IF NOT EXISTS system_variables_new (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            key VARCHAR(255) UNIQUE NOT NULL,
+            value TEXT,
+            target VARCHAR(50) NOT NULL DEFAULT 'shared' CHECK(target IN ('ui', 'api', 'shared')),
+            is_public BOOLEAN DEFAULT 0,
+            is_secret BOOLEAN DEFAULT 0,
+            protected BOOLEAN DEFAULT 0,
+            type VARCHAR(50) DEFAULT 'string',
+            description TEXT,
+            hashtags TEXT DEFAULT '[]',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            created_by INTEGER,
+            updated_by INTEGER
+          )
+        `);
+        
+        const hasIsAdmin = svNames.includes('is_admin');
+        const hasIsPublic = svNames.includes('is_public');
+        const hasTarget = svNames.includes('target');
+        const hasIsSystem = svNames.includes('protected');
+
+        const targetSelect = hasTarget
+          ? `target`
+          : (hasIsAdmin ? `CASE WHEN is_admin = 1 OR is_secret = 1 THEN 'api' ELSE 'shared' END as target` : `'shared' as target`);
+
+        const isPublicSelect = hasIsPublic
+          ? `is_public`
+          : `CASE WHEN key IN ('APP_NAME', 'APP_LOGO', 'ALLOW_HTTP') THEN 1 ELSE 0 END as is_public`;
+          
+        const isSystemSelect = hasIsSystem ? 'protected' : '0';
+
+        await mainSql.unsafe(`
+          INSERT INTO system_variables_new (id, key, value, target, is_public, is_secret, protected, type, description, hashtags, created_at, updated_at, created_by, updated_by)
+          SELECT id, key, value, 
+                 ${targetSelect},
+                 ${isPublicSelect},
+                 is_secret, ${isSystemSelect}, type, description, hashtags, created_at, updated_at, created_by, updated_by
+          FROM system_variables
+        `);
+        await mainSql.unsafe(`DROP TABLE system_variables`);
+        await mainSql.unsafe(`ALTER TABLE system_variables_new RENAME TO system_variables`);
+        await mainSql.unsafe(`CREATE UNIQUE INDEX IF NOT EXISTS idx_system_variables_key ON system_variables(key)`);
+        console.log('[Auto-Migration] system_variables şemasına protected eklendi ve taşındı.');
+      }
+    } catch (e: any) {
+      console.error('[Auto-Migration] system_variables şema dönüşüm hatası:', e?.message || e);
+    }    // =========================================================================
+    // --- NEW ISOLATED SEED LOGIC ---
+    if (isNewDb) {
+      const seedModule = await import('./seed/index');
+      await seedModule.runSeed(tenantSlug, refs);
+    }
+    
+    // --- INIT PENDING COMMAND TIMEOUTS INTO RAM ---
+    const { initCommandTimeouts } = await import('./deviceCommands');
+    await initCommandTimeouts(tenantSlug, mainSql);
+    console.log(`[DB] Database and security infrastructure ready. (Tenant: ${tenantSlug})`);
+  } catch (error: any) {
+    console.error(`[DB] Critical Database Setup Error: ${error.message}`);
+    process.exit(1);
+  }
+}

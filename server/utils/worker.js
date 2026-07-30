@@ -1,0 +1,222 @@
+import vm from 'vm';
+import crypto from 'crypto';
+import bcrypt from 'bcryptjs';
+import { createRequire } from 'module';
+import { resolve, join } from 'path';
+import fs from 'fs';
+import Database from 'better-sqlite3';
+import { transpileQueryAndParams } from './sqlTranspiler';
+
+/**
+ * Worker Process Execution Script (DAEMON)
+ * 
+ * Bu script ana thread'den ayrı, izole bir süreçte çalışır.
+ * Uzun ömürlü (Daemon) servisler içindir.
+ */
+
+const parentPort = {
+  postMessage: (msg) => {
+    if (process.send) process.send(msg);
+  },
+  on: (event, cb) => process.on(event, cb)
+};
+
+let workerData = null;
+const pendingRpc = new Map();
+let rpcIdCounter = 0;
+
+let workerDb = null;
+
+// Query transpiler helper for PostgreSQL syntax compatibility is now imported from sqlTranspiler.ts
+process.on('message', (msg) => {
+  if (msg.type === 'init') {
+    workerData = msg.workerData;
+    executeInWorker().catch(e => {
+      parentPort.postMessage({ type: 'error', error: e.message });
+      process.exit(1);
+    });
+  } else if (msg.type === 'rpc_response') {
+    const pending = pendingRpc.get(msg.rpcId);
+    if (pending) {
+      clearTimeout(pending.timeout);
+      pendingRpc.delete(msg.rpcId);
+      if (msg.error) pending.reject(new Error(msg.error));
+      else pending.resolve(msg.result);
+    }
+  } else if (msg.type === 'mqtt') {
+    mqttEmitter(msg.topic, msg.payload);
+  }
+});
+
+// ANA SUNUCU (Nuxt) YENİDEN BAŞLARSA VEYA BAĞLANTI KOPARSA ZOMBİ OLMAMAK İÇİN ÇIK
+process.on('disconnect', () => {
+  if (workerDb) {
+    try { workerDb.close(); } catch (e) {}
+  }
+  process.exit(0);
+});
+
+let baseRequire;
+try {
+  baseRequire = createRequire(resolve(process.cwd(), 'index.js'));
+} catch {
+  baseRequire = typeof require !== 'undefined' ? require : createRequire(process.cwd() + '/index.js');
+}
+
+const appRoot = process.env.APP_HOME || process.cwd();
+const pluginsDir = join(appRoot, 'plugins');
+if (!fs.existsSync(pluginsDir)) { try { fs.mkdirSync(pluginsDir, { recursive: true }); } catch {} }
+const pluginsRequire = createRequire(join(pluginsDir, 'index.js'));
+
+const customRequire = (id) => {
+  try { return pluginsRequire(id); } catch { return baseRequire(id); }
+};
+
+function callMainThread(method, args) {
+  return new Promise((resolve, reject) => {
+    const rpcId = ++rpcIdCounter;
+    const timeout = setTimeout(() => {
+      pendingRpc.delete(rpcId);
+      reject(new Error(`RPC timeout: ${method}`));
+    }, 30000);
+
+    pendingRpc.set(rpcId, { resolve, reject, timeout });
+    parentPort.postMessage({ type: 'rpc', rpcId, method, args });
+  });
+}
+
+let mqttEmitter = () => {};
+
+async function executeInWorker() {
+  const { code, tenantSlug } = workerData;
+  const mqttCallbacks = [];
+  mqttEmitter = (topic, payload) => {
+    mqttCallbacks.forEach(cb => {
+      try { cb(topic, payload); } catch (e) { parentPort.postMessage({ type: 'log', level: 'error', args: ['MQTT error:', e.message] }); }
+    });
+  };
+
+  // 1. Initialize SQLite Database directly in worker (Architectural Shield)
+  if (tenantSlug) {
+    const dbDir = join(process.env.APP_HOME || process.cwd(), 'data');
+    if (!fs.existsSync(dbDir)) { try { fs.mkdirSync(dbDir, { recursive: true }); } catch {} }
+    const dbPath = join(dbDir, `${tenantSlug}_app.db`);
+    try {
+      workerDb = new Database(dbPath);
+      // Wait for WAL to stabilize
+      workerDb.pragma('journal_mode = WAL');
+      workerDb.pragma('synchronous = NORMAL');
+      workerDb.pragma('busy_timeout = 5000'); // Add busy timeout to prevent SQLITE_BUSY under load
+    } catch (dbErr) {
+      parentPort.postMessage({ type: 'log', level: 'error', args: ['Worker DB Init Error:', dbErr.message] });
+    }
+  }
+
+  // Preserve expected db wrapper logic for custom sql strings, but use native SQLite connection
+  const sql = async (strings, ...values) => {
+    if (!workerDb) return callMainThread('db.query', { strings, values });
+    let flatValues = [];
+    let query = '';
+    for (let i = 0; i < strings.length; i++) {
+      query += strings[i];
+      if (i < values.length) {
+        flatValues.push(values[i]);
+        query += '?';
+      }
+    }
+    const transpiled = transpileQueryAndParams(query, flatValues);
+    const upperQ = transpiled.query.trim().toUpperCase();
+    const isSelect = upperQ.startsWith('SELECT') || upperQ.startsWith('WITH') || upperQ.startsWith('PRAGMA') || upperQ.includes('RETURNING');
+    const stmt = workerDb.prepare(transpiled.query);
+    return isSelect ? stmt.all(...transpiled.params) : stmt.run(...transpiled.params);
+  };
+  sql.unsafe = async (query, params = []) => {
+    if (!workerDb) return callMainThread('db.unsafe', { query, params });
+    const transpiled = transpileQueryAndParams(query, params);
+    const upperQ = transpiled.query.trim().toUpperCase();
+    const isSelect = upperQ.startsWith('SELECT') || upperQ.startsWith('WITH') || upperQ.startsWith('PRAGMA') || upperQ.includes('RETURNING');
+    const stmt = workerDb.prepare(transpiled.query);
+    return isSelect ? stmt.all(...transpiled.params) : stmt.run(...transpiled.params);
+  };
+  sql.begin = async () => { throw new Error("db.begin() not supported in worker."); };
+  sql.json = (val) => JSON.stringify(val);
+
+  const contextObj = {
+    payload: workerData.payload || null,
+    context: { tenantSlug: workerData.tenantSlug },
+    console: {
+      log: (...args) => parentPort.postMessage({ type: 'log', level: 'info', args: args.map(safeClone) }),
+      error: (...args) => parentPort.postMessage({ type: 'log', level: 'error', args: args.map(safeClone) }),
+      warn: (...args) => parentPort.postMessage({ type: 'log', level: 'warn', args: args.map(safeClone) }),
+      info: (...args) => parentPort.postMessage({ type: 'log', level: 'info', args: args.map(safeClone) })
+    },
+    sleep: (ms) => new Promise(resolve => setTimeout(resolve, ms)),
+    mqtt: { onMessage: (cb) => mqttCallbacks.push(cb) },
+    fetch: globalThis.fetch,
+    Buffer,
+    crypto,
+    bcrypt,
+    process,
+    env: process.env,
+    require: customRequire,
+    db: sql,
+    sql: sql,
+    push: {
+      send: (userId, pushPayload) => callMainThread('push.send', { userId, pushPayload }),
+      broadcast: (pushPayload) => callMainThread('push.broadcast', { pushPayload })
+    },
+    publishWS: (path, payload) => callMainThread('publishWS', { path, payload }),
+    tAsync: (args) => callMainThread('tAsync', { args }),
+    telemetryDb: {
+      unsafe: async (query, params = []) => callMainThread('telemetryDb.unsafe', { query, params })
+    },
+    publishMQTT: (topic, message) => callMainThread('publishMQTT', { topic, message }),
+    subscribeMQTT: (cb) => mqttCallbacks.push(cb),
+    sendEmail: (options) => callMainThread('sendEmail', { options }),
+    readModbusData: (ip, port, unitId, startAddress, length, type = 'holding', dataType = 'uint16') => callMainThread('readModbusData', { ip, port, unitId, startAddress, length, type, dataType }),
+    writeModbusData: (ip, port, unitId, address, value, dataType = 'uint16') => callMainThread('writeModbusData', { ip, port, unitId, address, value, dataType }),
+    useUtil: async (utilName) => async (...args) => callMainThread('useUtil', { utilName, args }),
+    utils: new Proxy({}, {
+      get: (_, prop) => async (...args) => callMainThread('useUtil', { utilName: prop, args })
+    })
+  };
+
+  let executableCode = code.trim();
+  if (executableCode.startsWith('export default ')) {
+    executableCode = executableCode.replace(/^export\s+default\s+/, 'const _defaultExport = ') + '\nif (typeof _defaultExport === "function") await _defaultExport(typeof payload !== "undefined" ? payload : {});';
+  }
+
+  try {
+    const context = vm.createContext(contextObj);
+    const wrappedCode = `
+      (async () => {
+        ${executableCode}
+      })()
+    `;
+    const script = new vm.Script(wrappedCode);
+    // Senkron sonsuz döngü koruması (S7 Fix)
+    if (workerData.isCronWorker) {
+      await script.runInContext(context, { timeout: 55000 });
+    } else {
+      // Daemon'lar tamamen bağımsız mikroservis gibi çalışır, zaman sınırı yoktur.
+      await script.runInContext(context);
+    }
+    
+    // Kod normal şekilde sonlanırsa bile thread'i açık tut (Daemon mode)
+    if (workerData.isCronWorker) {
+      parentPort.postMessage({ type: 'cron_worker_done' });
+      process.exit(0);
+    }
+  } catch (error) {
+    parentPort.postMessage({ type: 'error', error: error.message || error.toString() });
+    process.exit(1);
+  }
+}
+
+function safeClone(arg) {
+  if (typeof arg === 'object' && arg !== null) {
+    try { return JSON.parse(JSON.stringify(arg)); } catch { return String(arg); }
+  }
+  return arg;
+}
+

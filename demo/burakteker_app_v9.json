@@ -1,0 +1,617 @@
+{
+  "app_name": "Standart ERP (V9)",
+  "tag": "#v9",
+  "export_date": "2026-07-28T15:00:00.000Z",
+  "components": {
+    "roles": [
+      {
+        "name": "ERP_Kullanicisi",
+        "allowed_tags": "[\"#v9\"]",
+        "hashtags": "[\"#v9\"]"
+      }
+    ],
+    "entities": [
+      {
+        "name": "Cari (Müşteri & Tedarikçi) Yönetimi",
+        "slug": "cariler",
+        "schema": "{\"unvan\": {\"type\": \"string\", \"label\": \"Cari \\u00dcnvan\", \"rules\": {\"required\": true, \"unique\": true}, \"showInTable\": true, \"_order\": 0}, \"tip\": {\"type\": \"enum\", \"options\": [\"M\\u00fc\\u015fteri\", \"Tedarik\\u00e7i\"], \"label\": \"Tip\", \"showInTable\": true, \"_order\": 1}, \"telefon\": {\"type\": \"string\", \"label\": \"Telefon\", \"showInTable\": true, \"_order\": 2}}",
+        "hashtags": "[\"#v9\"]"
+      },
+      {
+        "name": "Depolar",
+        "slug": "depolar",
+        "schema": "{\"kodu\": {\"type\": \"string\", \"label\": \"Depo Kodu\", \"rules\": {\"required\": true, \"unique\": true}, \"showInTable\": true, \"_order\": 0}, \"adi\": {\"type\": \"string\", \"label\": \"Depo Ad\\u0131\", \"showInTable\": true, \"_order\": 1}}",
+        "hashtags": "[\"#v9\"]"
+      },
+      {
+        "name": "Departmanlar",
+        "slug": "departmanlar",
+        "schema": "{\"kodu\": {\"type\": \"string\", \"label\": \"Departman Kodu\", \"rules\": {\"required\": true, \"unique\": true}, \"showInTable\": true, \"_order\": 0}, \"adi\": {\"type\": \"string\", \"label\": \"Departman Ad\\u0131\", \"showInTable\": true, \"_order\": 1}}",
+        "hashtags": "[\"#v9\"]"
+      },
+      {
+        "name": "Stok & Ürün Yönetimi",
+        "slug": "stoklar",
+        "schema": "{\"urun_kodu\": {\"type\": \"string\", \"label\": \"\\u00dcr\\u00fcn Kodu\", \"rules\": {\"required\": true, \"unique\": true}, \"showInTable\": true, \"_order\": 0}, \"adi\": {\"type\": \"string\", \"label\": \"\\u00dcr\\u00fcn Ad\\u0131\", \"showInTable\": true, \"_order\": 1}, \"tip\": {\"type\": \"enum\", \"options\": [\"Hammadde\", \"Yar\\u0131 Mamul\", \"Mamul\"], \"label\": \"Tip\", \"showInTable\": true, \"_order\": 2}, \"birim_agirlik\": {\"type\": \"number\", \"label\": \"Birim A\\u011f\\u0131rl\\u0131k (kg)\", \"showInTable\": true, \"_order\": 3}, \"mevcut_stok\": {\"type\": \"number\", \"default\": 0, \"label\": \"Mevcut Stok\", \"showInTable\": true, \"_order\": 4}, \"bloke_stok\": {\"type\": \"number\", \"default\": 0, \"label\": \"Bloke Stok\", \"showInTable\": true, \"_order\": 5}, \"kritik_stok\": {\"type\": \"number\", \"default\": 100, \"label\": \"Kritik Stok S\\u0131n\\u0131r\\u0131\", \"showInTable\": true, \"_order\": 6}, \"guvenli_stok\": {\"type\": \"number\", \"default\": 500, \"label\": \"G\\u00fcvenli Stok (Hedef)\", \"showInTable\": true, \"_order\": 7}}",
+        "hashtags": "[\"#v9\"]"
+      },
+      {
+        "name": "Ürün Reçeteleri",
+        "slug": "receteler",
+        "schema": "{\"mamul_id\": {\"type\": \"relation\", \"targetEntitySlug\": \"stoklar\", \"displayKey\": \"urun_kodu\", \"label\": \"Mamul\", \"showInTable\": true, \"_order\": 0}, \"hammadde_id\": {\"type\": \"relation\", \"targetEntitySlug\": \"stoklar\", \"displayKey\": \"urun_kodu\", \"label\": \"Hammadde\", \"showInTable\": true, \"_order\": 1}, \"sarf_miktari\": {\"type\": \"number\", \"label\": \"Sarf Miktar\\u0131\", \"showInTable\": true, \"_order\": 2}}",
+        "hashtags": "[\"#v9\"]"
+      },
+      {
+        "name": "Siparişler",
+        "slug": "siparisler",
+        "schema": "{\"siparis_no\": {\"type\": \"string\", \"label\": \"Sipari\\u015f No\", \"rules\": {\"required\": true, \"unique\": true}, \"showInTable\": true, \"_order\": 0}, \"cari_id\": {\"type\": \"relation\", \"targetEntitySlug\": \"cariler\", \"displayKey\": \"unvan\", \"label\": \"M\\u00fc\\u015fteri\", \"showInTable\": true, \"_order\": 1}, \"urun_id\": {\"type\": \"relation\", \"targetEntitySlug\": \"stoklar\", \"displayKey\": \"urun_kodu\", \"label\": \"\\u00dcr\\u00fcn\", \"showInTable\": true, \"_order\": 2}, \"siparis_miktari\": {\"type\": \"number\", \"label\": \"Miktar\", \"showInTable\": true, \"_order\": 3}, \"sevkiyat_bloke_miktar\": {\"type\": \"number\", \"default\": 0, \"label\": \"Depodan Rezerve\", \"showInTable\": true, \"_order\": 4}, \"uretim_hedef_miktar\": {\"type\": \"number\", \"default\": 0, \"label\": \"\\u00dcretime G\\u00f6nderilen\", \"showInTable\": true, \"_order\": 5}, \"uretilen_miktar\": {\"type\": \"number\", \"default\": 0, \"label\": \"\\u00dcretilen Toplam\", \"showInTable\": true, \"_order\": 6}, \"sevk_edilen_miktar\": {\"type\": \"number\", \"default\": 0, \"label\": \"Sevk Edilen\", \"showInTable\": true, \"_order\": 7}, \"durum\": {\"type\": \"enum\", \"options\": [\"Bekleyen \\u0130\\u015fler\", \"Devam Edenler\", \"Tamamland\\u0131\", \"ETA_Bas\\u0131ld\\u0131\"], \"default\": \"Bekleyen \\u0130\\u015fler\", \"label\": \"Durum\", \"showInTable\": true, \"_order\": 8}}",
+        "hashtags": "[\"#v9\"]"
+      },
+      {
+        "name": "İş Emirleri",
+        "slug": "is_emirleri",
+        "schema": "{\"siparis_id\": {\"type\": \"relation\", \"targetEntitySlug\": \"siparisler\", \"displayKey\": \"siparis_no\", \"label\": \"Sipari\\u015f No\", \"showInTable\": true, \"_order\": 0}, \"departman_id\": {\"type\": \"relation\", \"targetEntitySlug\": \"departmanlar\", \"displayKey\": \"adi\", \"label\": \"Departman\", \"showInTable\": true, \"_order\": 1}, \"hedef_miktar\": {\"type\": \"number\", \"label\": \"Hedef\", \"showInTable\": true, \"_order\": 2}, \"gerceklesen_miktar\": {\"type\": \"number\", \"default\": 0, \"label\": \"Ger\\u00e7ekle\\u015fen\", \"showInTable\": true, \"_order\": 3}, \"fire_miktari\": {\"type\": \"number\", \"default\": 0, \"label\": \"Fire\", \"showInTable\": true, \"_order\": 4}, \"durum\": {\"type\": \"enum\", \"options\": [\"Bekliyor\", \"\\u00dcretimde\", \"Tamamland\\u0131\"], \"default\": \"Bekliyor\", \"label\": \"Durum\", \"showInTable\": true, \"_order\": 5}}",
+        "hashtags": "[\"#v9\"]"
+      },
+      {
+        "name": "Alt Görevler",
+        "slug": "alt_gorevler",
+        "schema": "{\"is_emri_id\": {\"type\": \"relation\", \"targetEntitySlug\": \"is_emirleri\", \"displayKey\": \"id\", \"label\": \"\\u0130\\u015f Emri ID\", \"showInTable\": true, \"_order\": 0}, \"gorev_adi\": {\"type\": \"string\", \"label\": \"G\\u00f6rev Ad\\u0131\", \"showInTable\": true, \"_order\": 1}, \"net_sure_sn\": {\"type\": \"number\", \"default\": 0, \"label\": \"Net S\\u00fcre (Sn)\", \"showInTable\": true, \"_order\": 2}}",
+        "hashtags": "[\"#v9\"]"
+      },
+      {
+        "name": "Fason İş Emirleri",
+        "slug": "fason_is_emirleri",
+        "schema": "{\"takip_no\": {\"type\": \"string\", \"label\": \"Takip No\", \"rules\": {\"required\": true, \"unique\": true}, \"showInTable\": true, \"_order\": 0}, \"urun_id\": {\"type\": \"relation\", \"targetEntitySlug\": \"stoklar\", \"displayKey\": \"urun_kodu\", \"label\": \"\\u00dcr\\u00fcn\", \"showInTable\": true, \"_order\": 1}, \"gonderilen_miktar\": {\"type\": \"number\", \"label\": \"G\\u00f6nderilen (Adet)\", \"showInTable\": true, \"_order\": 2}, \"kalan_miktar\": {\"type\": \"number\", \"label\": \"Bekleyen (Adet)\", \"showInTable\": true, \"_order\": 3}}",
+        "hashtags": "[\"#v9\"]"
+      }
+    ],
+    "endpoints": [
+      {
+        "name": "Cari (Müşteri & Tedarikçi) Yönetimi - GET List",
+        "route_pattern": "/api/custom/cariler",
+        "type": "http",
+        "active": 1,
+        "is_public": 1,
+        "priority": 100,
+        "code": "const reqMethod = payload.method; if (reqMethod !== 'GET') return; const reqId = payload.params?.id; if (reqId) return; try { const result = await recordManager.getRecords(context.tenantSlug, 'cariler', payload.query || query || {}); return { respond: true, status: 200, headers: { 'Content-Type': 'application/json' }, body: result }; } catch(e) { return { respond: true, status: e.statusCode || 500, headers: { 'Content-Type': 'application/json' }, body: { message: e.message || e } }; }",
+        "hashtags": "[\"#v9\"]"
+      },
+      {
+        "name": "Cari (Müşteri & Tedarikçi) Yönetimi - GET Single",
+        "route_pattern": "/api/custom/cariler/:id",
+        "type": "http",
+        "active": 1,
+        "is_public": 1,
+        "priority": 100,
+        "code": "const reqMethod = payload.method; if (reqMethod !== 'GET') return; const reqId = payload.params?.id; if (!reqId || reqId === 'bulk') return; try { const result = await recordManager.getRecord(context.tenantSlug, 'cariler', reqId); return { respond: true, status: 200, headers: { 'Content-Type': 'application/json' }, body: result }; } catch(e) { return { respond: true, status: e.statusCode || 500, headers: { 'Content-Type': 'application/json' }, body: { message: e.message || e } }; }",
+        "hashtags": "[\"#v9\"]"
+      },
+      {
+        "name": "Cari (Müşteri & Tedarikçi) Yönetimi - POST",
+        "route_pattern": "/api/custom/cariler",
+        "type": "http",
+        "active": 1,
+        "is_public": 1,
+        "priority": 100,
+        "code": "const reqMethod = payload.method; if (reqMethod !== 'POST') return; const body = payload.body || {}; const reqUser = context.user; try { const result = await recordManager.createRecord(context.tenantSlug, 'cariler', body, reqUser?.id); return { respond: true, status: 200, headers: { 'Content-Type': 'application/json' }, body: result }; } catch(e) { return { respond: true, status: e.statusCode || 500, headers: { 'Content-Type': 'application/json' }, body: { message: e.message || e, errors: e.data } }; }",
+        "hashtags": "[\"#v9\"]"
+      },
+      {
+        "name": "Cari (Müşteri & Tedarikçi) Yönetimi - PUT",
+        "route_pattern": "/api/custom/cariler/:id",
+        "type": "http",
+        "active": 1,
+        "is_public": 1,
+        "priority": 100,
+        "code": "const reqMethod = payload.method; if (reqMethod !== 'PUT') return; const reqId = payload.params?.id; if (!reqId || reqId === 'bulk') return; const body = payload.body || {}; const reqUser = context.user; try { const result = await recordManager.updateRecord(context.tenantSlug, 'cariler', reqId, body, reqUser?.id); return { respond: true, status: 200, headers: { 'Content-Type': 'application/json' }, body: result }; } catch(e) { return { respond: true, status: e.statusCode || 500, headers: { 'Content-Type': 'application/json' }, body: { message: e.message || e, errors: e.data } }; }",
+        "hashtags": "[\"#v9\"]"
+      },
+      {
+        "name": "Cari (Müşteri & Tedarikçi) Yönetimi - DELETE",
+        "route_pattern": "/api/custom/cariler/:id",
+        "type": "http",
+        "active": 1,
+        "is_public": 1,
+        "priority": 100,
+        "code": "const reqMethod = payload.method; if (reqMethod !== 'DELETE') return; const reqId = payload.params?.id; if (!reqId || reqId === 'bulk') return; try { const result = await recordManager.deleteRecord(context.tenantSlug, 'cariler', reqId); return { respond: true, status: 200, headers: { 'Content-Type': 'application/json' }, body: result }; } catch(e) { return { respond: true, status: e.statusCode || 500, headers: { 'Content-Type': 'application/json' }, body: { message: e.message || e } }; }",
+        "hashtags": "[\"#v9\"]"
+      },
+      {
+        "name": "Depolar - GET List",
+        "route_pattern": "/api/custom/depolar",
+        "type": "http",
+        "active": 1,
+        "is_public": 1,
+        "priority": 100,
+        "code": "const reqMethod = payload.method; if (reqMethod !== 'GET') return; const reqId = payload.params?.id; if (reqId) return; try { const result = await recordManager.getRecords(context.tenantSlug, 'depolar', payload.query || query || {}); return { respond: true, status: 200, headers: { 'Content-Type': 'application/json' }, body: result }; } catch(e) { return { respond: true, status: e.statusCode || 500, headers: { 'Content-Type': 'application/json' }, body: { message: e.message || e } }; }",
+        "hashtags": "[\"#v9\"]"
+      },
+      {
+        "name": "Depolar - GET Single",
+        "route_pattern": "/api/custom/depolar/:id",
+        "type": "http",
+        "active": 1,
+        "is_public": 1,
+        "priority": 100,
+        "code": "const reqMethod = payload.method; if (reqMethod !== 'GET') return; const reqId = payload.params?.id; if (!reqId || reqId === 'bulk') return; try { const result = await recordManager.getRecord(context.tenantSlug, 'depolar', reqId); return { respond: true, status: 200, headers: { 'Content-Type': 'application/json' }, body: result }; } catch(e) { return { respond: true, status: e.statusCode || 500, headers: { 'Content-Type': 'application/json' }, body: { message: e.message || e } }; }",
+        "hashtags": "[\"#v9\"]"
+      },
+      {
+        "name": "Depolar - POST",
+        "route_pattern": "/api/custom/depolar",
+        "type": "http",
+        "active": 1,
+        "is_public": 1,
+        "priority": 100,
+        "code": "const reqMethod = payload.method; if (reqMethod !== 'POST') return; const body = payload.body || {}; const reqUser = context.user; try { const result = await recordManager.createRecord(context.tenantSlug, 'depolar', body, reqUser?.id); return { respond: true, status: 200, headers: { 'Content-Type': 'application/json' }, body: result }; } catch(e) { return { respond: true, status: e.statusCode || 500, headers: { 'Content-Type': 'application/json' }, body: { message: e.message || e, errors: e.data } }; }",
+        "hashtags": "[\"#v9\"]"
+      },
+      {
+        "name": "Depolar - PUT",
+        "route_pattern": "/api/custom/depolar/:id",
+        "type": "http",
+        "active": 1,
+        "is_public": 1,
+        "priority": 100,
+        "code": "const reqMethod = payload.method; if (reqMethod !== 'PUT') return; const reqId = payload.params?.id; if (!reqId || reqId === 'bulk') return; const body = payload.body || {}; const reqUser = context.user; try { const result = await recordManager.updateRecord(context.tenantSlug, 'depolar', reqId, body, reqUser?.id); return { respond: true, status: 200, headers: { 'Content-Type': 'application/json' }, body: result }; } catch(e) { return { respond: true, status: e.statusCode || 500, headers: { 'Content-Type': 'application/json' }, body: { message: e.message || e, errors: e.data } }; }",
+        "hashtags": "[\"#v9\"]"
+      },
+      {
+        "name": "Depolar - DELETE",
+        "route_pattern": "/api/custom/depolar/:id",
+        "type": "http",
+        "active": 1,
+        "is_public": 1,
+        "priority": 100,
+        "code": "const reqMethod = payload.method; if (reqMethod !== 'DELETE') return; const reqId = payload.params?.id; if (!reqId || reqId === 'bulk') return; try { const result = await recordManager.deleteRecord(context.tenantSlug, 'depolar', reqId); return { respond: true, status: 200, headers: { 'Content-Type': 'application/json' }, body: result }; } catch(e) { return { respond: true, status: e.statusCode || 500, headers: { 'Content-Type': 'application/json' }, body: { message: e.message || e } }; }",
+        "hashtags": "[\"#v9\"]"
+      },
+      {
+        "name": "Departmanlar - GET List",
+        "route_pattern": "/api/custom/departmanlar",
+        "type": "http",
+        "active": 1,
+        "is_public": 1,
+        "priority": 100,
+        "code": "const reqMethod = payload.method; if (reqMethod !== 'GET') return; const reqId = payload.params?.id; if (reqId) return; try { const result = await recordManager.getRecords(context.tenantSlug, 'departmanlar', payload.query || query || {}); return { respond: true, status: 200, headers: { 'Content-Type': 'application/json' }, body: result }; } catch(e) { return { respond: true, status: e.statusCode || 500, headers: { 'Content-Type': 'application/json' }, body: { message: e.message || e } }; }",
+        "hashtags": "[\"#v9\"]"
+      },
+      {
+        "name": "Departmanlar - GET Single",
+        "route_pattern": "/api/custom/departmanlar/:id",
+        "type": "http",
+        "active": 1,
+        "is_public": 1,
+        "priority": 100,
+        "code": "const reqMethod = payload.method; if (reqMethod !== 'GET') return; const reqId = payload.params?.id; if (!reqId || reqId === 'bulk') return; try { const result = await recordManager.getRecord(context.tenantSlug, 'departmanlar', reqId); return { respond: true, status: 200, headers: { 'Content-Type': 'application/json' }, body: result }; } catch(e) { return { respond: true, status: e.statusCode || 500, headers: { 'Content-Type': 'application/json' }, body: { message: e.message || e } }; }",
+        "hashtags": "[\"#v9\"]"
+      },
+      {
+        "name": "Departmanlar - POST",
+        "route_pattern": "/api/custom/departmanlar",
+        "type": "http",
+        "active": 1,
+        "is_public": 1,
+        "priority": 100,
+        "code": "const reqMethod = payload.method; if (reqMethod !== 'POST') return; const body = payload.body || {}; const reqUser = context.user; try { const result = await recordManager.createRecord(context.tenantSlug, 'departmanlar', body, reqUser?.id); return { respond: true, status: 200, headers: { 'Content-Type': 'application/json' }, body: result }; } catch(e) { return { respond: true, status: e.statusCode || 500, headers: { 'Content-Type': 'application/json' }, body: { message: e.message || e, errors: e.data } }; }",
+        "hashtags": "[\"#v9\"]"
+      },
+      {
+        "name": "Departmanlar - PUT",
+        "route_pattern": "/api/custom/departmanlar/:id",
+        "type": "http",
+        "active": 1,
+        "is_public": 1,
+        "priority": 100,
+        "code": "const reqMethod = payload.method; if (reqMethod !== 'PUT') return; const reqId = payload.params?.id; if (!reqId || reqId === 'bulk') return; const body = payload.body || {}; const reqUser = context.user; try { const result = await recordManager.updateRecord(context.tenantSlug, 'departmanlar', reqId, body, reqUser?.id); return { respond: true, status: 200, headers: { 'Content-Type': 'application/json' }, body: result }; } catch(e) { return { respond: true, status: e.statusCode || 500, headers: { 'Content-Type': 'application/json' }, body: { message: e.message || e, errors: e.data } }; }",
+        "hashtags": "[\"#v9\"]"
+      },
+      {
+        "name": "Departmanlar - DELETE",
+        "route_pattern": "/api/custom/departmanlar/:id",
+        "type": "http",
+        "active": 1,
+        "is_public": 1,
+        "priority": 100,
+        "code": "const reqMethod = payload.method; if (reqMethod !== 'DELETE') return; const reqId = payload.params?.id; if (!reqId || reqId === 'bulk') return; try { const result = await recordManager.deleteRecord(context.tenantSlug, 'departmanlar', reqId); return { respond: true, status: 200, headers: { 'Content-Type': 'application/json' }, body: result }; } catch(e) { return { respond: true, status: e.statusCode || 500, headers: { 'Content-Type': 'application/json' }, body: { message: e.message || e } }; }",
+        "hashtags": "[\"#v9\"]"
+      },
+      {
+        "name": "Stok & Ürün Yönetimi - GET List",
+        "route_pattern": "/api/custom/stoklar",
+        "type": "http",
+        "active": 1,
+        "is_public": 1,
+        "priority": 100,
+        "code": "const reqMethod = payload.method; if (reqMethod !== 'GET') return; const reqId = payload.params?.id; if (reqId) return; try { const result = await recordManager.getRecords(context.tenantSlug, 'stoklar', payload.query || query || {}); return { respond: true, status: 200, headers: { 'Content-Type': 'application/json' }, body: result }; } catch(e) { return { respond: true, status: e.statusCode || 500, headers: { 'Content-Type': 'application/json' }, body: { message: e.message || e } }; }",
+        "hashtags": "[\"#v9\"]"
+      },
+      {
+        "name": "Stok & Ürün Yönetimi - GET Single",
+        "route_pattern": "/api/custom/stoklar/:id",
+        "type": "http",
+        "active": 1,
+        "is_public": 1,
+        "priority": 100,
+        "code": "const reqMethod = payload.method; if (reqMethod !== 'GET') return; const reqId = payload.params?.id; if (!reqId || reqId === 'bulk') return; try { const result = await recordManager.getRecord(context.tenantSlug, 'stoklar', reqId); return { respond: true, status: 200, headers: { 'Content-Type': 'application/json' }, body: result }; } catch(e) { return { respond: true, status: e.statusCode || 500, headers: { 'Content-Type': 'application/json' }, body: { message: e.message || e } }; }",
+        "hashtags": "[\"#v9\"]"
+      },
+      {
+        "name": "Stok & Ürün Yönetimi - POST",
+        "route_pattern": "/api/custom/stoklar",
+        "type": "http",
+        "active": 1,
+        "is_public": 1,
+        "priority": 100,
+        "code": "const reqMethod = payload.method; if (reqMethod !== 'POST') return; const body = payload.body || {}; const reqUser = context.user; try { const result = await recordManager.createRecord(context.tenantSlug, 'stoklar', body, reqUser?.id); return { respond: true, status: 200, headers: { 'Content-Type': 'application/json' }, body: result }; } catch(e) { return { respond: true, status: e.statusCode || 500, headers: { 'Content-Type': 'application/json' }, body: { message: e.message || e, errors: e.data } }; }",
+        "hashtags": "[\"#v9\"]"
+      },
+      {
+        "name": "Stok & Ürün Yönetimi - PUT",
+        "route_pattern": "/api/custom/stoklar/:id",
+        "type": "http",
+        "active": 1,
+        "is_public": 1,
+        "priority": 100,
+        "code": "const reqMethod = payload.method; if (reqMethod !== 'PUT') return; const reqId = payload.params?.id; if (!reqId || reqId === 'bulk') return; const body = payload.body || {}; const reqUser = context.user; try { const result = await recordManager.updateRecord(context.tenantSlug, 'stoklar', reqId, body, reqUser?.id); return { respond: true, status: 200, headers: { 'Content-Type': 'application/json' }, body: result }; } catch(e) { return { respond: true, status: e.statusCode || 500, headers: { 'Content-Type': 'application/json' }, body: { message: e.message || e, errors: e.data } }; }",
+        "hashtags": "[\"#v9\"]"
+      },
+      {
+        "name": "Stok & Ürün Yönetimi - DELETE",
+        "route_pattern": "/api/custom/stoklar/:id",
+        "type": "http",
+        "active": 1,
+        "is_public": 1,
+        "priority": 100,
+        "code": "const reqMethod = payload.method; if (reqMethod !== 'DELETE') return; const reqId = payload.params?.id; if (!reqId || reqId === 'bulk') return; try { const result = await recordManager.deleteRecord(context.tenantSlug, 'stoklar', reqId); return { respond: true, status: 200, headers: { 'Content-Type': 'application/json' }, body: result }; } catch(e) { return { respond: true, status: e.statusCode || 500, headers: { 'Content-Type': 'application/json' }, body: { message: e.message || e } }; }",
+        "hashtags": "[\"#v9\"]"
+      },
+      {
+        "name": "Ürün Reçeteleri - GET List",
+        "route_pattern": "/api/custom/receteler",
+        "type": "http",
+        "active": 1,
+        "is_public": 1,
+        "priority": 100,
+        "code": "const reqMethod = payload.method; if (reqMethod !== 'GET') return; const reqId = payload.params?.id; if (reqId) return; try { const result = await recordManager.getRecords(context.tenantSlug, 'receteler', payload.query || query || {}); return { respond: true, status: 200, headers: { 'Content-Type': 'application/json' }, body: result }; } catch(e) { return { respond: true, status: e.statusCode || 500, headers: { 'Content-Type': 'application/json' }, body: { message: e.message || e } }; }",
+        "hashtags": "[\"#v9\"]"
+      },
+      {
+        "name": "Ürün Reçeteleri - GET Single",
+        "route_pattern": "/api/custom/receteler/:id",
+        "type": "http",
+        "active": 1,
+        "is_public": 1,
+        "priority": 100,
+        "code": "const reqMethod = payload.method; if (reqMethod !== 'GET') return; const reqId = payload.params?.id; if (!reqId || reqId === 'bulk') return; try { const result = await recordManager.getRecord(context.tenantSlug, 'receteler', reqId); return { respond: true, status: 200, headers: { 'Content-Type': 'application/json' }, body: result }; } catch(e) { return { respond: true, status: e.statusCode || 500, headers: { 'Content-Type': 'application/json' }, body: { message: e.message || e } }; }",
+        "hashtags": "[\"#v9\"]"
+      },
+      {
+        "name": "Ürün Reçeteleri - POST",
+        "route_pattern": "/api/custom/receteler",
+        "type": "http",
+        "active": 1,
+        "is_public": 1,
+        "priority": 100,
+        "code": "const reqMethod = payload.method; if (reqMethod !== 'POST') return; const body = payload.body || {}; const reqUser = context.user; try { const result = await recordManager.createRecord(context.tenantSlug, 'receteler', body, reqUser?.id); return { respond: true, status: 200, headers: { 'Content-Type': 'application/json' }, body: result }; } catch(e) { return { respond: true, status: e.statusCode || 500, headers: { 'Content-Type': 'application/json' }, body: { message: e.message || e, errors: e.data } }; }",
+        "hashtags": "[\"#v9\"]"
+      },
+      {
+        "name": "Ürün Reçeteleri - PUT",
+        "route_pattern": "/api/custom/receteler/:id",
+        "type": "http",
+        "active": 1,
+        "is_public": 1,
+        "priority": 100,
+        "code": "const reqMethod = payload.method; if (reqMethod !== 'PUT') return; const reqId = payload.params?.id; if (!reqId || reqId === 'bulk') return; const body = payload.body || {}; const reqUser = context.user; try { const result = await recordManager.updateRecord(context.tenantSlug, 'receteler', reqId, body, reqUser?.id); return { respond: true, status: 200, headers: { 'Content-Type': 'application/json' }, body: result }; } catch(e) { return { respond: true, status: e.statusCode || 500, headers: { 'Content-Type': 'application/json' }, body: { message: e.message || e, errors: e.data } }; }",
+        "hashtags": "[\"#v9\"]"
+      },
+      {
+        "name": "Ürün Reçeteleri - DELETE",
+        "route_pattern": "/api/custom/receteler/:id",
+        "type": "http",
+        "active": 1,
+        "is_public": 1,
+        "priority": 100,
+        "code": "const reqMethod = payload.method; if (reqMethod !== 'DELETE') return; const reqId = payload.params?.id; if (!reqId || reqId === 'bulk') return; try { const result = await recordManager.deleteRecord(context.tenantSlug, 'receteler', reqId); return { respond: true, status: 200, headers: { 'Content-Type': 'application/json' }, body: result }; } catch(e) { return { respond: true, status: e.statusCode || 500, headers: { 'Content-Type': 'application/json' }, body: { message: e.message || e } }; }",
+        "hashtags": "[\"#v9\"]"
+      },
+      {
+        "name": "Siparişler - GET List",
+        "route_pattern": "/api/custom/siparisler",
+        "type": "http",
+        "active": 1,
+        "is_public": 1,
+        "priority": 100,
+        "code": "const reqMethod = payload.method; if (reqMethod !== 'GET') return; const reqId = payload.params?.id; if (reqId) return; try { const result = await recordManager.getRecords(context.tenantSlug, 'siparisler', payload.query || query || {}); return { respond: true, status: 200, headers: { 'Content-Type': 'application/json' }, body: result }; } catch(e) { return { respond: true, status: e.statusCode || 500, headers: { 'Content-Type': 'application/json' }, body: { message: e.message || e } }; }",
+        "hashtags": "[\"#v9\"]"
+      },
+      {
+        "name": "Siparişler - GET Single",
+        "route_pattern": "/api/custom/siparisler/:id",
+        "type": "http",
+        "active": 1,
+        "is_public": 1,
+        "priority": 100,
+        "code": "const reqMethod = payload.method; if (reqMethod !== 'GET') return; const reqId = payload.params?.id; if (!reqId || reqId === 'bulk') return; try { const result = await recordManager.getRecord(context.tenantSlug, 'siparisler', reqId); return { respond: true, status: 200, headers: { 'Content-Type': 'application/json' }, body: result }; } catch(e) { return { respond: true, status: e.statusCode || 500, headers: { 'Content-Type': 'application/json' }, body: { message: e.message || e } }; }",
+        "hashtags": "[\"#v9\"]"
+      },
+      {
+        "name": "Siparişler - PUT",
+        "route_pattern": "/api/custom/siparisler/:id",
+        "type": "http",
+        "active": 1,
+        "is_public": 1,
+        "priority": 100,
+        "code": "const reqMethod = payload.method; if (reqMethod !== 'PUT') return; const reqId = payload.params?.id; if (!reqId || reqId === 'bulk') return; const body = payload.body || {}; const reqUser = context.user; try { const result = await recordManager.updateRecord(context.tenantSlug, 'siparisler', reqId, body, reqUser?.id); return { respond: true, status: 200, headers: { 'Content-Type': 'application/json' }, body: result }; } catch(e) { return { respond: true, status: e.statusCode || 500, headers: { 'Content-Type': 'application/json' }, body: { message: e.message || e, errors: e.data } }; }",
+        "hashtags": "[\"#v9\"]"
+      },
+      {
+        "name": "Siparişler - DELETE",
+        "route_pattern": "/api/custom/siparisler/:id",
+        "type": "http",
+        "active": 1,
+        "is_public": 1,
+        "priority": 100,
+        "code": "const reqMethod = payload.method; if (reqMethod !== 'DELETE') return; const reqId = payload.params?.id; if (!reqId || reqId === 'bulk') return; try { const result = await recordManager.deleteRecord(context.tenantSlug, 'siparisler', reqId); return { respond: true, status: 200, headers: { 'Content-Type': 'application/json' }, body: result }; } catch(e) { return { respond: true, status: e.statusCode || 500, headers: { 'Content-Type': 'application/json' }, body: { message: e.message || e } }; }",
+        "hashtags": "[\"#v9\"]"
+      },
+      {
+        "name": "İş Emirleri - GET List",
+        "route_pattern": "/api/custom/is_emirleri",
+        "type": "http",
+        "active": 1,
+        "is_public": 1,
+        "priority": 100,
+        "code": "const reqMethod = payload.method; if (reqMethod !== 'GET') return; const reqId = payload.params?.id; if (reqId) return; try { const result = await recordManager.getRecords(context.tenantSlug, 'is_emirleri', payload.query || query || {}); return { respond: true, status: 200, headers: { 'Content-Type': 'application/json' }, body: result }; } catch(e) { return { respond: true, status: e.statusCode || 500, headers: { 'Content-Type': 'application/json' }, body: { message: e.message || e } }; }",
+        "hashtags": "[\"#v9\"]"
+      },
+      {
+        "name": "İş Emirleri - GET Single",
+        "route_pattern": "/api/custom/is_emirleri/:id",
+        "type": "http",
+        "active": 1,
+        "is_public": 1,
+        "priority": 100,
+        "code": "const reqMethod = payload.method; if (reqMethod !== 'GET') return; const reqId = payload.params?.id; if (!reqId || reqId === 'bulk') return; try { const result = await recordManager.getRecord(context.tenantSlug, 'is_emirleri', reqId); return { respond: true, status: 200, headers: { 'Content-Type': 'application/json' }, body: result }; } catch(e) { return { respond: true, status: e.statusCode || 500, headers: { 'Content-Type': 'application/json' }, body: { message: e.message || e } }; }",
+        "hashtags": "[\"#v9\"]"
+      },
+      {
+        "name": "İş Emirleri - POST",
+        "route_pattern": "/api/custom/is_emirleri",
+        "type": "http",
+        "active": 1,
+        "is_public": 1,
+        "priority": 100,
+        "code": "const reqMethod = payload.method; if (reqMethod !== 'POST') return; const body = payload.body || {}; const reqUser = context.user; try { const result = await recordManager.createRecord(context.tenantSlug, 'is_emirleri', body, reqUser?.id); return { respond: true, status: 200, headers: { 'Content-Type': 'application/json' }, body: result }; } catch(e) { return { respond: true, status: e.statusCode || 500, headers: { 'Content-Type': 'application/json' }, body: { message: e.message || e, errors: e.data } }; }",
+        "hashtags": "[\"#v9\"]"
+      },
+      {
+        "name": "İş Emirleri - PUT",
+        "route_pattern": "/api/custom/is_emirleri/:id",
+        "type": "http",
+        "active": 1,
+        "is_public": 1,
+        "priority": 100,
+        "code": "const reqMethod = payload.method; if (reqMethod !== 'PUT') return; const reqId = payload.params?.id; if (!reqId || reqId === 'bulk') return; const body = payload.body || {}; const reqUser = context.user; try { const result = await recordManager.updateRecord(context.tenantSlug, 'is_emirleri', reqId, body, reqUser?.id); return { respond: true, status: 200, headers: { 'Content-Type': 'application/json' }, body: result }; } catch(e) { return { respond: true, status: e.statusCode || 500, headers: { 'Content-Type': 'application/json' }, body: { message: e.message || e, errors: e.data } }; }",
+        "hashtags": "[\"#v9\"]"
+      },
+      {
+        "name": "İş Emirleri - DELETE",
+        "route_pattern": "/api/custom/is_emirleri/:id",
+        "type": "http",
+        "active": 1,
+        "is_public": 1,
+        "priority": 100,
+        "code": "const reqMethod = payload.method; if (reqMethod !== 'DELETE') return; const reqId = payload.params?.id; if (!reqId || reqId === 'bulk') return; try { const result = await recordManager.deleteRecord(context.tenantSlug, 'is_emirleri', reqId); return { respond: true, status: 200, headers: { 'Content-Type': 'application/json' }, body: result }; } catch(e) { return { respond: true, status: e.statusCode || 500, headers: { 'Content-Type': 'application/json' }, body: { message: e.message || e } }; }",
+        "hashtags": "[\"#v9\"]"
+      },
+      {
+        "name": "Alt Görevler - GET List",
+        "route_pattern": "/api/custom/alt_gorevler",
+        "type": "http",
+        "active": 1,
+        "is_public": 1,
+        "priority": 100,
+        "code": "const reqMethod = payload.method; if (reqMethod !== 'GET') return; const reqId = payload.params?.id; if (reqId) return; try { const result = await recordManager.getRecords(context.tenantSlug, 'alt_gorevler', payload.query || query || {}); return { respond: true, status: 200, headers: { 'Content-Type': 'application/json' }, body: result }; } catch(e) { return { respond: true, status: e.statusCode || 500, headers: { 'Content-Type': 'application/json' }, body: { message: e.message || e } }; }",
+        "hashtags": "[\"#v9\"]"
+      },
+      {
+        "name": "Alt Görevler - GET Single",
+        "route_pattern": "/api/custom/alt_gorevler/:id",
+        "type": "http",
+        "active": 1,
+        "is_public": 1,
+        "priority": 100,
+        "code": "const reqMethod = payload.method; if (reqMethod !== 'GET') return; const reqId = payload.params?.id; if (!reqId || reqId === 'bulk') return; try { const result = await recordManager.getRecord(context.tenantSlug, 'alt_gorevler', reqId); return { respond: true, status: 200, headers: { 'Content-Type': 'application/json' }, body: result }; } catch(e) { return { respond: true, status: e.statusCode || 500, headers: { 'Content-Type': 'application/json' }, body: { message: e.message || e } }; }",
+        "hashtags": "[\"#v9\"]"
+      },
+      {
+        "name": "Alt Görevler - POST",
+        "route_pattern": "/api/custom/alt_gorevler",
+        "type": "http",
+        "active": 1,
+        "is_public": 1,
+        "priority": 100,
+        "code": "const reqMethod = payload.method; if (reqMethod !== 'POST') return; const body = payload.body || {}; const reqUser = context.user; try { const result = await recordManager.createRecord(context.tenantSlug, 'alt_gorevler', body, reqUser?.id); return { respond: true, status: 200, headers: { 'Content-Type': 'application/json' }, body: result }; } catch(e) { return { respond: true, status: e.statusCode || 500, headers: { 'Content-Type': 'application/json' }, body: { message: e.message || e, errors: e.data } }; }",
+        "hashtags": "[\"#v9\"]"
+      },
+      {
+        "name": "Alt Görevler - PUT",
+        "route_pattern": "/api/custom/alt_gorevler/:id",
+        "type": "http",
+        "active": 1,
+        "is_public": 1,
+        "priority": 100,
+        "code": "const reqMethod = payload.method; if (reqMethod !== 'PUT') return; const reqId = payload.params?.id; if (!reqId || reqId === 'bulk') return; const body = payload.body || {}; const reqUser = context.user; try { const result = await recordManager.updateRecord(context.tenantSlug, 'alt_gorevler', reqId, body, reqUser?.id); return { respond: true, status: 200, headers: { 'Content-Type': 'application/json' }, body: result }; } catch(e) { return { respond: true, status: e.statusCode || 500, headers: { 'Content-Type': 'application/json' }, body: { message: e.message || e, errors: e.data } }; }",
+        "hashtags": "[\"#v9\"]"
+      },
+      {
+        "name": "Alt Görevler - DELETE",
+        "route_pattern": "/api/custom/alt_gorevler/:id",
+        "type": "http",
+        "active": 1,
+        "is_public": 1,
+        "priority": 100,
+        "code": "const reqMethod = payload.method; if (reqMethod !== 'DELETE') return; const reqId = payload.params?.id; if (!reqId || reqId === 'bulk') return; try { const result = await recordManager.deleteRecord(context.tenantSlug, 'alt_gorevler', reqId); return { respond: true, status: 200, headers: { 'Content-Type': 'application/json' }, body: result }; } catch(e) { return { respond: true, status: e.statusCode || 500, headers: { 'Content-Type': 'application/json' }, body: { message: e.message || e } }; }",
+        "hashtags": "[\"#v9\"]"
+      },
+      {
+        "name": "Fason İş Emirleri - GET List",
+        "route_pattern": "/api/custom/fason_is_emirleri",
+        "type": "http",
+        "active": 1,
+        "is_public": 1,
+        "priority": 100,
+        "code": "const reqMethod = payload.method; if (reqMethod !== 'GET') return; const reqId = payload.params?.id; if (reqId) return; try { const result = await recordManager.getRecords(context.tenantSlug, 'fason_is_emirleri', payload.query || query || {}); return { respond: true, status: 200, headers: { 'Content-Type': 'application/json' }, body: result }; } catch(e) { return { respond: true, status: e.statusCode || 500, headers: { 'Content-Type': 'application/json' }, body: { message: e.message || e } }; }",
+        "hashtags": "[\"#v9\"]"
+      },
+      {
+        "name": "Fason İş Emirleri - GET Single",
+        "route_pattern": "/api/custom/fason_is_emirleri/:id",
+        "type": "http",
+        "active": 1,
+        "is_public": 1,
+        "priority": 100,
+        "code": "const reqMethod = payload.method; if (reqMethod !== 'GET') return; const reqId = payload.params?.id; if (!reqId || reqId === 'bulk') return; try { const result = await recordManager.getRecord(context.tenantSlug, 'fason_is_emirleri', reqId); return { respond: true, status: 200, headers: { 'Content-Type': 'application/json' }, body: result }; } catch(e) { return { respond: true, status: e.statusCode || 500, headers: { 'Content-Type': 'application/json' }, body: { message: e.message || e } }; }",
+        "hashtags": "[\"#v9\"]"
+      },
+      {
+        "name": "Fason İş Emirleri - POST",
+        "route_pattern": "/api/custom/fason_is_emirleri",
+        "type": "http",
+        "active": 1,
+        "is_public": 1,
+        "priority": 100,
+        "code": "const reqMethod = payload.method; if (reqMethod !== 'POST') return; const body = payload.body || {}; const reqUser = context.user; try { const result = await recordManager.createRecord(context.tenantSlug, 'fason_is_emirleri', body, reqUser?.id); return { respond: true, status: 200, headers: { 'Content-Type': 'application/json' }, body: result }; } catch(e) { return { respond: true, status: e.statusCode || 500, headers: { 'Content-Type': 'application/json' }, body: { message: e.message || e, errors: e.data } }; }",
+        "hashtags": "[\"#v9\"]"
+      },
+      {
+        "name": "Fason İş Emirleri - PUT",
+        "route_pattern": "/api/custom/fason_is_emirleri/:id",
+        "type": "http",
+        "active": 1,
+        "is_public": 1,
+        "priority": 100,
+        "code": "const reqMethod = payload.method; if (reqMethod !== 'PUT') return; const reqId = payload.params?.id; if (!reqId || reqId === 'bulk') return; const body = payload.body || {}; const reqUser = context.user; try { const result = await recordManager.updateRecord(context.tenantSlug, 'fason_is_emirleri', reqId, body, reqUser?.id); return { respond: true, status: 200, headers: { 'Content-Type': 'application/json' }, body: result }; } catch(e) { return { respond: true, status: e.statusCode || 500, headers: { 'Content-Type': 'application/json' }, body: { message: e.message || e, errors: e.data } }; }",
+        "hashtags": "[\"#v9\"]"
+      },
+      {
+        "name": "Fason İş Emirleri - DELETE",
+        "route_pattern": "/api/custom/fason_is_emirleri/:id",
+        "type": "http",
+        "active": 1,
+        "is_public": 1,
+        "priority": 100,
+        "code": "const reqMethod = payload.method; if (reqMethod !== 'DELETE') return; const reqId = payload.params?.id; if (!reqId || reqId === 'bulk') return; try { const result = await recordManager.deleteRecord(context.tenantSlug, 'fason_is_emirleri', reqId); return { respond: true, status: 200, headers: { 'Content-Type': 'application/json' }, body: result }; } catch(e) { return { respond: true, status: e.statusCode || 500, headers: { 'Content-Type': 'application/json' }, body: { message: e.message || e } }; }",
+        "hashtags": "[\"#v9\"]"
+      },
+      {
+        "name": "Sipariş Parçalama Motoru (POST)",
+        "route_pattern": "/api/custom/siparisler",
+        "type": "http",
+        "active": 1,
+        "is_public": 1,
+        "priority": 90,
+        "code": "const reqMethod = payload.method; if (reqMethod !== 'POST') return; \nconst body = payload.body || {}; \nconst reqUser = context.user; \ntry { \n  const urunId = body.urun_id;\n  const sip_miktari = Number(body.siparis_miktari);\n  const urunRes = await recordManager.getRecord(context.tenantSlug, 'stoklar', urunId);\n  if(!urunRes) throw new Error(\"Ürün bulunamadı\");\n  \n  const urunData = urunRes; \n  let mevcut = urunData.mevcut_stok || 0;\n  let bloke = urunData.bloke_stok || 0;\n  let net_stok = mevcut - bloke;\n  if(net_stok < 0) net_stok = 0;\n  \n  let sevkiyat_bloke = 0;\n  let uretim_hedef = 0;\n  \n  if (net_stok >= sip_miktari) {\n     sevkiyat_bloke = sip_miktari;\n  } else {\n     sevkiyat_bloke = net_stok;\n     uretim_hedef = sip_miktari - net_stok;\n  }\n  \n  body.sevkiyat_bloke_miktar = sevkiyat_bloke;\n  body.uretim_hedef_miktar = uretim_hedef;\n  body.durum = 'Bekleyen İşler';\n  \n  const result = await recordManager.createRecord(context.tenantSlug, 'siparisler', body, reqUser?.id);\n  \n  if (sevkiyat_bloke > 0) {\n      await recordManager.updateRecord(context.tenantSlug, 'stoklar', urunId, { bloke_stok: bloke + sevkiyat_bloke }, reqUser?.id);\n  }\n  \n  if (uretim_hedef > 0) {\n      await recordManager.createRecord(context.tenantSlug, 'is_emirleri', {\n          siparis_id: result.id,\n          hedef_miktar: uretim_hedef,\n          gerceklesen_miktar: 0,\n          fire_miktari: 0,\n          durum: 'Bekliyor'\n      }, reqUser?.id);\n  }\n  \n  if(typeof publishWS !== 'undefined') publishWS('/api/ws/custom/siparis_guncellendi', { action: 'yeni_siparis', siparis_no: body.siparis_no });\n  \n  return { respond: true, status: 200, headers: { 'Content-Type': 'application/json' }, body: result }; \n} catch(e) { \n  return { respond: true, status: e.statusCode || 500, headers: { 'Content-Type': 'application/json' }, body: { message: e.message || e, errors: e.data } }; \n}",
+        "hashtags": "[\"#v9\"]"
+      },
+      {
+        "name": "MES Operations API (Production & Fason)",
+        "route_pattern": "/api/custom/mes/operations",
+        "type": "http",
+        "active": 1,
+        "is_public": 1,
+        "priority": 100,
+        "code": "try {\n  const bodyData = payload.method === 'POST' ? payload.body : (payload.query || payload);\n  const { action, data } = bodyData || {};\n  const reqUser = context.user; \n\n  if (action === 'islem_baslat') {\n     const { is_emri_id } = data;\n     await recordManager.updateRecord(context.tenantSlug, 'is_emirleri', is_emri_id, { durum: 'Üretimde' }, reqUser?.id);\n     const ie = await recordManager.getRecord(context.tenantSlug, 'is_emirleri', is_emri_id);\n     if(ie && ie.siparis_id) {\n         await recordManager.updateRecord(context.tenantSlug, 'siparisler', ie.siparis_id, { durum: 'Devam Edenler' }, reqUser?.id);\n     }\n     if(typeof publishWS !== 'undefined') publishWS('/api/ws/custom/siparis_guncellendi', { action: 'islem_baslat' });\n     return { respond: true, status: 200, body: { success: true } };\n  }\n  \n  if (action === 'islem_bitir') {\n     const { is_emri_id, uretilen, fire, net_sure_sn, gorev_adi } = data;\n     const ie = await recordManager.getRecord(context.tenantSlug, 'is_emirleri', is_emri_id);\n     const yeni_gerceklesen = (ie.gerceklesen_miktar || 0) + uretilen;\n     const yeni_fire = (ie.fire_miktari || 0) + fire;\n     await recordManager.updateRecord(context.tenantSlug, 'is_emirleri', is_emri_id, { durum: 'Tamamlandı', gerceklesen_miktar: yeni_gerceklesen, fire_miktari: yeni_fire }, reqUser?.id);\n     \n     if(gorev_adi) {\n         await recordManager.createRecord(context.tenantSlug, 'alt_gorevler', { is_emri_id: is_emri_id, gorev_adi: gorev_adi, net_sure_sn: net_sure_sn }, reqUser?.id);\n     }\n     \n     if(ie && ie.siparis_id) {\n         const sip = await recordManager.getRecord(context.tenantSlug, 'siparisler', ie.siparis_id);\n         const sip_yeni_uretilen = (sip.uretilen_miktar || 0) + uretilen;\n         let sip_durum = sip.durum;\n         if(sip_yeni_uretilen >= sip.uretim_hedef_miktar) sip_durum = 'Tamamlandı';\n         await recordManager.updateRecord(context.tenantSlug, 'siparisler', ie.siparis_id, { durum: sip_durum, uretilen_miktar: sip_yeni_uretilen }, reqUser?.id);\n         \n         const urunId = sip.urun_id;\n         if(urunId) {\n            const u = await recordManager.getRecord(context.tenantSlug, 'stoklar', urunId);\n            await recordManager.updateRecord(context.tenantSlug, 'stoklar', urunId, { mevcut_stok: (u.mevcut_stok || 0) + uretilen }, reqUser?.id);\n         }\n     }\n     if(typeof publishWS !== 'undefined') publishWS('/api/ws/custom/siparis_guncellendi', { action: 'islem_bitir' });\n     return { respond: true, status: 200, body: { success: true } };\n  }\n\n  if (action === 'fason_kabul') {\n     const { takip_no, tartilan_agirlik } = data;\n     const entFason = await sql`SELECT id FROM entities WHERE slug = 'fason_is_emirleri'`;\n     const fasonData = await sql`SELECT r.id, \n       MAX(CASE WHEN rf.key = 'takip_no' THEN rf.val_str END) as takip_no,\n       MAX(CASE WHEN rf.key = 'urun_id' THEN rf.val_num END) as urun_id,\n       MAX(CASE WHEN rf.key = 'kalan_miktar' THEN rf.val_num END) as kalan_miktar\n       FROM records r LEFT JOIN record_fields rf ON r.id = rf.record_id \n       WHERE r.entity_id = ${entFason[0].id} GROUP BY r.id HAVING MAX(CASE WHEN rf.key = 'takip_no' THEN rf.val_str END) = ${takip_no}`;\n     \n     if(fasonData.length === 0) throw new Error(\"Fason kaydı bulunamadı!\");\n     const f = fasonData[0];\n\n     const s = await recordManager.getRecord(context.tenantSlug, 'stoklar', f.urun_id);\n     if(!s) throw new Error(\"Stok kartı bulunamadı!\");\n     \n     const adet = Math.floor(tartilan_agirlik / (s.birim_agirlik || 1));\n     const yeni_kalan = (f.kalan_miktar || 0) - adet;\n     \n     await recordManager.updateRecord(context.tenantSlug, 'fason_is_emirleri', f.id, { kalan_miktar: yeni_kalan }, reqUser?.id);\n     await recordManager.updateRecord(context.tenantSlug, 'stoklar', s.id, { mevcut_stok: (s.mevcut_stok || 0) + adet }, reqUser?.id);\n     \n     return { respond: true, status: 200, body: { success: true, adet, urun_kodu: s.urun_kodu } };\n  }\n  return { respond: true, status: 400, body: { error: 'Unknown action' } };\n} catch (e) {\n  return { respond: true, status: 500, body: { error: e.message } };\n}",
+        "hashtags": "[\"#v9\"]"
+      }
+    ],
+    "pages": [
+      {
+        "title": "Cari (Müşteri & Tedarikçi) Yönetimi",
+        "route_pattern": "cariler",
+        "page_type": "regular",
+        "active": 1,
+        "template_string": "<RecordsManager slug='cariler' api-endpoint='/api/custom/cariler' />",
+        "script_content": "",
+        "hashtags": "[\"#v9\"]"
+      },
+      {
+        "title": "Depolar",
+        "route_pattern": "depolar",
+        "page_type": "regular",
+        "active": 1,
+        "template_string": "<RecordsManager slug='depolar' api-endpoint='/api/custom/depolar' />",
+        "script_content": "",
+        "hashtags": "[\"#v9\"]"
+      },
+      {
+        "title": "Departmanlar",
+        "route_pattern": "departmanlar",
+        "page_type": "regular",
+        "active": 1,
+        "template_string": "<RecordsManager slug='departmanlar' api-endpoint='/api/custom/departmanlar' />",
+        "script_content": "",
+        "hashtags": "[\"#v9\"]"
+      },
+      {
+        "title": "Stok & Ürün Yönetimi",
+        "route_pattern": "stoklar",
+        "page_type": "regular",
+        "active": 1,
+        "template_string": "<RecordsManager slug='stoklar' api-endpoint='/api/custom/stoklar' />",
+        "script_content": "",
+        "hashtags": "[\"#v9\"]"
+      },
+      {
+        "title": "Ürün Reçeteleri",
+        "route_pattern": "receteler",
+        "page_type": "regular",
+        "active": 1,
+        "template_string": "<RecordsManager slug='receteler' api-endpoint='/api/custom/receteler' />",
+        "script_content": "",
+        "hashtags": "[\"#v9\"]"
+      },
+      {
+        "title": "Alt Görevler",
+        "route_pattern": "alt_gorevler",
+        "page_type": "regular",
+        "active": 1,
+        "template_string": "<RecordsManager slug='alt_gorevler' api-endpoint='/api/custom/alt_gorevler' />",
+        "script_content": "",
+        "hashtags": "[\"#v9\"]"
+      },
+      {
+        "title": "Siparişler & Canlı Takip",
+        "route_pattern": "siparisler",
+        "page_type": "regular",
+        "active": 1,
+        "template_string": "<RecordsManager slug=\"siparisler\" api-endpoint=\"/api/custom/siparisler\" />",
+        "script_content": "if (typeof useWS !== 'undefined') {\n   useWS('/api/ws/custom/siparis_guncellendi', (payload) => {\n       // Refresh via finding the refresh button since RecordsManager doesn't expose loadItems directly\n       const btns = document.querySelectorAll('.mdi-refresh');\n       if(btns.length > 0 && btns[0].parentElement) {\n           btns[0].parentElement.click();\n       }\n   });\n}\nreturn {};",
+        "hashtags": "[\"#v9\"]"
+      },
+      {
+        "title": "İş Emirleri & Üretim İstasyonu",
+        "route_pattern": "is_emirleri",
+        "page_type": "regular",
+        "active": 1,
+        "template_string": "<div>\n  <RecordsManager slug=\"is_emirleri\" api-endpoint=\"/api/custom/is_emirleri\">\n    <template #extraRowActions=\"{ item }\">\n       <v-btn v-if=\"item.durum !== 'Tamamlandı'\" icon=\"mdi-play-circle\" color=\"primary\" variant=\"text\" size=\"small\" @click=\"selectOrder(item)\" title=\"Üretime Geç\"></v-btn>\n    </template>\n  </RecordsManager>\n\n  <ItemDialog v-model=\"dialogOpen\" title=\"Üretim ve Görev Ekranı\" mode=\"edit\" :max-width=\"500\" @save=\"finishOrder\">\n    <template #default=\"{ formData }\">\n       <v-text-field v-model=\"formData.gorev_adi\" label=\"Yapılan Alt Görev Adı (Kaynak vb.)\" :disabled=\"isRunning\" class=\"mb-4\" />\n       \n       <div v-if=\"!isRunning\" class=\"text-center\">\n          <v-btn color=\"primary\" @click=\"startTimer\" prepend-icon=\"mdi-play\">KRONOMETRE BAŞLAT</v-btn>\n       </div>\n       <div v-else class=\"text-center\">\n          <div class=\"text-h3 mb-4\">{{ timerStr }}</div>\n          <v-btn color=\"error\" class=\"mb-4\" @click=\"pauseTimer\" prepend-icon=\"mdi-pause\">DURAKLAT</v-btn>\n          <v-text-field v-model=\"formData.uretilen\" type=\"number\" label=\"Üretilen Sağlam Adet\" />\n          <v-text-field v-model=\"formData.fire\" type=\"number\" label=\"Fire Adedi\" />\n       </div>\n    </template>\n  </ItemDialog>\n</div>",
+        "script_content": "const dialogOpen = ref(false);\nconst activeOrder = ref(null);\n\nconst isRunning = ref(false);\nconst baslamaZamani = ref(0);\nconst saniye = ref(0);\nlet intv = null;\n\nconst timerStr = computed(() => {\n   const m = Math.floor(saniye.value / 60).toString().padStart(2, '0');\n   const s = (saniye.value % 60).toString().padStart(2, '0');\n   return `${m}:${s}`;\n});\n\nconst selectOrder = (item) => {\n   activeOrder.value = item;\n   saniye.value = 0;\n   isRunning.value = false;\n   dialogOpen.value = true;\n};\n\nconst startTimer = async () => {\n   isRunning.value = true;\n   baslamaZamani.value = Date.now();\n   intv = setInterval(() => { saniye.value++; }, 1000);\n   try {\n      await $fetch('/api/custom/mes/operations', { method: 'POST', body: { action: 'islem_baslat', data: { is_emri_id: activeOrder.value.id } } });\n   } catch(e){}\n};\n\nconst pauseTimer = () => {\n   isRunning.value = false;\n   if(intv) clearInterval(intv);\n};\n\nconst finishOrder = async (formData) => {\n   isRunning.value = false;\n   if(intv) clearInterval(intv);\n   \n   try {\n      await $fetch('/api/custom/mes/operations', { method: 'POST', body: { \n         action: 'islem_bitir', \n         data: { is_emri_id: activeOrder.value.id, uretilen: Number(formData.uretilen || 0), fire: Number(formData.fire || 0), net_sure_sn: saniye.value, gorev_adi: formData.gorev_adi } \n      } });\n      dialogOpen.value = false;\n      \n      const btns = document.querySelectorAll('.mdi-refresh');\n      if(btns.length > 0 && btns[0].parentElement) btns[0].parentElement.click();\n      \n   } catch(e) {\n      alert(\"Hata oluştu\");\n   }\n};\n\nif (typeof useWS !== 'undefined') {\n   useWS('/api/ws/custom/siparis_guncellendi', (payload) => {\n       const btns = document.querySelectorAll('.mdi-refresh');\n       if(btns.length > 0 && btns[0].parentElement) btns[0].parentElement.click();\n   });\n}\n\nreturn { dialogOpen, activeOrder, selectOrder, isRunning, saniye, timerStr, startTimer, pauseTimer, finishOrder };",
+        "hashtags": "[\"#v9\"]"
+      },
+      {
+        "title": "Fason İş Emirleri & Kantar",
+        "route_pattern": "fason_is_emirleri",
+        "page_type": "regular",
+        "active": 1,
+        "template_string": "<div>\n  <RecordsManager slug=\"fason_is_emirleri\" api-endpoint=\"/api/custom/fason_is_emirleri\">\n    <template #extraRowActions=\"{ item }\">\n       <v-btn v-if=\"item.kalan_miktar > 0\" icon=\"mdi-scale\" color=\"warning\" variant=\"text\" size=\"small\" @click=\"openKantar(item)\" title=\"Kantardan Kabul Et\"></v-btn>\n    </template>\n  </RecordsManager>\n\n  <ItemDialog v-model=\"dialogOpen\" title=\"Kantar (Tartım Girişi)\" mode=\"edit\" :max-width=\"400\" @save=\"kabulEt\">\n    <template #default=\"{ formData }\">\n       <v-text-field v-model=\"formData.tartilan_agirlik\" type=\"number\" label=\"Kantardan Gelen Ağırlık (kg)\" required autofocus />\n       <div class=\"text-caption text-grey\">Sistem stok ağırlığına bölerek otomatik adedi hesaplayacak ve stoğa alacaktır.</div>\n    </template>\n  </ItemDialog>\n</div>",
+        "script_content": "const dialogOpen = ref(false);\nconst activeItem = ref(null);\n\nconst openKantar = (item) => {\n   activeItem.value = item;\n   dialogOpen.value = true;\n};\n\nconst kabulEt = async (formData) => {\n   try {\n      const res = await $fetch('/api/custom/mes/operations', { method: 'POST', body: { \n         action: 'fason_kabul', \n         data: { takip_no: activeItem.value.takip_no, tartilan_agirlik: Number(formData.tartilan_agirlik) } \n      } });\n      dialogOpen.value = false;\n      alert(res.adet + ' Adet stoğa eklendi!');\n      \n      const btns = document.querySelectorAll('.mdi-refresh');\n      if(btns.length > 0 && btns[0].parentElement) btns[0].parentElement.click();\n      \n   } catch(e) {\n      alert(\"Hata oluştu\");\n   }\n};\n\nreturn { dialogOpen, openKantar, kabulEt };",
+        "hashtags": "[\"#v9\"]"
+      }
+    ],
+    "utils": [],
+    "workers": []
+  }
+}

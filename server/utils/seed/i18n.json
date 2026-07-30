@@ -1,0 +1,2410 @@
+{
+  "action.addNew": {
+    "en": "Add New {name}",
+    "tr": "Yeni {name} Ekle"
+  },
+  "action.addValidationRule": {
+    "en": "Add Validation Rule",
+    "tr": "Geçerlilik Kuralı Ekle"
+  },
+  "action.allowNotifications": {
+    "en": "Allow Notifications",
+    "tr": "Bildirimlere İzin Ver"
+  },
+  "action.backToSystemPanel": {
+    "en": "Back to System Panel",
+    "tr": "Sistem Paneline Dön"
+  },
+  "action.copyForTelemetry": {
+    "en": "Copy to assign device (Telemetry)",
+    "tr": "Cihaz (Telemetri) atamak için kopyala"
+  },
+  "action.deleteField": {
+    "en": "Delete Field",
+    "tr": "Alanı Sil"
+  },
+  "action.disableNotifications": {
+    "en": "Disable Notifications",
+    "tr": "Bildirimleri Kapat"
+  },
+  "action.downloadBackup": {
+    "en": "Download Backup",
+    "tr": "Yedeği İndir"
+  },
+  "action.erDiagramEditor": {
+    "en": "ER Diagram Editor",
+    "tr": "ER Diyagram Editörü"
+  },
+  "action.export": {
+    "en": "Export",
+    "tr": "Dışa Aktar"
+  },
+  "action.exportFormat": {
+    "en": "Export {format}",
+    "tr": "{format} Dışa Aktar"
+  },
+  "action.goBack": {
+    "en": "Go Back",
+    "tr": "Geri Dön"
+  },
+  "action.history": {
+    "en": "History",
+    "tr": "Geçmiş"
+  },
+  "action.import": {
+    "en": "Import",
+    "tr": "İçe Aktar"
+  },
+  "action.importFormat": {
+    "en": "Import {format}",
+    "tr": "{format} İçe Aktar"
+  },
+  "action.manageRecords": {
+    "en": "Manage Records",
+    "tr": "Kayıtları Yönet"
+  },
+  "action.moveDown": {
+    "en": "Move Down",
+    "tr": "Aşağı Taşı"
+  },
+  "action.moveUp": {
+    "en": "Move Up",
+    "tr": "Yukarı Taşı"
+  },
+  "action.newCommand": {
+    "en": "New Command",
+    "tr": "Yeni Komut"
+  },
+  "action.openPage": {
+    "en": "Open Page",
+    "tr": "Sayfayı Aç"
+  },
+  "action.returnTenantHome": {
+    "en": "Return to Tenant Home",
+    "tr": "Kiracı Ana Sayfasına Dön"
+  },
+  "action.saveCode": {
+    "en": "Save Code",
+    "tr": "Kodu Kaydet"
+  },
+  "action.sendCommand": {
+    "en": "Send Command",
+    "tr": "Komut Gönder"
+  },
+  "action.start": {
+    "en": "Start",
+    "tr": "Başlat"
+  },
+  "action.stop": {
+    "en": "Stop",
+    "tr": "Durdur"
+  },
+  "action.telemetryData": {
+    "en": "Telemetry Data",
+    "tr": "Telemetri Verileri"
+  },
+  "action.updatePassword": {
+    "en": "Update Password",
+    "tr": "Şifreyi Güncelle"
+  },
+  "action.uploadBackup": {
+    "en": "Upload Backup",
+    "tr": "Yedeği Yükle"
+  },
+  "appStudio.description": {
+    "en": "Enter the common tag of the application to export or view the summary of the vertical application you have developed.",
+    "tr": "Geliştirdiğiniz dikey uygulamayı dışa aktarmak (Export) veya özetini görmek için uygulamanın ortak etiketini (Tag) girin."
+  },
+  "appStudio.itemsCount": {
+    "en": "Items",
+    "tr": "Adet"
+  },
+  "appStudio.moduleContent": {
+    "en": "Module Content",
+    "tr": "Modül İçeriği"
+  },
+  "appStudio.scan": {
+    "en": "Scan",
+    "tr": "Tara"
+  },
+  "appStudio.scanFailed": {
+    "en": "Scan failed",
+    "tr": "Tarama başarısız"
+  },
+  "appStudio.selectTagWarning": {
+    "en": "Please enter or select at least one tag.",
+    "tr": "Lütfen en az bir etiket girin veya seçin."
+  },
+  "appStudio.tagLabel": {
+    "en": "Application Tags (e.g. hr-module)",
+    "tr": "Uygulama Etiketleri (Örn: ik-modulu)"
+  },
+  "appStudio.title": {
+    "en": "App Studio (Application Manager)",
+    "tr": "App Studio (Uygulama Yöneticisi)"
+  },
+  "common.actions": {
+    "en": "Actions",
+    "tr": "İşlemler"
+  },
+  "common.active": {
+    "en": "Active",
+    "tr": "Aktif"
+  },
+  "common.add": {
+    "en": "Add New",
+    "tr": "Yeni Ekle"
+  },
+  "common.addAtLeastOneOption": {
+    "en": "Add at least one option",
+    "tr": "En az bir seçenek ekleyin"
+  },
+  "common.addField": {
+    "en": "Add Field",
+    "tr": "Alan Ekle"
+  },
+  "common.addRule": {
+    "en": "Add Rule",
+    "tr": "Kural Ekle"
+  },
+  "common.admin": {
+    "en": "Admin",
+    "tr": "Admin"
+  },
+  "common.advancedFilters": {
+    "en": "Advanced Filters",
+    "tr": "Gelişmiş Filtreler"
+  },
+  "common.cancel": {
+    "en": "Cancel",
+    "tr": "İptal"
+  },
+  "common.clear": {
+    "en": "Clear",
+    "tr": "Temizle"
+  },
+  "common.code": {
+    "en": "Code",
+    "tr": "Kod"
+  },
+  "common.codeEditor": {
+    "en": "Code Editor",
+    "tr": "Kod Editörü"
+  },
+  "common.customPages": {
+    "en": "Custom Pages",
+    "tr": "Özel Sayfalar"
+  },
+  "common.default": {
+    "en": "Default",
+    "tr": "Varsayılan"
+  },
+  "common.delete": {
+    "en": "Delete",
+    "tr": "Sil"
+  },
+  "common.deleteAll": {
+    "en": "Delete All",
+    "tr": "Tümünü Sil"
+  },
+  "common.detail": {
+    "en": "Detail",
+    "tr": "Detay"
+  },
+  "common.edit": {
+    "en": "Edit",
+    "tr": "Düzenle"
+  },
+  "common.emailFormat": {
+    "en": "Email Format",
+    "tr": "E-Posta Formatı"
+  },
+  "common.error": {
+    "en": "Error",
+    "tr": "Hata"
+  },
+  "common.errorMessage": {
+    "en": "Error Message",
+    "tr": "Hata Mesajı"
+  },
+  "common.exitFullscreen": {
+    "en": "Exit Fullscreen",
+    "tr": "Tam Ekrandan Çık"
+  },
+  "common.fieldName": {
+    "en": "Field Name",
+    "tr": "Alan Adı"
+  },
+  "common.fullscreen": {
+    "en": "Fullscreen",
+    "tr": "Tam Ekran"
+  },
+  "common.home": {
+    "en": "Home",
+    "tr": "Anasayfa"
+  },
+  "common.id": {
+    "en": "ID",
+    "tr": "ID"
+  },
+  "common.info": {
+    "en": "Information",
+    "tr": "Bilgi"
+  },
+  "common.language": {
+    "en": "Language",
+    "tr": "Dil"
+  },
+  "common.languageName": {
+    "en": "Language Name",
+    "tr": "Dil Adı"
+  },
+  "common.loading": {
+    "en": "Loading...",
+    "tr": "Yükleniyor..."
+  },
+  "common.login": {
+    "en": "Login",
+    "tr": "Giriş Yap"
+  },
+  "common.maximumValue": {
+    "en": "Maximum Value",
+    "tr": "Maksimum Değer"
+  },
+  "common.minimumValue": {
+    "en": "Minimum Value",
+    "tr": "Minimum Değer"
+  },
+  "common.name": {
+    "en": "Name",
+    "tr": "Ad"
+  },
+  "common.noData": {
+    "en": "No data found",
+    "tr": "Kayıt bulunamadı"
+  },
+  "common.optionsPressEnterToAdd": {
+    "en": "Options (Press Enter to add)",
+    "tr": "Seçenekler (Enter ile ekleyin)"
+  },
+  "common.pages": {
+    "en": "Pages",
+    "tr": "Sayfalar"
+  },
+  "common.passive": {
+    "en": "Passive",
+    "tr": "Pasif"
+  },
+  "common.plainText": {
+    "en": "Plain Text",
+    "tr": "Düz Metin (Plain)"
+  },
+  "common.priority": {
+    "en": "Priority",
+    "tr": "Öncelik"
+  },
+  "common.profileSettings": {
+    "en": "Profile Settings",
+    "tr": "Profil Ayarları"
+  },
+  "common.public": {
+    "en": "Public",
+    "tr": "Public"
+  },
+  "common.refresh": {
+    "en": "Refresh",
+    "tr": "Yenile"
+  },
+  "common.regularExpressionRegex": {
+    "en": "Regular Expression (Regex)",
+    "tr": "Düzenli İfade (Regex)"
+  },
+  "common.role": {
+    "en": "Role",
+    "tr": "Rol"
+  },
+  "common.routePattern": {
+    "en": "Route Pattern",
+    "tr": "Rota (Route)"
+  },
+  "common.save": {
+    "en": "Save",
+    "tr": "Kaydet"
+  },
+  "common.search": {
+    "en": "Search...",
+    "tr": "Ara..."
+  },
+  "common.secretKey": {
+    "en": "Secret Key",
+    "tr": "Gizli Anahtar (Secret Key)"
+  },
+  "common.showInTable": {
+    "en": "Show in Table",
+    "tr": "Tabloda Göster"
+  },
+  "common.status": {
+    "en": "Status",
+    "tr": "Durum"
+  },
+  "common.systemSettings": {
+    "en": "System Settings",
+    "tr": "Sistem Ayarları"
+  },
+  "common.tags": {
+    "en": "Tags",
+    "tr": "Etiketler"
+  },
+  "common.target": {
+    "en": "Target",
+    "tr": "Target"
+  },
+  "common.title": {
+    "en": "Title",
+    "tr": "Başlık"
+  },
+  "common.tryAgain": {
+    "en": "Try Again",
+    "tr": "Tekrar Dene"
+  },
+  "common.type": {
+    "en": "Type",
+    "tr": "Tip / Tür"
+  },
+  "common.update": {
+    "en": "Update",
+    "tr": "Güncelle"
+  },
+  "common.urlFormat": {
+    "en": "URL Format",
+    "tr": "URL Formatı"
+  },
+  "common.useTheLinksInTheMenuToAccessYourPages": {
+    "en": "Use the links in the menu to access your pages.",
+    "tr": "Menüdeki bağlantıları kullanarak sayfalarınıza erişebilirsiniz."
+  },
+  "common.username": {
+    "en": "Username",
+    "tr": "Kullanıcı Adı"
+  },
+  "common.value": {
+    "en": "Value",
+    "tr": "Değer"
+  },
+  "common.virtualConsole": {
+    "en": "Virtual Console",
+    "tr": "Sanal Konsol"
+  },
+  "confirm.delete": {
+    "en": "Are you sure you want to delete?",
+    "tr": "Silmek istediğinize emin misiniz?"
+  },
+  "console.connected": {
+    "en": "Connected, waiting for logs...",
+    "tr": "Bağlantı sağlandı, log bekleniyor..."
+  },
+  "console.connecting": {
+    "en": "Connecting...",
+    "tr": "Bağlantı bekleniyor..."
+  },
+  "console.maxRetries": {
+    "en": "Connection failed: Maximum retries reached.",
+    "tr": "Bağlantı kurulamadı: Maksimum deneme sayısına ulaşıldı."
+  },
+  "console.notReady": {
+    "en": "Not Ready",
+    "tr": "Hazır Değil"
+  },
+  "crud.confirmDeleteMulti": {
+    "en": "{0} records will be deleted. Do you want to continue?",
+    "tr": "{0} adet kayıt silinecek. Devam etmek istiyor musunuz?"
+  },
+  "dashboard.dataOptDesc": {
+    "en": "Manage platform configuration, system variables, and general settings.",
+    "tr": "Platform yapılandırmasını, sistem değişkenlerini ve genel ayarları yönetin."
+  },
+  "dashboard.dataOptTitle": {
+    "en": "System Settings",
+    "tr": "Sistem Ayarları"
+  },
+  "dashboard.devicesDesc": {
+    "en": "Manage IoT devices and telemetry data.",
+    "tr": "IoT cihazlarını ve telemetri verilerini yönetin."
+  },
+  "dashboard.dynPagesDesc": {
+    "en": "Create pages at runtime with Vuetify JSON schema.",
+    "tr": "Vuetify JSON şeması ile runtime'da sayfalar oluşturun."
+  },
+  "dashboard.endpointsDesc": {
+    "en": "Manage your HTTP, WS, and MQTT endpoints.",
+    "tr": "HTTP, WS ve MQTT uç noktalarınızı yönetin."
+  },
+  "dashboard.entitiesDesc": {
+    "en": "Custom data schemas and records.",
+    "tr": "Özel veri şemaları ve kayıtlar."
+  },
+  "dashboard.install": {
+    "en": "Install App",
+    "tr": "Uygulamayı Yükle"
+  },
+  "dashboard.landingDesc": {
+    "en": "Elevate your business with independent data management, real-time telemetry processing, and instantly updatable custom interfaces.",
+    "tr": "Bağımsız veri yönetimi, gerçek zamanlı telemetri işleme ve anında güncellenebilen özel arayüz yapısıyla işletmenizi bir üst seviyeye taşıyın."
+  },
+  "dashboard.landingTitle": {
+    "en": "Next-Gen Industrial IoT Platform",
+    "tr": "Yeni Nesil Endüstriyel IoT Platformu"
+  },
+  "dashboard.login": {
+    "en": "Log In to System",
+    "tr": "Sisteme Giriş Yap"
+  },
+  "dashboard.middlewaresDesc": {
+    "en": "Define custom rules intercepting HTTP requests.",
+    "tr": "HTTP isteklerini yakalayan özel kurallar tanımlayın."
+  },
+  "dashboard.runtimeDesc": {
+    "en": "Create APIs, pages, and middlewares over the database — no build required.",
+    "tr": "Veritabanı üzerinden API, sayfa ve middleware oluşturun — build gerektirmez."
+  },
+  "dashboard.runtimeTitle": {
+    "en": "Runtime Development Environment",
+    "tr": "Runtime Geliştirme Ortamı"
+  },
+  "dashboard.welcome": {
+    "en": "Welcome, {username}",
+    "tr": "Hoş Geldiniz, {username}"
+  },
+  "dashboard.workersDesc": {
+    "en": "Manage your Daemon and Cron processes.",
+    "tr": "Daemon ve Cron işlemlerini yönetin."
+  },
+  "device.downlink": {
+    "en": "Device Control (Downlink):",
+    "tr": "Cihaz Kontrolü (Downlink):"
+  },
+  "entity.device": {
+    "en": "Device",
+    "tr": "Cihaz"
+  },
+  "entity.entity": {
+    "en": "Entity",
+    "tr": "Varlık"
+  },
+  "entity.language": {
+    "en": "Language",
+    "tr": "Dil"
+  },
+  "entity.microservice": {
+    "en": "Microservice",
+    "tr": "Mikroservis"
+  },
+  "entity.middleware": {
+    "en": "Middleware",
+    "tr": "Ara Katman"
+  },
+  "entity.page": {
+    "en": "Page",
+    "tr": "Sayfa"
+  },
+  "entity.record": {
+    "en": "Record",
+    "tr": "Kayıt"
+  },
+  "entity.task": {
+    "en": "Task",
+    "tr": "Görev"
+  },
+  "entity.tenant": {
+    "en": "Tenant",
+    "tr": "Firma"
+  },
+  "entity.user": {
+    "en": "User",
+    "tr": "Kullanıcı"
+  },
+  "entity.util": {
+    "en": "Utility",
+    "tr": "Metot"
+  },
+  "entity.var": {
+    "en": "Variable",
+    "tr": "Değişken"
+  },
+  "entity.ws": {
+    "en": "WS Channel",
+    "tr": "WS Kanalı"
+  },
+  "er.addNewField": {
+    "en": "Add New Field",
+    "tr": "Yeni Alan Ekle"
+  },
+  "er.alphanumericOnly": {
+    "en": "Alphanumeric Only",
+    "tr": "Sadece Alfanümerik"
+  },
+  "er.autoLayout": {
+    "en": "Auto Layout",
+    "tr": "Otomatik Yerle"
+  },
+  "er.createEntityToStart": {
+    "en": "Create a new entity to get started",
+    "tr": "Yeni bir varlık oluşturarak başlayın"
+  },
+  "er.createFirstEntity": {
+    "en": "Create First Entity",
+    "tr": "İlk Varlığı Oluştur"
+  },
+  "er.createNewEntity": {
+    "en": "Create New Entity",
+    "tr": "Yeni Varlık Oluştur"
+  },
+  "er.editEntity": {
+    "en": "Edit Entity",
+    "tr": "Varlığı Düzenle"
+  },
+  "er.editField": {
+    "en": "Edit Field",
+    "tr": "Alanı Düzenle"
+  },
+  "er.entitySlug": {
+    "en": "URL Slug",
+    "tr": "URL Kısa Adı (Slug)"
+  },
+  "er.entitySlugHint": {
+    "en": "Unique, lowercase, with hyphens (e.g., work-order)",
+    "tr": "Benzersiz, küçük harf, tire ile (örn: is-emri)"
+  },
+  "er.fieldNameRequired": {
+    "en": "Field name is required",
+    "tr": "Alan adı zorunludur"
+  },
+  "er.hashMethod": {
+    "en": "Hash Method",
+    "tr": "Şifreleme (Hash) Yöntemi"
+  },
+  "er.integerOnly": {
+    "en": "Integer Only",
+    "tr": "Sadece Tam Sayı"
+  },
+  "er.mandatoryAccept": {
+    "en": "Mandatory Accept",
+    "tr": "Zorunlu Kabul"
+  },
+  "er.maxTime": {
+    "en": "Max Time",
+    "tr": "En Geç Saat"
+  },
+  "er.newEntity": {
+    "en": "New Entity",
+    "tr": "Yeni Varlık"
+  },
+  "er.noEntities": {
+    "en": "No entities yet",
+    "tr": "Henüz varlık yok"
+  },
+  "er.pastOnly": {
+    "en": "Past Only",
+    "tr": "Sadece Geçmiş"
+  },
+  "er.primaryName": {
+    "en": "Primary Name",
+    "tr": "Birincil Ad"
+  },
+  "er.stepMultiple": {
+    "en": "Step Multiple",
+    "tr": "Artış Katı (Step)"
+  },
+  "er.targetEntityRequired": {
+    "en": "Target entity selection is required",
+    "tr": "Hedef varlık seçimi zorunludur"
+  },
+  "er.timeStep": {
+    "en": "Time Step",
+    "tr": "Zaman Aralığı"
+  },
+  "er.validJson": {
+    "en": "Valid JSON",
+    "tr": "Geçerli JSON"
+  },
+  "er.validUuid": {
+    "en": "Valid UUID",
+    "tr": "Geçerli UUID"
+  },
+  "er.validationRules": {
+    "en": "Validation Rules",
+    "tr": "Geçerlilik Kuralları"
+  },
+  "er.zoomIn": {
+    "en": "Zoom In",
+    "tr": "Yakınlaştır"
+  },
+  "er.zoomOut": {
+    "en": "Zoom Out",
+    "tr": "Uzaklaştır"
+  },
+  "er.zoomReset": {
+    "en": "Reset Zoom",
+    "tr": "Sıfırla"
+  },
+  "error.entityNotFound": {
+    "en": "Entity not found",
+    "tr": "Varlık bulunamadı"
+  },
+  "error.fetchRecords": {
+    "en": "Error fetching records.",
+    "tr": "Kayıtlar alınırken hata oluştu."
+  },
+  "error.fileNotFound": {
+    "en": "File not found",
+    "tr": "Dosya bulunamadı"
+  },
+  "error.fillRequired": {
+    "en": "Please fill in the required fields.",
+    "tr": "Lütfen gerekli alanları doldurun."
+  },
+  "error.forbidden": {
+    "en": "Forbidden",
+    "tr": "Yasak"
+  },
+  "error.historyLoad": {
+    "en": "Failed to load command history:",
+    "tr": "Komut geçmişi yüklenemedi:"
+  },
+  "error.importError": {
+    "en": "Import error",
+    "tr": "İçe aktarma hatası"
+  },
+  "error.invalidFormat": {
+    "en": "Invalid format",
+    "tr": "Geçersiz format"
+  },
+  "error.invalidRoute": {
+    "en": "Invalid page route.",
+    "tr": "Geçersiz sayfa yolu."
+  },
+  "error.noIdsProvided": {
+    "en": "No ids provided",
+    "tr": "Kimlik numarası belirtilmedi"
+  },
+  "error.noTargetId": {
+    "en": "No target ID specified",
+    "tr": "Hedef kimliği belirtilmedi"
+  },
+  "error.notFound": {
+    "en": "Not found",
+    "tr": "Bulunamadı"
+  },
+  "error.operationFailed": {
+    "en": "Operation failed.",
+    "tr": "İşlem başarısız."
+  },
+  "error.pageLoadFailed": {
+    "en": "Page failed to load.",
+    "tr": "Sayfa yüklenemedi."
+  },
+  "error.recordNotFound": {
+    "en": "Record not found",
+    "tr": "Kayıt bulunamadı"
+  },
+  "error.recordsArrayExpected": {
+    "en": "Records array expected",
+    "tr": "Kayıt dizisi bekleniyor"
+  },
+  "error.ruleProcess": {
+    "en": "Rule processing error!",
+    "tr": "Kural işleme hatası!"
+  },
+  "error.sandboxCodeLoad": {
+    "en": "Failed to load Sandbox code",
+    "tr": "Sandbox kodu yüklenemedi"
+  },
+  "error.saveError": {
+    "en": "Save Error:",
+    "tr": "Kayıt Hatası:"
+  },
+  "errors.adminRequired": {
+    "en": "Admin access required.",
+    "tr": "Yönetici erişimi gerekli."
+  },
+  "errors.appTagsRequired": {
+    "en": "You must specify one or more application tags. (e.g., meet, radio)",
+    "tr": "Bir veya daha fazla uygulama etiketi (tag) belirtmelisiniz. (Örn: meet, radio)"
+  },
+  "errors.badRequest": {
+    "en": "Bad Request",
+    "tr": "Geçersiz İstek"
+  },
+  "errors.cannotDeleteSelf": {
+    "en": "You cannot delete your own account",
+    "tr": "Kendi hesabınızı silemezsiniz"
+  },
+  "errors.commandSendFailed": {
+    "en": "Failed to send command to device",
+    "tr": "Cihaza komut gönderilemedi"
+  },
+  "errors.componentNotFound": {
+    "en": "Component not found",
+    "tr": "Bileşen bulunamadı"
+  },
+  "errors.deviceDuplicate": {
+    "en": "A device with this ID already exists",
+    "tr": "Bu ID'ye sahip bir cihaz zaten mevcut"
+  },
+  "errors.deviceIdRequired": {
+    "en": "Device ID is required",
+    "tr": "Cihaz ID zorunludur"
+  },
+  "errors.duplicateEndpoint": {
+    "en": "An endpoint with the same name or path already exists",
+    "tr": "Aynı isim veya path'e sahip bir uç nokta zaten mevcut"
+  },
+  "errors.duplicateKey": {
+    "en": "This key is already in use",
+    "tr": "Bu anahtar zaten kullanılıyor"
+  },
+  "errors.duplicateSlug": {
+    "en": "This slug is already in use",
+    "tr": "Bu slug zaten kullanılıyor"
+  },
+  "errors.entityIdRequired": {
+    "en": "Entity ID is required",
+    "tr": "Varlık ID'si zorunludur"
+  },
+  "errors.entityNotFound": {
+    "en": "Entity not found",
+    "tr": "Varlık bulunamadı"
+  },
+  "errors.forbidden": {
+    "en": "Forbidden",
+    "tr": "Yasak"
+  },
+  "errors.forbiddenAdminOnly": {
+    "en": "Forbidden: API endpoints are strictly admin-only",
+    "tr": "Yasak: API uç noktaları sadece yöneticilere özeldir"
+  },
+  "errors.importDataRequired": {
+    "en": "Import data is required. Please provide a valid array",
+    "tr": "İçe aktarma verisi gereklidir. Geçerli bir dizi gönderin"
+  },
+  "errors.importLimitExceeded": {
+    "en": "Import limit exceeded. Maximum 5000 records allowed",
+    "tr": "İçe aktarma limiti aşıldı. En fazla 5000 kayıt gönderilebilir"
+  },
+  "errors.importValidationErrors": {
+    "en": "Import completed with validation errors: ",
+    "tr": "İçe aktarma doğrulama hatalarıyla tamamlandı: "
+  },
+  "errors.internalError": {
+    "en": "An internal error occurred",
+    "tr": "Dahili bir hata oluştu"
+  },
+  "errors.invalidAppPackage": {
+    "en": "Invalid application package (JSON format error).",
+    "tr": "Geçersiz uygulama paketi (JSON formatı hatalı)."
+  },
+  "errors.invalidCredentials": {
+    "en": "Invalid username or password",
+    "tr": "Geçersiz kullanıcı adı veya şifre"
+  },
+  "errors.invalidCronExpression": {
+    "en": "Invalid cron expression. Must have 5 or 6 fields",
+    "tr": "Geçersiz cron ifadesi. 5 veya 6 alandan oluşmalıdır"
+  },
+  "errors.invalidKeyFormat": {
+    "en": "Key must contain only letters, numbers and underscores",
+    "tr": "Anahtar sadece harf, rakam ve alt çizgi içerebilir"
+  },
+  "errors.invalidPath": {
+    "en": "Invalid page path.",
+    "tr": "Geçersiz sayfa yolu."
+  },
+  "errors.invalidTarget": {
+    "en": "Invalid target parameter. Must be 'ui' or 'shared'",
+    "tr": "Geçersiz hedef parametresi. 'ui' veya 'shared' olmalıdır"
+  },
+  "errors.invalidTemplate": {
+    "en": "Invalid template package (JSON format error).",
+    "tr": "Geçersiz şablon paketi (JSON formatı hatalı)."
+  },
+  "errors.loginRequired": {
+    "en": "Please log in to access this page",
+    "tr": "Bu sayfaya erişmek için giriş yapmalısınız"
+  },
+  "errors.maskedSecretNotAllowed": {
+    "en": "Cannot save a masked secret value. Please enter the actual value",
+    "tr": "Maskelenmiş gizli değer kaydedilemez. Lütfen gerçek değeri girin"
+  },
+  "errors.methodNotAllowed": {
+    "en": "This HTTP method is not allowed",
+    "tr": "Bu HTTP metodu desteklenmiyor"
+  },
+  "errors.oldPasswordIncorrect": {
+    "en": "Current password is incorrect",
+    "tr": "Mevcut şifre yanlış"
+  },
+  "errors.pageLoadError": {
+    "en": "Page could not be loaded.",
+    "tr": "Sayfa yüklenemedi."
+  },
+  "errors.passwordFieldsRequired": {
+    "en": "Current and new password are both required",
+    "tr": "Mevcut ve yeni şifre alanları zorunludur"
+  },
+  "errors.rateLimitExceeded": {
+    "en": "Rate limit exceeded. Please try again later.",
+    "tr": "İstek sınırı aşıldı. Lütfen daha sonra tekrar deneyin."
+  },
+  "errors.sessionExpired": {
+    "en": "Access denied. Session expired.",
+    "tr": "Erişim reddedildi. Oturum süresi doldu."
+  },
+  "errors.sessionInvalid": {
+    "en": "Access denied. Session invalid.",
+    "tr": "Erişim reddedildi. Oturum geçersiz."
+  },
+  "errors.sessionMismatch": {
+    "en": "Access denied. Session mismatch.",
+    "tr": "Erişim reddedildi. Oturum uyuşmazlığı."
+  },
+  "errors.slugRequired": {
+    "en": "Slug is required",
+    "tr": "Slug (Kısa Ad) zorunludur"
+  },
+  "errors.superAdminRequired": {
+    "en": "Super Admin access required.",
+    "tr": "Süper Yönetici erişimi gerekli."
+  },
+  "errors.syntaxError": {
+    "en": "Syntax Error: {msg}",
+    "tr": "Sözdizimi Hatası: {msg}"
+  },
+  "errors.syntaxErrorLine": {
+    "en": "Syntax Error (Line {line}): {msg}",
+    "tr": "Sözdizimi Hatası (Satır {line}): {msg}"
+  },
+  "errors.templateErrorMismatch": {
+    "en": "Template Validation: Invalid closing tag. Expected </{expected}> but found </{found}>.",
+    "tr": "Şablon Doğrulama Hatası: Hatalı kapanış etiketi. </{expected}> bekleniyordu ancak </{found}> bulundu."
+  },
+  "errors.templateErrorUnclosed": {
+    "en": "Template Validation: Unclosed tags found: {tags}",
+    "tr": "Şablon Doğrulama Hatası: Kapatılmamış etiketler bulundu: {tags}"
+  },
+  "errors.templateErrorUnopened": {
+    "en": "Template Validation: Found closing tag </{tag}> without an opening tag.",
+    "tr": "Şablon Doğrulama Hatası: Açılış etiketi olmadan kapanış etiketi bulundu: </{tag}>."
+  },
+  "errors.tenantMismatch": {
+    "en": "Access denied. Session mismatch.",
+    "tr": "Erişim engellendi. Oturumunuz bu çalışma alanına ait değil."
+  },
+  "errors.typeRequired": {
+    "en": "Type is required",
+    "tr": "Tür (Type) zorunludur"
+  },
+  "errors.unauthorized": {
+    "en": "Unauthorized access",
+    "tr": "Yetkisiz erişim"
+  },
+  "errors.usernamePasswordRequired": {
+    "en": "Username and password are required",
+    "tr": "Kullanıcı adı ve şifre zorunludur"
+  },
+  "errors.usernamePasswordRequiredAdmin": {
+    "en": "Username and password are required to create a user",
+    "tr": "Kullanıcı oluşturmak için kullanıcı adı ve şifre zorunludur"
+  },
+  "errors.utilNotExecutable": {
+    "en": "This utility cannot be executed in the current context",
+    "tr": "Bu araç mevcut bağlamda çalıştırılamaz"
+  },
+  "errors.validationFailed": {
+    "en": "Validation failed",
+    "tr": "Doğrulama hatası"
+  },
+  "field.adminPrivilege": {
+    "en": "Grant Admin Privilege",
+    "tr": "Admin Yetkisi Ver"
+  },
+  "field.anonymousReadHint": {
+    "en": "Can anonymous visitors read?",
+    "tr": "Anonim ziyaretçiler okuyabilir mi?"
+  },
+  "field.autostart": {
+    "en": "Autostart",
+    "tr": "Autostart"
+  },
+  "field.bcrypt": {
+    "en": "Bcrypt Hashing",
+    "tr": "Bcrypt Hashing"
+  },
+  "field.commandParamsJson": {
+    "en": "Command Parameters (JSON)",
+    "tr": "Komut Parametreleri (JSON)"
+  },
+  "field.cronExpression": {
+    "en": "Cron Expression",
+    "tr": "Cron Expression"
+  },
+  "field.cronExpressionHint": {
+    "en": "*/5 * * * * *",
+    "tr": "*/5 * * * * *"
+  },
+  "field.currentPassword": {
+    "en": "Current Password",
+    "tr": "Mevcut Şifre"
+  },
+  "field.customDomain": {
+    "en": "Custom Domain",
+    "tr": "Özel Alan Adı"
+  },
+  "field.customErrorMessage": {
+    "en": "Custom Error Message",
+    "tr": "Özel Hata Mesajı"
+  },
+  "field.customErrorMessageHint": {
+    "en": "e.g. Invalid format",
+    "tr": "Örn: Geçersiz format"
+  },
+  "field.customHomePage": {
+    "en": "Custom Home Page",
+    "tr": "Özel Ana Sayfa"
+  },
+  "field.customLeftMenu": {
+    "en": "Custom Left Menu",
+    "tr": "Özel Sol Menü"
+  },
+  "field.daemonName": {
+    "en": "Daemon Name",
+    "tr": "Daemon Adı"
+  },
+  "field.dataType": {
+    "en": "Data Type",
+    "tr": "Veri Türü (Type)"
+  },
+  "field.defaultLayout": {
+    "tr": "Varsayılan Layout",
+    "en": "Default Layout"
+  },
+  "field.descriptionOptional": {
+    "en": "Description (Optional)",
+    "tr": "Açıklama (Opsiyonel)"
+  },
+  "field.deviceId": {
+    "en": "Device ID",
+    "tr": "Cihaz ID"
+  },
+  "field.fieldLabel": {
+    "en": "Field Label",
+    "tr": "Alan Etiketi"
+  },
+  "field.fields": {
+    "en": "Fields",
+    "tr": "Alanlar (Fields)"
+  },
+  "field.filterMax": {
+    "en": "Max",
+    "tr": "Max"
+  },
+  "field.generatorApiBulk": {
+    "en": "POST & DELETE (Bulk) API",
+    "tr": "POST & DELETE (Toplu/Bulk) API"
+  },
+  "field.generatorApiCreate": {
+    "en": "POST (Create) API",
+    "tr": "POST (Ekleme) API"
+  },
+  "field.generatorApiDelete": {
+    "en": "DELETE (Delete) API",
+    "tr": "DELETE (Silme) API"
+  },
+  "field.generatorApiList": {
+    "en": "GET (List) API",
+    "tr": "GET (Liste) API"
+  },
+  "field.generatorApiSingle": {
+    "en": "GET (Single) API",
+    "tr": "GET (Tekil) API"
+  },
+  "field.generatorApiUpdate": {
+    "en": "PUT (Update) API",
+    "tr": "PUT (Güncelleme) API"
+  },
+  "field.generatorPageList": {
+    "en": "Interface (List & Form) Page",
+    "tr": "Arayüz (Liste & Form) Sayfası"
+  },
+  "field.hashAlgorithm": {
+    "en": "Hash Algorithm",
+    "tr": "Şifreleme (Hash) Yöntemi"
+  },
+  "field.hashtags": {
+    "en": "Hashtags",
+    "tr": "Etiketler (Hashtags)"
+  },
+  "field.hashtagsHint": {
+    "en": "Add tags for easy filtering in lists.",
+    "tr": "Listelerde kolayca filtreleyebilmek için etiket ekleyin."
+  },
+  "field.homePageParam": {
+    "en": "Home Page Parameter",
+    "tr": "Ana Sayfa Parametresi"
+  },
+  "field.icon": {
+    "en": "Icon",
+    "tr": "İkon"
+  },
+  "field.isActive": {
+    "en": "Is Active in System?",
+    "tr": "Sistemde Aktif Mi?"
+  },
+  "field.isAdminOnly": {
+    "en": "Admin Only",
+    "tr": "Sadece Admin (Admin Only)"
+  },
+  "field.isSecret": {
+    "en": "Secret Data",
+    "tr": "Gizli Veri (Secret)"
+  },
+  "field.keyExample": {
+    "en": "Key (e.g. utils.auth.hashPassword)",
+    "tr": "Key (ör: utils.auth.hashPassword)"
+  },
+  "field.langCode": {
+    "en": "Language Code",
+    "tr": "Dil Kodu"
+  },
+  "field.langDir": {
+    "en": "Writing Direction",
+    "tr": "Yazım Yönü"
+  },
+  "field.language": {
+    "en": "Language",
+    "tr": "Dil"
+  },
+  "field.linkedRecords": {
+    "en": "Linked Records",
+    "tr": "Bağlı Kayıtlar"
+  },
+  "field.middlewareName": {
+    "en": "Middleware Name",
+    "tr": "Middleware Adı"
+  },
+  "field.nameHint": {
+    "en": "Name (e.g. Chat Stream)",
+    "tr": "İsim (Örn: Sohbet Akışı)"
+  },
+  "field.nameOptional": {
+    "en": "Name (Optional)",
+    "tr": "Ad (Opsiyonel)"
+  },
+  "field.newPassword": {
+    "en": "New Password",
+    "tr": "Yeni Şifre"
+  },
+  "field.onDelete": {
+    "en": "On Delete",
+    "tr": "Silindiğinde"
+  },
+  "field.pageCodeHint": {
+    "en": "my-page/:id",
+    "tr": "my-page/:id"
+  },
+  "field.pageTitle": {
+    "en": "Page Title",
+    "tr": "Sayfa Başlığı"
+  },
+  "field.password": {
+    "en": "Password",
+    "tr": "Şifre"
+  },
+  "field.permissionHashtags": {
+    "en": "Permission Hashtags",
+    "tr": "Yetki Etiketleri (Hashtags)"
+  },
+  "field.permissionHashtagsHint": {
+    "en": "Set required tags for accessing the generated APIs and Pages.",
+    "tr": "Üretilen API ve Sayfalara erişim için gerekli etiketleri belirleyin."
+  },
+  "field.permissionTags": {
+    "en": "Permission Tags",
+    "tr": "Yetkili Etiketler (Tags)"
+  },
+  "field.permissionTagsHint": {
+    "en": "e.g., admin, finance, page-1",
+    "tr": "Örn: admin, finans, page-1"
+  },
+  "field.primaryName": {
+    "en": "Primary Name (Display)",
+    "tr": "Birincil Ad (Gösterim)"
+  },
+  "field.primaryNameHint": {
+    "en": "Used as the record name in tables and selection lists",
+    "tr": "Tablolarda ve seçim listelerinde kayıt adı olarak gösterilir"
+  },
+  "field.priority": {
+    "en": "Priority (Lower = First)",
+    "tr": "Öncelik (Düşük = Önce)"
+  },
+  "field.recentlyAddedDevices": {
+    "en": "Recently Added Devices",
+    "tr": "Son Eklenen Cihazlar"
+  },
+  "field.redirectHomePage": {
+    "en": "Redirect Home Page",
+    "tr": "Yönlendirilecek Ana Sayfa"
+  },
+  "field.routePattern": {
+    "en": "Route Pattern",
+    "tr": "Route Pattern"
+  },
+  "field.routePatternHint": {
+    "en": "e.g., /api/custom/:id",
+    "tr": "Örn: /api/custom/:id"
+  },
+  "field.rule": {
+    "en": "Rule",
+    "tr": "Kural"
+  },
+  "field.ruleType": {
+    "en": "Rule Type",
+    "tr": "Kural Tipi"
+  },
+  "field.selectLang": {
+    "en": "Select Language to Add",
+    "tr": "Eklenecek Dili Seçin"
+  },
+  "field.selectLayout": {
+    "tr": "Özel Layout Seç",
+    "en": "Select Custom Layout"
+  },
+  "field.sha256": {
+    "en": "SHA-256 Hashing",
+    "tr": "SHA-256 Hashing"
+  },
+  "field.showInTableHint": {
+    "en": "Shows this field as a column in the records table",
+    "tr": "Bu alanın kayıtlara ait tabloda sütun olarak görünmesini sağlar"
+  },
+  "field.slug": {
+    "en": "Slug",
+    "tr": "Slug"
+  },
+  "field.slugHint": {
+    "en": "Must be unique (e.g. work-order)",
+    "tr": "Sistemde benzersiz olmalıdır (Örn: is-emri)"
+  },
+  "field.targetHint": {
+    "en": "api: Backend, ui: Frontend, shared: Both",
+    "tr": "api: Backend, ui: Frontend, shared: Her ikisi"
+  },
+  "field.targetRecordOptional": {
+    "en": "Linked Target Record (Optional)",
+    "tr": "Bağlı Hedef Varlık (Opsiyonel)"
+  },
+  "field.targetUrl": {
+    "en": "Target URL or Custom Page",
+    "tr": "Hedef URL veya Özel Sayfa"
+  },
+  "field.taskName": {
+    "en": "Task Name",
+    "tr": "Görev Adı"
+  },
+  "field.telemetryEstimate": {
+    "en": "Telemetry Data (Estimated)",
+    "tr": "Telemetri Verisi (Tahmini)"
+  },
+  "field.tenantCodeHint": {
+    "en": "company.com",
+    "tr": "sirket.com"
+  },
+  "field.tenantName": {
+    "en": "Tenant / Project Name",
+    "tr": "Firma / Proje Adı"
+  },
+  "field.topicPattern": {
+    "en": "Topic Pattern",
+    "tr": "Topic Pattern"
+  },
+  "field.topicPatternHint": {
+    "en": "e.g., telemetry/devices/#",
+    "tr": "Örn: telemetry/devices/#"
+  },
+  "field.totalDevices": {
+    "en": "Total Devices",
+    "tr": "Toplam Cihaz"
+  },
+  "field.transForLangs": {
+    "en": "Translations for Languages",
+    "tr": "Diller İçin Çeviriler"
+  },
+  "field.transKey": {
+    "en": "Key (e.g. login.button.submit)",
+    "tr": "Anahtar (Örn: login.button.submit)"
+  },
+  "field.unique": {
+    "en": "Unique",
+    "tr": "Benzersiz"
+  },
+  "filter.addGroup": {
+    "en": "Add Group",
+    "tr": "Grup Ekle"
+  },
+  "filter.apply": {
+    "en": "Apply",
+    "tr": "Uygula"
+  },
+  "filter.false": {
+    "en": "False",
+    "tr": "Yanlış"
+  },
+  "filter.noRules": {
+    "en": "No rules added yet.",
+    "tr": "Henüz kural eklenmedi."
+  },
+  "filter.not": {
+    "en": "NOT",
+    "tr": "DEĞİL"
+  },
+  "filter.notActive": {
+    "en": "NOT (ACTIVE)",
+    "tr": "DEĞİL (AKTİF)"
+  },
+  "filter.opBetween": {
+    "en": "Between",
+    "tr": "Arasında"
+  },
+  "filter.opContains": {
+    "en": "Contains",
+    "tr": "İçerir"
+  },
+  "filter.opEndsWith": {
+    "en": "Ends With",
+    "tr": "Şununla Biter"
+  },
+  "filter.opEquals": {
+    "en": "Equals",
+    "tr": "Eşittir"
+  },
+  "filter.opGt": {
+    "en": "Greater Than",
+    "tr": "Büyüktür"
+  },
+  "filter.opIsEmpty": {
+    "en": "Is Empty",
+    "tr": "Boş"
+  },
+  "filter.opIsNotEmpty": {
+    "en": "Is Not Empty",
+    "tr": "Boş Değil"
+  },
+  "filter.opLt": {
+    "en": "Less Than",
+    "tr": "Küçüktür"
+  },
+  "filter.opNotContains": {
+    "en": "Not Contains",
+    "tr": "İçermez"
+  },
+  "filter.opNotEquals": {
+    "en": "Not Equals",
+    "tr": "Eşit Değil"
+  },
+  "filter.opStartsWith": {
+    "en": "Starts With",
+    "tr": "Şununla Başlar"
+  },
+  "filter.operatorAnd": {
+    "en": "AND",
+    "tr": "VE"
+  },
+  "filter.operatorOr": {
+    "en": "OR",
+    "tr": "VEYA"
+  },
+  "filter.true": {
+    "en": "True",
+    "tr": "Doğru"
+  },
+  "footer.cpu": {
+    "en": "OS CPU Usage",
+    "tr": "İşletim Sistemi CPU Yükü"
+  },
+  "footer.dbStatus": {
+    "en": "Database Status",
+    "tr": "Veritabanı Durumu"
+  },
+  "footer.disk": {
+    "en": "Disk Usage",
+    "tr": "Disk Doluluk Oranı"
+  },
+  "footer.memory": {
+    "en": "Node.js Memory Usage",
+    "tr": "Node.js Uygulama Belleği"
+  },
+  "footer.mqttStatus": {
+    "en": "MQTT Broker Status",
+    "tr": "MQTT Broker Durumu"
+  },
+  "footer.osMemory": {
+    "en": "OS Memory Usage",
+    "tr": "İşletim Sistemi Bellek Yükü"
+  },
+  "footer.uptime": {
+    "en": "System Uptime",
+    "tr": "Sistem Çalışma Süresi"
+  },
+  "hint.generateKey": {
+    "en": "Click the refresh icon to generate a random key.",
+    "tr": "Yenile ikonuna basarak rastgele yeni bir anahtar üretebilirsiniz."
+  },
+  "hint.maxDate": {
+    "en": "You can enter a fixed date or a custom formula like \"today()-2d\".",
+    "tr": "Sabit tarih veya \"today()-2d\" gibi özel formül girebilirsiniz."
+  },
+  "hint.regex": {
+    "en": "Enter a regex pattern (e.g., only letters).",
+    "tr": "Regex deseni girin (örn: sadece harfler)."
+  },
+  "hint.requiredKeys": {
+    "en": "Write the required JSON keys separated by commas.",
+    "tr": "Zorunlu JSON anahtarlarını virgülle ayırarak yazın."
+  },
+  "hint.selectEntity": {
+    "en": "Select the entity the device will measure/control from the list.",
+    "tr": "Cihazın ölçüm/kontrol yapacağı varlığı listeden seçin."
+  },
+  "hint.step": {
+    "en": "Increment/decrement factor (e.g., 0.5)",
+    "tr": "Artış/azalış katsayısı (örn: 0.5)"
+  },
+  "hint.validJson": {
+    "en": "Enter a valid JSON object",
+    "tr": "Geçerli bir JSON objesi girin"
+  },
+  "history.compare": {
+    "en": "Compare:",
+    "tr": "Karşılaştırma:"
+  },
+  "history.compareDesc": {
+    "en": "Old Version (Left) → Current Code (Right)",
+    "tr": "Eski Versiyon (Sol) → Mevcut Kod (Sağ)"
+  },
+  "history.fetchError": {
+    "en": "Failed to fetch version data!",
+    "tr": "Versiyon verisi alınamadı!"
+  },
+  "history.restore": {
+    "en": "Restore This Version",
+    "tr": "Bu Versiyonu Yükle"
+  },
+  "history.selectPrompt": {
+    "en": "Select a version from the left panel to inspect.",
+    "tr": "Sol taraftan incelemek istediğiniz versiyonu seçin."
+  },
+  "history.title": {
+    "en": "Version History",
+    "tr": "Versiyon Geçmişi"
+  },
+  "history.version": {
+    "en": "Version",
+    "tr": "Versiyon"
+  },
+  "label.commandName": {
+    "en": "Command Name (e.g., toggle_led, reboot, set_speed)",
+    "tr": "Komut Adı (örn: toggle_led, reboot, set_speed)"
+  },
+  "menu.contactAdmin": {
+    "en": "Please contact system administrator.",
+    "tr": "Lütfen sistem yöneticisiyle iletişime geçin."
+  },
+  "menu.devices": {
+    "en": "Devices",
+    "tr": "Cihaz Yönetimi"
+  },
+  "menu.endpoints": {
+    "en": "Endpoints",
+    "tr": "Uç Noktalar (Endpoints)"
+  },
+  "menu.entities": {
+    "en": "Entities",
+    "tr": "Varlıklar"
+  },
+  "menu.logout": {
+    "en": "Logout",
+    "tr": "Çıkış Yap"
+  },
+  "menu.masterTenant": {
+    "en": "Master Tenant (System)",
+    "tr": "Master Tenant (Sistem)"
+  },
+  "menu.menuItem": {
+    "en": "Menu Item",
+    "tr": "Menü Öğesi"
+  },
+  "menu.noMenu": {
+    "en": "No Menu Configured",
+    "tr": "Menü Tanımlanmadı"
+  },
+  "menu.pages": {
+    "en": "Pages",
+    "tr": "Sayfalar"
+  },
+  "menu.records": {
+    "en": "Records",
+    "tr": "Kayıtlar"
+  },
+  "menu.roles": {
+    "en": "Roles",
+    "tr": "Roller"
+  },
+  "menu.runtime": {
+    "en": "Runtime",
+    "tr": "Runtime"
+  },
+  "menu.securityAccess": {
+    "en": "Security & Access",
+    "tr": "Güvenlik & Erişim"
+  },
+  "menu.settings": {
+    "en": "Settings",
+    "tr": "Ayarlar"
+  },
+  "menu.systemPanel": {
+    "en": "System Panel",
+    "tr": "Sistem Paneli"
+  },
+  "menu.tenantWorkspace": {
+    "en": "Tenant Workspace",
+    "tr": "Firma (Tenant) Alanı"
+  },
+  "menu.tenants": {
+    "en": "Tenants",
+    "tr": "Kiracılar (Tenants)"
+  },
+  "menu.users": {
+    "en": "Users",
+    "tr": "Kullanıcılar"
+  },
+  "menu.utils": {
+    "en": "Utils",
+    "tr": "Araçlar"
+  },
+  "menu.workers": {
+    "en": "Workers",
+    "tr": "Arka Plan Görevleri"
+  },
+  "message.actionSuccess": {
+    "en": "Action successful",
+    "tr": "İşlem başarılı"
+  },
+  "message.added": {
+    "en": "Added successfully",
+    "tr": "Başarıyla eklendi"
+  },
+  "message.browserNoPush": {
+    "en": "Your browser does not support push notifications.",
+    "tr": "Tarayıcınız Push bildirimlerini desteklemiyor."
+  },
+  "message.codeSaveNotAllowed": {
+    "en": "Code Save is not allowed during creation.",
+    "tr": "Yeni kayıt oluşturulurken Kodu Kaydet kullanılamaz."
+  },
+  "message.codeSavedSuccess": {
+    "en": "Code saved successfully",
+    "tr": "Kod başarıyla kaydedildi"
+  },
+  "message.column": {
+    "en": "Column",
+    "tr": "Sütun"
+  },
+  "message.commandEmpty": {
+    "en": "Command name cannot be empty!",
+    "tr": "Komut adı boş olamaz!"
+  },
+  "message.commandFailed": {
+    "en": "Command failed.",
+    "tr": "Komut gönderilemedi."
+  },
+  "message.commandSent": {
+    "en": "Command sent",
+    "tr": "Komut gönderildi"
+  },
+  "message.componentCreateError": {
+    "en": "Component creation error:",
+    "tr": "Bileşen oluşturma hatası:"
+  },
+  "message.componentLoadError": {
+    "en": "Component Load Error",
+    "tr": "Bileşen Yükleme Hatası"
+  },
+  "message.copied": {
+    "en": "Copied",
+    "tr": "Kopyalandı"
+  },
+  "message.created": {
+    "en": "Created",
+    "tr": "Oluşturuldu"
+  },
+  "message.daemonStarted": {
+    "en": "Daemon started!",
+    "tr": "Daemon başlatıldı!"
+  },
+  "message.defaultPageHint": {
+    "en": "Default page shown after login",
+    "tr": "Giriş sonrası gösterilecek varsayılan sayfa"
+  },
+  "message.deleteError": {
+    "en": "Delete operation failed",
+    "tr": "Silme işlemi başarısız"
+  },
+  "message.deleteFailed": {
+    "en": "Delete failed",
+    "tr": "Silinemedi"
+  },
+  "message.deleteSuccess": {
+    "en": "Deleted successfully",
+    "tr": "Başarıyla silindi"
+  },
+  "message.deleted": {
+    "en": "Deleted",
+    "tr": "Silindi"
+  },
+  "message.depsError": {
+    "tr": "Bağımlılık Hatası",
+    "en": "Dependency Error"
+  },
+  "message.dynamicCompError": {
+    "en": "Custom component error:",
+    "tr": "Özel bileşen hatası:"
+  },
+  "message.enterCredentials": {
+    "en": "Please enter your username and password.",
+    "tr": "Lütfen kullanıcı adı ve şifrenizi girin."
+  },
+  "message.enterPasswords": {
+    "en": "Please enter your current and new password.",
+    "tr": "Lütfen mevcut ve yeni şifrenizi girin."
+  },
+  "message.entityCreated": {
+    "en": "{name} created",
+    "tr": "{name} oluşturuldu"
+  },
+  "message.entityDeleted": {
+    "en": "{name} deleted",
+    "tr": "{name} silindi"
+  },
+  "message.entityUpdated": {
+    "en": "{name} updated",
+    "tr": "{name} güncellendi"
+  },
+  "message.exportError": {
+    "en": "Export failed",
+    "tr": "Dışa aktarma başarısız"
+  },
+  "message.fileReadError": {
+    "en": "File could not be read.",
+    "tr": "Dosya okunamadı."
+  },
+  "message.historyLoaded": {
+    "en": "History version loaded. You must click Save to persist.",
+    "tr": "Geçmiş versiyon yüklendi. Kalıcı olması için Kaydet butonuna basmalısınız."
+  },
+  "message.idCopied": {
+    "en": "ID copied",
+    "tr": "ID kopyalandı"
+  },
+  "message.importError": {
+    "en": "Import failed",
+    "tr": "İçe aktarma başarısız"
+  },
+  "message.importSuccess": {
+    "en": "Import completed successfully",
+    "tr": "İçe aktarma başarıyla tamamlandı"
+  },
+  "message.invalidCsvFormat": {
+    "en": "CSV file is empty or contains only header.",
+    "tr": "CSV dosyası boş veya sadece başlık içeriyor."
+  },
+  "message.keyCopied": {
+    "en": "Secret Key copied",
+    "tr": "Anahtar kopyalandı"
+  },
+  "message.keyGenerated": {
+    "en": "New key generated. Press Update to save.",
+    "tr": "Yeni anahtar hazırlandı. Kaydetmek için Güncelle butonuna basın."
+  },
+  "message.libLoadError": {
+    "en": "Library failed to load:",
+    "tr": "Kütüphane yüklenemedi:"
+  },
+  "message.line": {
+    "en": "Line",
+    "tr": "Satır"
+  },
+  "message.linkedRecordsHint": {
+    "en": "Select the records this user represents (e.g., Factory A staff).",
+    "tr": "Kullanıcının hangi kayıtları temsil ettiğini (Örn: A Fabrikası personeli) seçin."
+  },
+  "message.loadError": {
+    "en": "Failed to load data",
+    "tr": "Veri yüklenemedi"
+  },
+  "message.loadingDevice": {
+    "en": "Loading device information...",
+    "tr": "Cihaz bilgileri yükleniyor..."
+  },
+  "message.local": {
+    "en": "Local",
+    "tr": "Yerel"
+  },
+  "message.localOverride": {
+    "en": "Local Override",
+    "tr": "Yerel Ezme"
+  },
+  "message.loginFailed": {
+    "en": "Login failed.",
+    "tr": "Giriş yapılamadı."
+  },
+  "message.masterAll": {
+    "en": "Master (All)",
+    "tr": "Master (Tümü)"
+  },
+  "message.masterInherited": {
+    "en": "Master (Inherited)",
+    "tr": "Master (Miras)"
+  },
+  "message.masterLangDelWarning": {
+    "en": "Master tenant languages cannot be deleted.",
+    "tr": "Master tenant dilleri silinemez."
+  },
+  "message.masterLangWarning": {
+    "en": "Master tenant languages cannot be edited, only deactivated.",
+    "tr": "Master tenant dilleri düzenlenemez, sadece pasife çekilebilir."
+  },
+  "message.masterTransDelWarning": {
+    "en": "Master tenant translations cannot be deleted.",
+    "tr": "Master tenant çevirileri silinemez."
+  },
+  "message.menuHint": {
+    "en": "If left blank, the user's role menu (if any) will be shown.",
+    "tr": "Boş bırakılırsa kullanıcının rolündeki menü (varsa) gösterilir."
+  },
+  "message.noCommandHistory": {
+    "en": "No sent commands found.",
+    "tr": "Gönderilmiş komut bulunamadı."
+  },
+  "message.paramHint": {
+    "en": "Optional parameter",
+    "tr": "İsteğe bağlı parametre"
+  },
+  "message.passwordUnchanged": {
+    "en": "Leave empty to keep current password",
+    "tr": "Mevcut şifreyi korumak için boş bırakın"
+  },
+  "message.passwordUpdateError": {
+    "en": "An error occurred while updating the password.",
+    "tr": "Şifre güncellenirken bir hata oluştu."
+  },
+  "message.passwordUpdated": {
+    "en": "Password updated successfully.",
+    "tr": "Şifreniz başarıyla güncellendi."
+  },
+  "message.pushDenied": {
+    "en": "Notification permission denied.",
+    "tr": "Bildirim izni reddedildi."
+  },
+  "message.pushDisableError": {
+    "en": "An error occurred while disabling notifications.",
+    "tr": "Bildirimler kapatılırken bir hata oluştu."
+  },
+  "message.pushDisabled": {
+    "en": "Notifications disabled for this device.",
+    "tr": "Bildirimler bu cihaz için kapatıldı."
+  },
+  "message.pushError": {
+    "en": "An error occurred during push subscription.",
+    "tr": "Bildirim aboneliği sırasında bir hata oluştu."
+  },
+  "message.roleMenuHint": {
+    "en": "Users with this role will only see these links on the left menu when they log in.",
+    "tr": "Bu role sahip kullanıcılar giriş yaptığında sol menüde sadece aşağıdaki bağlantılar gösterilecektir."
+  },
+  "message.saveCodeNotAllowed": {
+    "en": "Save Code is not available when creating a new record.",
+    "tr": "Yeni kayıt oluşturulurken Kodu Kaydet kullanılamaz."
+  },
+  "message.saveCodeWarning": {
+    "en": "Save Code cannot be used while creating a new record, use the Save button below.",
+    "tr": "Yeni kayıt oluşturulurken Kodu Kaydet kullanılamaz, alttaki Kaydet butonunu kullanın."
+  },
+  "message.saveError": {
+    "en": "Error occurred while saving",
+    "tr": "Kayıt sırasında bir hata oluştu"
+  },
+  "message.saveSuccess": {
+    "en": "Saved successfully",
+    "tr": "Kayıt başarıyla tamamlandı"
+  },
+  "message.saved": {
+    "en": "Saved successfully",
+    "tr": "Başarıyla kaydedildi"
+  },
+  "message.scriptMustBeObject": {
+    "en": "Script must be an object (e.g. { setup() { ... } }).",
+    "tr": "Script bir obje olmalıdır. (Örn: { setup() { ... } })"
+  },
+  "message.selectExport": {
+    "en": "Select Export",
+    "tr": "Dışa Aktarma Seçin"
+  },
+  "message.selectFile": {
+    "en": "Please select a file.",
+    "tr": "Lütfen bir dosya seçin."
+  },
+  "message.slugHint": {
+    "en": "Only lowercase letters, numbers, and dashes (-). Changing this is dangerous.",
+    "tr": "Sadece küçük harf, rakam ve tire (-). Değiştirilmesi tehlikelidir."
+  },
+  "message.startFailed": {
+    "en": "Start failed",
+    "tr": "Başlatılamadı"
+  },
+  "message.stopFailed": {
+    "en": "Stop failed",
+    "tr": "Durdurulamadı"
+  },
+  "message.success": {
+    "en": "Operation successful",
+    "tr": "İşlem başarılı"
+  },
+  "message.syntaxError": {
+    "en": "Syntax Error:",
+    "tr": "Syntax Hatası:"
+  },
+  "message.templateExported": {
+    "en": "Template exported successfully.",
+    "tr": "Şablon başarıyla dışa aktarıldı."
+  },
+  "message.templateImportWarning": {
+    "en": "WARNING: This operation will DELETE all existing data in the database (except admin). Are you sure you want to continue?",
+    "tr": "DİKKAT: Bu işlem veritabanındaki tüm mevcut verileri SİLECEK (admin hariç). Devam etmek istediğinize emin misiniz?"
+  },
+  "message.templateImported": {
+    "en": "Template imported successfully.",
+    "tr": "Şablon başarıyla yüklendi."
+  },
+  "message.transOverrideHint": {
+    "en": "This translation is inherited from Master tenant. You can enter local overrides for some or all languages.",
+    "tr": "Bu çevirinin tüm dillerdeki karşılığı Master tenant'tan miras alınmıştır. Dilerseniz bazı dillere veya tüm dillere yerel olarak override girebilirsiniz."
+  },
+  "message.undefined": {
+    "en": "Undefined",
+    "tr": "Tanımsız"
+  },
+  "message.updated": {
+    "en": "Updated",
+    "tr": "Güncellendi"
+  },
+  "message.workerAlreadyRunning": {
+    "en": "Already running",
+    "tr": "Zaten çalışıyor"
+  },
+  "message.workerNotRunning": {
+    "en": "Not running",
+    "tr": "Çalışmıyor"
+  },
+  "message.workerStarted": {
+    "en": "Started",
+    "tr": "Başlatıldı"
+  },
+  "message.workerStopped": {
+    "en": "Stopped",
+    "tr": "Durduruldu"
+  },
+  "page.changePassword": {
+    "en": "Change Password",
+    "tr": "Şifre Değiştir"
+  },
+  "page.customMiddlewares": {
+    "en": "Custom Middlewares",
+    "tr": "Özel Middleware'ler"
+  },
+  "page.devices": {
+    "en": "Device Management",
+    "tr": "Cihaz Yönetimi"
+  },
+  "page.editLang": {
+    "en": "Edit Language",
+    "tr": "Dili Düzenle"
+  },
+  "page.editTrans": {
+    "en": "Edit / Override Translation",
+    "tr": "Çeviri Düzenle / Ez"
+  },
+  "page.entities": {
+    "en": "Entity Management",
+    "tr": "Varlık Yönetimi"
+  },
+  "page.i18n": {
+    "en": "Multilanguage Management",
+    "tr": "Çoklu Dil Yönetimi"
+  },
+  "page.loginTitle": {
+    "en": "BaseApp Login",
+    "tr": "BaseApp Girişi"
+  },
+  "page.noLandingPage": {
+    "en": "You have not created a landing page for this tenant yet.",
+    "tr": "Bu kiracı (tenant) için henüz bir landing page (karşılama sayfası) oluşturmadınız."
+  },
+  "page.notifications": {
+    "en": "Notifications",
+    "tr": "Bildirimler"
+  },
+  "page.pushDesc": {
+    "en": "Allow push notifications on this device.",
+    "tr": "Bu cihazda anlık bildirim (Push Notification) almak için izin verin."
+  },
+  "page.returnToWorkspace": {
+    "en": "Return to {slug} workspace",
+    "tr": "Son ziyaret ettiğiniz {slug} alanına dönün"
+  },
+  "page.roles": {
+    "en": "Roles Management",
+    "tr": "Rol Yönetimi"
+  },
+  "page.tenants": {
+    "en": "Tenant Management",
+    "tr": "Müşteri Yönetimi"
+  },
+  "page.transManagement": {
+    "en": "Translation Management",
+    "tr": "Çeviri Yönetimi"
+  },
+  "page.users": {
+    "en": "User Management",
+    "tr": "Kullanıcı Yönetimi"
+  },
+  "page.utils": {
+    "en": "Custom Utilities",
+    "tr": "Özel Utilities"
+  },
+  "page.welcome": {
+    "en": "Welcome",
+    "tr": "Hoş Geldiniz"
+  },
+  "page.workspace": {
+    "en": "Workspace",
+    "tr": "Çalışma Alanı"
+  },
+  "page.wsEndpoints": {
+    "en": "WebSocket Endpoints",
+    "tr": "WebSocket Endpoints"
+  },
+  "pageType.component": {
+    "en": "Component",
+    "tr": "Bileşen"
+  },
+  "pageType.landing": {
+    "en": "Landing Page",
+    "tr": "Landing Page (Karşılama)"
+  },
+  "pageType.layout": {
+    "en": "System Layout",
+    "tr": "Sistem Ana Şablonu (Layout)"
+  },
+  "pageType.login": {
+    "en": "System Login Screen",
+    "tr": "Sistem Giriş Ekranı (Login)"
+  },
+  "pageType.regular": {
+    "en": "Regular Page",
+    "tr": "Normal Sayfa"
+  },
+  "placeholder.enterValue": {
+    "en": "Enter value...",
+    "tr": "Değer girin..."
+  },
+  "placeholder.tenantExample": {
+    "en": "e.g: Akpa",
+    "tr": "Örn: Akpa"
+  },
+  "policy.cascade": {
+    "en": "Cascade",
+    "tr": "Zincirleme (Cascade)"
+  },
+  "policy.restrict": {
+    "en": "Restrict",
+    "tr": "Kısıtla (Restrict)"
+  },
+  "policy.setNull": {
+    "en": "Set Null",
+    "tr": "Boş Bırak (Set Null)"
+  },
+  "record.prefix": {
+    "en": "Record #",
+    "tr": "Kayıt #"
+  },
+  "rule.disableWeekends": {
+    "en": "Disable Weekends",
+    "tr": "Hafta Sonlarını Engelle"
+  },
+  "rule.futureOnly": {
+    "en": "Future Dates Only",
+    "tr": "Sadece Gelecek Tarihler"
+  },
+  "rule.isInteger": {
+    "en": "Integer Only",
+    "tr": "Sadece Tam Sayı (Integer)"
+  },
+  "rule.isTrue": {
+    "en": "Must be True",
+    "tr": "Zorunlu Kabul (Sadece True)"
+  },
+  "rule.maxDate": {
+    "en": "Maximum Date",
+    "tr": "Maksimum Tarih"
+  },
+  "rule.maxDepth": {
+    "en": "Max Depth",
+    "tr": "Maksimum Derinlik"
+  },
+  "rule.maxItems": {
+    "en": "Maximum Item Count",
+    "tr": "Maksimum Eleman Sayısı"
+  },
+  "rule.maxLength": {
+    "en": "Maximum Length",
+    "tr": "Maksimum Uzunluk"
+  },
+  "rule.maxTime": {
+    "en": "Maximum Time",
+    "tr": "En Geç Saat"
+  },
+  "rule.minDate": {
+    "en": "Minimum Date",
+    "tr": "Minimum Tarih"
+  },
+  "rule.minItems": {
+    "en": "Minimum Item Count",
+    "tr": "Minimum Eleman Sayısı"
+  },
+  "rule.minLength": {
+    "en": "Minimum Length",
+    "tr": "Minimum Uzunluk"
+  },
+  "rule.minTime": {
+    "en": "Earliest Time",
+    "tr": "En Erken Saat"
+  },
+  "rule.pastOnly": {
+    "en": "Past Dates Only",
+    "tr": "Sadece Geçmiş Tarihler"
+  },
+  "rule.requiredKeys": {
+    "en": "Required JSON Keys",
+    "tr": "Gerekli JSON Anahtarları (Keys)"
+  },
+  "rule.step": {
+    "en": "Step Increment",
+    "tr": "Belirli Katlarda Artış (Step)"
+  },
+  "rule.timeStep": {
+    "en": "Time Step (Minutes)",
+    "tr": "Zaman Aralığı (Dakika)"
+  },
+  "rule.uniqueItems": {
+    "en": "Unique Items",
+    "tr": "Benzersiz Elemanlar"
+  },
+  "rule.uuidVersion": {
+    "en": "UUID Version (e.g., 4)",
+    "tr": "UUID Versiyonu (Örn: 4)"
+  },
+  "rule.validJson": {
+    "en": "Valid JSON Format",
+    "tr": "Geçerli JSON Formatı"
+  },
+  "rule.validUuid": {
+    "en": "Valid UUID Format",
+    "tr": "Geçerli UUID Formatı"
+  },
+  "settings.allDevicesFilter": {
+    "en": "All Devices (Filter)",
+    "tr": "Tüm Cihazlar (Filtrele)"
+  },
+  "settings.appTemplateManagement": {
+    "en": "Vertical App Template Management",
+    "tr": "Dikey Uygulama Şablonu Yönetimi"
+  },
+  "settings.backupDesc": {
+    "en": "Download or upload full database backup including all tenant data.",
+    "tr": "Tüm tenant verileri dahil tam veritabanı yedeğini indirin veya yükleyin."
+  },
+  "settings.booleanValue": {
+    "en": "True/False",
+    "tr": "Doğru/Yanlış"
+  },
+  "settings.exportTemplate": {
+    "en": "Export Template (.json)",
+    "tr": "Şablonu Dışa Aktar (.json)"
+  },
+  "settings.exportTemplateDesc": {
+    "en": "Exports everything in the system including roles, users (except admin), entities, records, pages, middlewares, devices, and system variables as a single JSON application template.",
+    "tr": "Mevcut sistemdeki roller, kullanıcılar (admin hariç), varlıklar, kayıtlar, sayfalar, özel middleware'ler, cihazlar ve sistem değişkenleri dahil her şeyi tek bir dikey uygulama şablonu (JSON) olarak dışarı aktarır."
+  },
+  "settings.hintEncrypted": {
+    "en": "Encrypted in UI",
+    "tr": "Arayüzde şifrelenir"
+  },
+  "settings.importWarning": {
+    "en": "WARNING:",
+    "tr": "DİKKAT:"
+  },
+  "settings.importWarningDesc": {
+    "en": "This action will delete all existing data (except admin account) and load the data from the template. Recommended only for clean installations.",
+    "tr": "Bu işlem mevcut veritabanındaki tüm verileri silerek (admin hesabı hariç) şablondaki verileri yükler. Sadece sıfır kurulumlarda kullanılması önerilir."
+  },
+  "settings.numericValue": {
+    "en": "Numeric Value",
+    "tr": "Sayısal Değer"
+  },
+  "settings.placeholderTheme": {
+    "en": "e.g., theme_color",
+    "tr": "Örn: theme_color"
+  },
+  "settings.privateHint": {
+    "en": "Visible to admins only",
+    "tr": "Sadece yöneticiler erişebilir"
+  },
+  "settings.publicHint": {
+    "en": "Visible to non-logged users",
+    "tr": "Giriş yapmamış kullanıcılar da görebilir"
+  },
+  "settings.restoreWarning": {
+    "en": "Warning: Uploading a backup will overwrite the entire database. This action cannot be undone.",
+    "tr": "Uyarı: Yedek yüklemek tüm veritabanının üzerine yazar. Bu işlem geri alınamaz."
+  },
+  "settings.systemBackup": {
+    "en": "System Backup",
+    "tr": "Sistem Yedeği"
+  },
+  "settings.telemetrySandbox": {
+    "en": "MQTT Telemetry Sandbox (Secure Layer)",
+    "tr": "MQTT Telemetry Sandbox (Güvenli Katman)"
+  },
+  "status.pushRegistered": {
+    "en": "This device is registered for notifications.",
+    "tr": "Bu cihaz bildirimler için kayıtlı."
+  },
+  "status.running": {
+    "en": "Running",
+    "tr": "Çalışıyor"
+  },
+  "status.stopped": {
+    "en": "Stopped",
+    "tr": "Durduruldu"
+  },
+  "status.systemStatus": {
+    "en": "System Status",
+    "tr": "Sistem Durumu"
+  },
+  "success.appImported": {
+    "en": "Application imported successfully.",
+    "tr": "Uygulama başarıyla içeri aktarıldı."
+  },
+  "success.templateImported": {
+    "en": "Template imported successfully.",
+    "tr": "Şablon başarıyla içe aktarıldı."
+  },
+  "tab.code": {
+    "en": "Code",
+    "tr": "Kod"
+  },
+  "tab.console": {
+    "en": "Console",
+    "tr": "Konsol"
+  },
+  "tab.preview": {
+    "en": "Preview",
+    "tr": "Önizleme"
+  },
+  "tab.script": {
+    "tr": "Kod",
+    "en": "Script"
+  },
+  "tab.style": {
+    "tr": "Stil",
+    "en": "Style"
+  },
+  "tab.template": {
+    "tr": "Şablon",
+    "en": "Template"
+  },
+  "table.additionalInfo": {
+    "en": "Additional Info",
+    "tr": "Ek Bilgiler"
+  },
+  "table.allowedTags": {
+    "en": "Allowed Tags",
+    "tr": "Yetkili Etiketler"
+  },
+  "table.authType": {
+    "en": "Auth Type",
+    "tr": "Yetki Tipi"
+  },
+  "table.autostart": {
+    "en": "Autostart",
+    "tr": "Autostart"
+  },
+  "table.createdAt": {
+    "en": "Created At",
+    "tr": "Oluşturulma"
+  },
+  "table.cronAutostart": {
+    "en": "Cron / Autostart",
+    "tr": "Zamanlayıcı / Otomatik Başlatma"
+  },
+  "table.cronExpression": {
+    "en": "Cron Expression",
+    "tr": "Cron İfadesi"
+  },
+  "table.description": {
+    "en": "Description",
+    "tr": "Açıklama"
+  },
+  "table.deviceId": {
+    "en": "Device ID",
+    "tr": "Cihaz ID"
+  },
+  "table.hashtags": {
+    "en": "Hashtags",
+    "tr": "Etiketler (Hashtags)"
+  },
+  "table.homePage": {
+    "en": "Home Page",
+    "tr": "Ana Sayfa"
+  },
+  "table.id": {
+    "en": "ID",
+    "tr": "ID"
+  },
+  "table.langDir": {
+    "en": "Direction",
+    "tr": "Yön"
+  },
+  "table.pageType": {
+    "en": "Page Type",
+    "tr": "Sayfa Tipi"
+  },
+  "table.payload": {
+    "en": "Payload (JSON)",
+    "tr": "Payload (JSON)"
+  },
+  "table.priority": {
+    "en": "Priority",
+    "tr": "Öncelik"
+  },
+  "table.routePattern": {
+    "en": "Route Pattern",
+    "tr": "Route Pattern"
+  },
+  "table.schema": {
+    "en": "Schema",
+    "tr": "Şablon"
+  },
+  "table.secret": {
+    "en": "Secret",
+    "tr": "Gizli"
+  },
+  "table.slug": {
+    "en": "URL Slug",
+    "tr": "URL Kısa Adı"
+  },
+  "table.source": {
+    "en": "Source",
+    "tr": "Kaynak"
+  },
+  "table.targetRecordId": {
+    "en": "Target Record",
+    "tr": "Bağlı Varlık (Record ID)"
+  },
+  "table.timestamp": {
+    "en": "Timestamp",
+    "tr": "Zaman (Timestamp)"
+  },
+  "table.transKey": {
+    "en": "Key",
+    "tr": "Anahtar (Key)"
+  },
+  "table.updatedAt": {
+    "en": "Updated At",
+    "tr": "Güncellenme"
+  },
+  "theme.darkMode": {
+    "en": "Switch to Dark Mode",
+    "tr": "Dark Moda Geç"
+  },
+  "theme.lightMode": {
+    "en": "Switch to Light Mode",
+    "tr": "Light Moda Geç"
+  },
+  "user.standardUser": {
+    "en": "Standard User",
+    "tr": "Standart Kullanıcı"
+  },
+  "validation.alphanumeric": {
+    "en": "Only letters and numbers are allowed.",
+    "tr": "Sadece harf ve rakam kullanılabilir."
+  },
+  "validation.enterFieldName": {
+    "en": "Enter field name",
+    "tr": "Alan adı girin"
+  },
+  "validation.exactLength": {
+    "en": "Must be exactly {0} characters.",
+    "tr": "Tam olarak {0} karakter olmalı."
+  },
+  "validation.futureDate": {
+    "en": "Only a future date can be selected.",
+    "tr": "Sadece ileri bir tarih seçilebilir."
+  },
+  "validation.integerOnly": {
+    "en": "Only integers are allowed.",
+    "tr": "Sadece tam sayı girilebilir."
+  },
+  "validation.invalidEmail": {
+    "en": "Enter a valid email address.",
+    "tr": "Geçerli bir e-posta adresi girin."
+  },
+  "validation.invalidJson": {
+    "en": "You must enter a valid JSON format.",
+    "tr": "Geçerli bir JSON formatı girmelisiniz."
+  },
+  "validation.invalidRoutePattern": {
+    "en": "Must be a valid route pattern (no spaces or special characters)",
+    "tr": "Geçerli bir Route adresi giriniz (boşluk veya özel karakter içermemelidir)"
+  },
+  "validation.invalidUrl": {
+    "en": "Enter a valid URL.",
+    "tr": "Geçerli bir URL girin."
+  },
+  "validation.maxDate": {
+    "en": "Date must be {0} or earlier.",
+    "tr": "Tarih en geç {0} olmalıdır."
+  },
+  "validation.maxLength": {
+    "en": "Must be at most {0} characters.",
+    "tr": "En fazla {0} karakter olmalı."
+  },
+  "validation.maxTime": {
+    "en": "Time must be at most {0}.",
+    "tr": "Saat en geç {0} olmalıdır."
+  },
+  "validation.maxVal": {
+    "en": "Must be at most {0}.",
+    "tr": "Maksimum {0} olmalıdır."
+  },
+  "validation.minDate": {
+    "en": "Date must be {0} or later.",
+    "tr": "Tarih {0} veya daha sonrası olmalıdır."
+  },
+  "validation.minLength": {
+    "en": "Must be at least {0} characters.",
+    "tr": "En az {0} karakter olmalı."
+  },
+  "validation.minOneElement": {
+    "en": "must contain at least one element.",
+    "tr": "en az bir eleman içermelidir."
+  },
+  "validation.minTime": {
+    "en": "Time must be at least {0}.",
+    "tr": "Saat en erken {0} olmalıdır."
+  },
+  "validation.minVal": {
+    "en": "Must be at least {0}.",
+    "tr": "Minimum {0} olmalıdır."
+  },
+  "validation.mustBeApproved": {
+    "en": "must be approved.",
+    "tr": "onaylanmalıdır."
+  },
+  "validation.noWeekend": {
+    "en": "Weekends cannot be selected.",
+    "tr": "Hafta sonu seçilemez."
+  },
+  "validation.onlyAlphanumeric": {
+    "en": "Only letters, numbers and underscores allowed",
+    "tr": "Sadece harf, rakam ve alt çizgi kullanılabilir"
+  },
+  "validation.pastDate": {
+    "en": "Only a past date can be selected.",
+    "tr": "Sadece geçmiş bir tarih seçilebilir."
+  },
+  "validation.regexMismatch": {
+    "en": "Does not match the required format.",
+    "tr": "İstenen formata uymuyor."
+  },
+  "validation.required": {
+    "en": "This field is required",
+    "tr": "Bu alan zorunludur"
+  },
+  "validation.stepMismatch": {
+    "en": "Value must be {0} or its multiples.",
+    "tr": "Değer {0} ve katları olmalıdır."
+  },
+  "validation.tenantSlugPattern": {
+    "en": "Can only contain lowercase letters, numbers, and dashes (-)",
+    "tr": "Sadece kck harf, rakam ve tire (-) icerebilir"
+  },
+  "page.about": {
+    "en": "About Us",
+    "tr": "Hakkımızda"
+  },
+  "about.heroTitle": {
+    "en": "Innovative Industrial Platform",
+    "tr": "Yenilikçi Endüstriyel Platform"
+  },
+  "about.heroDesc": {
+    "en": "We take your production and management processes to the future with our advanced architecture, modern interface, and high performance.",
+    "tr": "Gelişmiş mimarimiz, modern arayüzümüz ve yüksek performansımız ile üretim ve yönetim süreçlerinizi geleceğe taşıyoruz."
+  },
+  "about.performanceTitle": {
+    "en": "High Performance",
+    "tr": "Yüksek Performans"
+  },
+  "about.performanceDesc": {
+    "en": "We maximize data processing speed with our in-memory architecture. Analysis and reporting in seconds.",
+    "tr": "In-memory mimarisi ile veri işleme hızını en üst seviyeye çıkarıyoruz. Saniyeler içinde analiz ve raporlama."
+  },
+  "about.securityTitle": {
+    "en": "Secure Infrastructure",
+    "tr": "Güvenli Altyapı"
+  },
+  "about.securityDesc": {
+    "en": "We offer data isolation and end-to-end encryption with our multi-tenant architecture.",
+    "tr": "Çok kiracılı (multi-tenant) yapımız sayesinde veri izolasyonu ve uçtan uca şifreleme sunuyoruz."
+  },
+  "about.integrationTitle": {
+    "en": "Flexible Integration",
+    "tr": "Esnek Entegrasyon"
+  },
+  "about.integrationDesc": {
+    "en": "You can easily integrate with any ERP, CRM, or Industry 4.0 hardware with our modular structure.",
+    "tr": "Modüler yapımız ile dilediğiniz ERP, CRM veya Endüstri 4.0 donanımı ile kolayca entegre olabilirsiniz."
+  },
+  "about.ctaTitle": {
+    "en": "Get Started Now",
+    "tr": "Hemen Başlayın"
+  },
+  "about.ctaDesc": {
+    "en": "Experience our power by registering to our system or contacting an administrator.",
+    "tr": "Sistemimize kayıt olarak veya yönetici ile iletişime geçerek gücümüzü deneyimleyin."
+  },
+  "about.ctaButton": {
+    "en": "Log In to System",
+    "tr": "Sisteme Giriş Yap"
+  }
+}

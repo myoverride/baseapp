@@ -1,0 +1,6 @@
+{
+  "mode": "local",
+  "httpPort": 80,
+  "httpsPort": 443,
+  "mqttPort": 1883
+}
