@@ -14,10 +14,9 @@ export interface CachedUtil {
 
 interface TenantCache {
   utils: Map<string, CachedUtil>;
-  lastFetchTime: number;
+  isFetched: boolean;
 }
 const tenantCaches: Map<string, TenantCache> = new Map();
-const CACHE_TTL = 60000; // 60 seconds
 
 TenantEventManager.on('tenant:evict', (tenantSlug: string) => {
   if (tenantCaches.has(tenantSlug)) {
@@ -59,14 +58,12 @@ function parseScopeSafe(raw: unknown): string[] {
 }
 
 export async function getActiveUtilities(tenantSlug: string): Promise<CachedUtil[]> {
-  const now = Date.now();
-  
   if (!tenantCaches.has(tenantSlug)) {
-    tenantCaches.set(tenantSlug, { utils: new Map(), lastFetchTime: 0 });
+    tenantCaches.set(tenantSlug, { utils: new Map(), isFetched: false });
   }
   const cache = tenantCaches.get(tenantSlug)!;
 
-  if (cache.lastFetchTime > 0 && (now - cache.lastFetchTime < CACHE_TTL)) {
+  if (cache.isFetched) {
     return Array.from(cache.utils.values());
   }
 
@@ -91,7 +88,7 @@ export async function getActiveUtilities(tenantSlug: string): Promise<CachedUtil
       cache.utils.set(row.key, util);
     });
 
-    cache.lastFetchTime = Date.now();
+    cache.isFetched = true;
   } catch (err) {
     console.error('[Utils Cache Error]', err);
   }
@@ -108,7 +105,7 @@ export function getUtilByKey(tenantSlug: string, key: string): CachedUtil | unde
 export function invalidateUtilsCache(tenantSlug: string) {
   if (tenantCaches.has(tenantSlug)) {
     tenantCaches.get(tenantSlug)!.utils.clear();
-    tenantCaches.get(tenantSlug)!.lastFetchTime = 0;
+    tenantCaches.get(tenantSlug)!.isFetched = false;
   }
 }
 

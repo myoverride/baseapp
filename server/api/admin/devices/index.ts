@@ -108,14 +108,14 @@ export default defineEventHandler(async (event) => {
                   updated_by = ${user.id}
               WHERE device_id = ${rec.device_id}
             `;
-          removeDeviceFromCache(rec.device_id);
+          removeDeviceFromCache(event.context.tenantSlug, rec.device_id);
           updatedCount++;
         } else {
           await sql`
               INSERT INTO devices (device_id, secret_key, schema, hashtags, created_by, updated_by) 
               VALUES (${rec.device_id}, ${rec.secret_key}, ${sql.json(rec.schema || {})}, ${sql.json(rec.hashtags || [])}, ${user.id}, ${user.id})
             `;
-          removeDeviceFromCache(rec.device_id);
+          removeDeviceFromCache(event.context.tenantSlug, rec.device_id);
           insertedCount++;
         }
       }
@@ -137,7 +137,7 @@ export default defineEventHandler(async (event) => {
         VALUES (${body.deviceId.trim()}, ${generatedSecret}, ${sql.json(schema)}, ${sql.json(body.hashtags || [])}, ${event.context.user.id}, ${event.context.user.id})
         RETURNING id, device_id, secret_key, schema, hashtags, created_at, updated_at, created_by, updated_by
       `;
-      removeDeviceFromCache(body.deviceId.trim());
+      removeDeviceFromCache(event.context.tenantSlug, body.deviceId.trim());
       return { success: true, data: result[0] };
     } catch (error: any) {
       if (error.code === '23505') throw createError({ statusCode: 400, message: 'errors.deviceDuplicate' });

@@ -48,8 +48,10 @@ const props = defineProps<{
   hideFullscreen?: boolean;
   autoHeight?: boolean;
   theme?: string;
+  contextType?: 'frontend' | 'backend';
 }>();
 
+const { sysVars } = useSysVars();
 const dynamicHeight = ref(props.height || '400px');
 
 watch(() => props.height, (newVal) => {
@@ -87,6 +89,99 @@ const toggleInternalTheme = () => {
 
 // Global loading state to prevent multiple script injections
 const getGlobalWindow = () => (typeof window !== 'undefined' ? (window as any) : null);
+
+async function fetchGlobalSuggestions() {
+  const win = getGlobalWindow();
+  if (!win) return { sysVars: [], utils: [] };
+  
+  if (win.__monaco_intellisense_cache__ && Date.now() - win.__monaco_intellisense_cache_time__ < 10000) {
+    return win.__monaco_intellisense_cache__;
+  }
+  
+  try {
+    const [sysVarsRes, utilsRes] = await Promise.all([
+      $fetch('/api/admin/system-variables?limit=1000').catch(() => ({ data: [] })),
+      $fetch('/api/admin/utils?limit=1000').catch(() => ({ data: [] }))
+    ]);
+    const parseRes = (res: any) => Array.isArray(res) ? res : (res?.data || []);
+    win.__monaco_intellisense_cache__ = {
+      sysVars: parseRes(sysVarsRes),
+      utils: parseRes(utilsRes)
+    };
+    win.__monaco_intellisense_cache_time__ = Date.now();
+  } catch (e) {
+    console.error('Monaco IntelliSense fetch error:', e);
+    return { sysVars: [], utils: [] };
+  }
+  return win.__monaco_intellisense_cache__;
+}
+
+async function injectDynamicExtraLib(isBackend: boolean, win: any) {
+  try {
+    const dynamicData = await fetchGlobalSuggestions();
+    let dynamicLib = '';
+
+    if (isBackend) {
+      const apiSysVars = dynamicData.sysVars.filter((v: any) => v.target === 'api' || v.target === 'shared');
+      const apiUtils = dynamicData.utils.filter((v: any) => v.target === 'api' || v.target === 'shared');
+      
+      const sysVarsProps = apiSysVars.map((v: any) => `        ${v.key}: any;`).join('\n');
+      const utilsProps = apiUtils.map((v: any) => `        ${v.key}(...args: any[]): Promise<any>;`).join('\n');
+      
+      dynamicLib = `
+        /** Sistem Değişkenleri Objesi (Senkron okuma) */
+        declare const sysVars: {
+${sysVarsProps}
+        };
+
+        /** (Backend) Dinamik Utility Fonksiyonları (utils) */
+        declare const utils: {
+${utilsProps}
+        };
+      `;
+    } else {
+      const uiSysVars = dynamicData.sysVars.filter((v: any) => v.target === 'ui' || v.target === 'shared');
+      const uiUtils = dynamicData.utils.filter((v: any) => v.target === 'ui' || v.target === 'shared');
+      
+      const sysVarsProps = uiSysVars.map((v: any) => `        ${v.key}: any;`).join('\n');
+      const utilsProps = uiUtils.map((v: any) => `        ${v.key}(...args: any[]): Promise<any>;`).join('\n');
+      
+      dynamicLib = `
+        /** Sistem Değişkenleri Objesi (Senkron okuma) */
+        declare const sysVars: {
+${sysVarsProps}
+        };
+
+        /** (Frontend) Dinamik Utility Fonksiyonları (utils) */
+        declare const utils: {
+${utilsProps}
+        };
+
+        declare function useSysVars(): {
+          sysVars: {
+${sysVarsProps}
+          };
+          status: any;
+          primaryColor: any;
+        };
+
+        declare function useUtils(): {
+          utils: {
+${utilsProps}
+          };
+        };
+      `;
+    }
+
+    if (win.__monaco_dynamic_lib_js) win.__monaco_dynamic_lib_js.dispose();
+    if (win.__monaco_dynamic_lib_ts) win.__monaco_dynamic_lib_ts.dispose();
+
+    win.__monaco_dynamic_lib_js = win.monaco.languages.typescript.javascriptDefaults.addExtraLib(dynamicLib, 'file:///dynamic-globals.d.ts');
+    win.__monaco_dynamic_lib_ts = win.monaco.languages.typescript.typescriptDefaults.addExtraLib(dynamicLib, 'file:///dynamic-globals.d.ts');
+  } catch (e) {
+    console.error('Monaco dynamic extraLib injection failed', e);
+  }
+}
 
 let componentUnmounted = false;
 
@@ -132,7 +227,8 @@ function initEditor() {
   
   // Custom globals tanımlamalarını monaco dil servislerine ekleyelim (IntelliSense için)
   // Her mount edildiğinde lib'i güncelleyelim (eski libler monaco içinde kalsa da son eklenen ezer)
-  if (true) {
+  const isBackend = props.contextType !== 'frontend';
+  if (isBackend) {
     const extraLib = `
       /**
        * Gelen istek parametreleri veya görev (Scheduler) bilgileri.
@@ -211,11 +307,6 @@ function initEditor() {
       }
 
       /**
-       * .env dosyasındaki çevre değişkenlerine erişim sağlar.
-       */
-      declare const env: { [key: string]: string | undefined };
-
-      /**
        * Belirli bir konuya (topic) MQTT mesajı yayınlar. Başarılı ise true döner.
        */
       declare function publishMQTT(topic: string, message: string): boolean;
@@ -225,13 +316,6 @@ function initEditor() {
        * Örnek: publishWS('/api/ws/kazan', { sicaklik: 45 });
        */
       declare function publishWS(path: string, payload: any): void;
-
-      /**
-       * (Arayüz/Frontend) Belirli bir WebSocket odasına bağlanır ve mesajları dinler.
-       * Sadece Özel Sayfalar (Frontend) içinde çalışır.
-       * Örnek: useWS('/api/ws/kazan', (data) => console.log(data));
-       */
-      declare function useWS(path: string, callback: (data: any) => void): void;
 
       /**
        * (Microservices) Gelen tüm MQTT mesajlarını dinlemek için abone olur.
@@ -295,15 +379,90 @@ function initEditor() {
     `;
     
     try {
-      win.monaco.languages.typescript.javascriptDefaults.addExtraLib(extraLib, 'file:///globals.d.ts');
-      win.monaco.languages.typescript.typescriptDefaults.addExtraLib(extraLib, 'file:///globals.d.ts');
+      if (win.__monaco_static_lib_js) win.__monaco_static_lib_js.dispose();
+      if (win.__monaco_static_lib_ts) win.__monaco_static_lib_ts.dispose();
+
+      win.__monaco_static_lib_js = win.monaco.languages.typescript.javascriptDefaults.addExtraLib(extraLib, 'file:///globals.d.ts');
+      win.__monaco_static_lib_ts = win.monaco.languages.typescript.typescriptDefaults.addExtraLib(extraLib, 'file:///globals.d.ts');
     } catch (e) {
       console.warn('Monaco typings loading failed', e);
     }
+  } else {
+    const frontendExtraLib = `
+      /** Vue 3 Reactivity API */
+      declare function ref<T>(value: T): { value: T };
+      declare function reactive<T extends object>(target: T): T;
+      declare function computed<T>(getter: () => T): { readonly value: T };
+      declare function watch(source: any, callback: (val: any, oldVal: any) => void, options?: any): void;
+      declare function watchEffect(effect: () => void): void;
+      declare function watchPostEffect(effect: () => void): void;
+      declare function watchSyncEffect(effect: () => void): void;
+      declare function shallowRef<T>(value: T): { value: T };
+      declare function triggerRef(ref: any): void;
+      declare function customRef<T>(factory: (track: () => void, trigger: () => void) => { get: () => T, set: (val: T) => void }): { value: T };
+      declare function shallowReactive<T extends object>(target: T): T;
+      declare function shallowReadonly<T extends object>(target: T): T;
+      declare function toRaw<T>(observed: T): T;
+      declare function markRaw<T>(value: T): T;
+      declare function toRef(object: object, key: string): { value: any };
+      declare function toRefs(object: object): Record<string, { value: any }>;
+      declare function unref<T>(ref: T | { value: T }): T;
+      declare function isRef(r: any): boolean;
+      declare function isReactive(r: any): boolean;
+      declare function isReadonly(r: any): boolean;
+      declare function isProxy(r: any): boolean;
+
+      /** Vue 3 Lifecycle Hooks */
+      declare function onMounted(callback: () => void): void;
+      declare function onUnmounted(callback: () => void): void;
+      declare function onUpdated(callback: () => void): void;
+      declare function onBeforeMount(callback: () => void): void;
+      declare function onBeforeUnmount(callback: () => void): void;
+      declare function onErrorCaptured(callback: (err: any, instance: any, info: string) => boolean | void): void;
+      declare function onActivated(callback: () => void): void;
+      declare function onDeactivated(callback: () => void): void;
+
+      /** Vue 3 Component APIs */
+      declare function provide<T>(key: string | symbol, value: T): void;
+      declare function inject<T>(key: string | symbol, defaultValue?: T): T;
+      declare function nextTick(callback?: () => void): Promise<void>;
+      declare function useSlots(): Record<string, any>;
+      declare function useCssModule(name?: string): Record<string, string>;
+      declare function useModel(props: any, name?: string): { value: any };
+      declare function useAttrs(): Record<string, any>;
+      declare function defineProps<T>(): T;
+      declare function defineEmits<T>(): T;
+
+      /** Nuxt / App Composables */
+      declare function useRoute(): any;
+      declare function useRouter(): any;
+      declare function useFetch(url: string, options?: any): any;
+      declare function useAsyncData(key: string, handler: () => Promise<any>): any;
+      declare function useCookie(name: string, options?: any): any;
+      declare function useState<T>(key: string, init?: () => T): { value: T };
+      declare function navigateTo(to: string, options?: any): Promise<void | any>;
+      declare function useWS(path: string, callback: (data: any) => void): void;
+      declare function useHead(meta: any): void;
+      declare function useSeoMeta(meta: any): void;
+      declare function useI18n(): any;
+      declare const routeParams: any;
+    `;
+    try {
+      if (win.__monaco_frontend_lib_js) win.__monaco_frontend_lib_js.dispose();
+      if (win.__monaco_frontend_lib_ts) win.__monaco_frontend_lib_ts.dispose();
+
+      win.__monaco_frontend_lib_js = win.monaco.languages.typescript.javascriptDefaults.addExtraLib(frontendExtraLib, 'file:///frontend-globals.d.ts');
+      win.__monaco_frontend_lib_ts = win.monaco.languages.typescript.typescriptDefaults.addExtraLib(frontendExtraLib, 'file:///frontend-globals.d.ts');
+    } catch (e) {
+      console.warn('Monaco frontend typings loading failed', e);
+    }
   }
 
+  // Dinamik tipleri enjekte et (asenkron, editoru bloklamaz)
+  injectDynamicExtraLib(isBackend, win);
+
   // Özel Autocomplete (CompletionItemProvider) Ekleme
-  if (!win.__monaco_completion_provider_added_v7__) {
+  if (!win.__monaco_completion_provider_added_v8__) {
     try {
       // JAVASCRIPT / TYPESCRIPT PROVİDER
       ['javascript', 'typescript'].forEach(lang => {
@@ -313,67 +472,18 @@ function initEditor() {
             const word = model.getWordUntilPosition(position);
             const lineContent = model.getLineContent(position.lineNumber);
             const textBeforeCursor = lineContent.substring(0, position.column - 1);
+            
+            // Eğer tırnak içindeyse (string literal yazılıyorsa) custom globalleri gösterme, TypeScript'e bırak.
+            if (textBeforeCursor.match(/['"]\w*$/)) {
+              return { suggestions: [] };
+            }
+            
+            // HMR ve Closure bug'ını çözmek için isBackend bilgisini doğrudan model üzerinden alıyoruz
+            const isBackendContext = model.__isBackend === true;
 
-            // 1. env. durumunu kontrol et
-            const envMatch = textBeforeCursor.match(/env\.(\w*)$/);
-            if (envMatch) {
-              const range = {
-                startLineNumber: position.lineNumber,
-                endLineNumber: position.lineNumber,
-                startColumn: position.column - envMatch[1].length,
-              endColumn: position.column
-            };
-            return {
-              suggestions: [
-                {
-                  label: 'SECRET_KEY',
-                  kind: win.monaco.languages.CompletionItemKind.Property,
-                  insertText: 'SECRET_KEY',
-                  range: range,
-                  detail: 'Uygulama gizli anahtarı'
-                },
-                {
-                  label: 'MQTT_URL',
-                  kind: win.monaco.languages.CompletionItemKind.Property,
-                  insertText: 'MQTT_URL',
-                  range: range,
-                  detail: 'mqtt broker connection url'
-                },
-                {
-                  label: 'SMTP_HOST',
-                  kind: win.monaco.languages.CompletionItemKind.Property,
-                  insertText: 'SMTP_HOST',
-                  range: range,
-                  detail: 'smtp server host'
-                },
-                {
-                  label: 'SMTP_PORT',
-                  kind: win.monaco.languages.CompletionItemKind.Property,
-                  insertText: 'SMTP_PORT',
-                  range: range,
-                  detail: 'smtp server port'
-                },
-                {
-                  label: 'EMAIL_USER',
-                  kind: win.monaco.languages.CompletionItemKind.Property,
-                  insertText: 'EMAIL_USER',
-                  range: range,
-                  detail: 'smtp user email address'
-                },
-                {
-                  label: 'EMAIL_PASS',
-                  kind: win.monaco.languages.CompletionItemKind.Property,
-                  insertText: 'EMAIL_PASS',
-                  range: range,
-                  detail: 'smtp application password'
-                }
-              ]
-            };
-          }
-
-          // 2. db. durumunu kontrol et (db.begin vs. yazarken önerileri çıkar)
-          const dbMatch = textBeforeCursor.match(/db\.(\w*)$/);
-          if (dbMatch) {
+            // 1. db. durumunu kontrol et (db.begin vs. yazarken önerileri çıkar)
+            const dbMatch = isBackendContext ? textBeforeCursor.match(/db\.(\w*)$/) : null;
+            if (dbMatch) {
             const range = {
               startLineNumber: position.lineNumber,
               endLineNumber: position.lineNumber,
@@ -408,7 +518,7 @@ function initEditor() {
             };
           }
 
-          const payloadMatch = textBeforeCursor.match(/payload\.(\w*)$/);
+          const payloadMatch = isBackend ? textBeforeCursor.match(/payload\.(\w*)$/) : null;
           if (payloadMatch) {
             const range = {
               startLineNumber: position.lineNumber, endLineNumber: position.lineNumber,
@@ -426,7 +536,7 @@ function initEditor() {
             };
           }
 
-          const cryptoMatch = textBeforeCursor.match(/crypto\.(\w*)$/);
+          const cryptoMatch = isBackend ? textBeforeCursor.match(/crypto\.(\w*)$/) : null;
           if (cryptoMatch) {
             const range = {
               startLineNumber: position.lineNumber, endLineNumber: position.lineNumber,
@@ -442,7 +552,7 @@ function initEditor() {
             };
           }
 
-          const bcryptMatch = textBeforeCursor.match(/bcrypt\.(\w*)$/);
+          const bcryptMatch = isBackend ? textBeforeCursor.match(/bcrypt\.(\w*)$/) : null;
           if (bcryptMatch) {
             const range = {
               startLineNumber: position.lineNumber, endLineNumber: position.lineNumber,
@@ -531,7 +641,7 @@ function initEditor() {
             };
           }
 
-          const bufferMatch = textBeforeCursor.match(/Buffer\.(\w*)$/);
+          const bufferMatch = isBackend ? textBeforeCursor.match(/Buffer\.(\w*)$/) : null;
           if (bufferMatch) {
             const range = {
               startLineNumber: position.lineNumber, endLineNumber: position.lineNumber,
@@ -664,16 +774,6 @@ function initEditor() {
               }
             },
             {
-              label: 'env',
-              kind: win.monaco.languages.CompletionItemKind.Variable,
-              insertText: 'env',
-              range: range,
-              detail: 'Environment Variables (process.env)',
-              documentation: {
-                value: '.env dosyasındaki çevre değişkenlerine erişim sağlar.\n\nÖrnek:\n```javascript\nconst key = env.SECRET_KEY;\n```'
-              }
-            },
-            {
               label: 'publishMQTT',
               kind: win.monaco.languages.CompletionItemKind.Function,
               insertText: "publishMQTT('${1:topic}', '${2:message}')",
@@ -738,199 +838,40 @@ function initEditor() {
               documentation: {
                 value: 'Modbus TCP üzerinden veri yazar.\n\nÖrnek:\n```javascript\nawait writeModbusData("192.168.1.50", 502, 1, 40001, 123, "uint16");\n```'
               }
+            },
+            {
+              label: 'useWS',
+              kind: win.monaco.languages.CompletionItemKind.Function,
+              insertText: "useWS('${1:path}', (data) => {\n\t${2}\n})",
+              insertTextRules: win.monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+              range: range,
+              detail: 'useWS(path, callback)',
+              documentation: {
+                value: 'Frontend tarafında WebSocket dinleyicisi başlatır.\n\nÖrnek:\n```javascript\nuseWS("/api/ws/cihaz1", (data) => console.log(data));\n```'
+              }
             }
           ];
-            return { suggestions: suggestions };
+
+            // Noktadan sonra yazılıyorsa ve yukarıdaki objelere (db., crypto. vs) uymadıysa global listeyi dönme!
+            if (textBeforeCursor.match(/\.\w*$/)) {
+              return undefined;
+            }
+
+            if (!isBackendContext) {
+              const allowedFrontendGlobals = ['fetch', 'sleep', 'useWS'];
+              return { suggestions: suggestions.filter(s => allowedFrontendGlobals.includes(s.label)) };
+            }
+            
+            // Backend ise ui-only nesnelerini gizle
+            const backendForbidden = ['useWS'];
+            return { suggestions: suggestions.filter(s => !backendForbidden.includes(s.label)) };
           }
         });
       }); // End of JS/TS forEach
 
-      // C# PROVİDER (Zengin BCL ve js_env Sınıfları)
-      ['csharp', 'dotnet'].forEach(lang => {
-        win.monaco.languages.registerCompletionItemProvider(lang, {
-          triggerCharacters: ['.'],
-          provideCompletionItems: (model: any, position: any) => {
-            const word = model.getWordUntilPosition(position);
-            const lineContent = model.getLineContent(position.lineNumber);
-            const textBeforeCursor = lineContent.substring(0, position.column - 1);
-            const range = { startLineNumber: position.lineNumber, endLineNumber: position.lineNumber, startColumn: word.startColumn, endColumn: word.endColumn };
 
-            const consoleMatch = textBeforeCursor.match(/Console\.(\w*)$/);
-            if (consoleMatch) {
-              const r = { ...range, startColumn: position.column - consoleMatch[1].length };
-              return { suggestions: [
-                { label: 'WriteLine', kind: 1, insertText: 'WriteLine("${1}")', insertTextRules: 4, range: r },
-                { label: 'Write', kind: 1, insertText: 'Write("${1}")', insertTextRules: 4, range: r },
-                { label: 'Clear', kind: 1, insertText: 'Clear()', insertTextRules: 4, range: r },
-                { label: 'ReadLine', kind: 1, insertText: 'ReadLine()', insertTextRules: 4, range: r }
-              ]};
-            }
 
-            const taskMatch = textBeforeCursor.match(/Task\.(\w*)$/);
-            if (taskMatch) {
-              const r = { ...range, startColumn: position.column - taskMatch[1].length };
-              return { suggestions: [
-                { label: 'Delay', kind: 1, insertText: 'Delay(${1:1000})', insertTextRules: 4, range: r },
-                { label: 'FromResult', kind: 1, insertText: 'FromResult(${1:null})', insertTextRules: 4, range: r },
-                { label: 'Run', kind: 1, insertText: 'Run(() => {\n\t${1}\n})', insertTextRules: 4, range: r },
-                { label: 'WhenAll', kind: 1, insertText: 'WhenAll(${1:tasks})', insertTextRules: 4, range: r }
-              ]};
-            }
-
-            const envMatch = textBeforeCursor.match(/Environment\.(\w*)$/);
-            if (envMatch) {
-              const r = { ...range, startColumn: position.column - envMatch[1].length };
-              return { suggestions: [
-                { label: 'GetEnvironmentVariable', kind: 1, insertText: 'GetEnvironmentVariable("${1}")', insertTextRules: 4, range: r },
-                { label: 'Exit', kind: 1, insertText: 'Exit(${1:0})', insertTextRules: 4, range: r },
-                { label: 'MachineName', kind: 9, insertText: 'MachineName', range: r }
-              ]};
-            }
-
-            const mathMatch = textBeforeCursor.match(/Math\.(\w*)$/);
-            if (mathMatch) {
-              const r = { ...range, startColumn: position.column - mathMatch[1].length };
-              return { suggestions: [
-                { label: 'Abs', kind: 1, insertText: 'Abs(${1:val})', insertTextRules: 4, range: r },
-                { label: 'Round', kind: 1, insertText: 'Round(${1:val}, ${2:2})', insertTextRules: 4, range: r },
-                { label: 'Max', kind: 1, insertText: 'Max(${1:a}, ${2:b})', insertTextRules: 4, range: r },
-                { label: 'Min', kind: 1, insertText: 'Min(${1:a}, ${2:b})', insertTextRules: 4, range: r }
-              ]};
-            }
-
-            const convertMatch = textBeforeCursor.match(/Convert\.(\w*)$/);
-            if (convertMatch) {
-              const r = { ...range, startColumn: position.column - convertMatch[1].length };
-              return { suggestions: [
-                { label: 'ToInt32', kind: 1, insertText: 'ToInt32(${1})', insertTextRules: 4, range: r },
-                { label: 'ToDouble', kind: 1, insertText: 'ToDouble(${1})', insertTextRules: 4, range: r },
-                { label: 'ToString', kind: 1, insertText: 'ToString(${1})', insertTextRules: 4, range: r },
-                { label: 'ToBoolean', kind: 1, insertText: 'ToBoolean(${1})', insertTextRules: 4, range: r }
-              ]};
-            }
-
-            const jsEnvDbMatch = textBeforeCursor.match(/js_env\.db\.(\w*)$/);
-            if (jsEnvDbMatch) {
-              const r = { ...range, startColumn: position.column - jsEnvDbMatch[1].length };
-              return { suggestions: [
-                { label: 'unsafe', kind: 1, insertText: 'unsafe("${1:query}", new object[] { ${2} })', insertTextRules: 4, range: r, detail: 'Raw SQL' }
-              ]};
-            }
-
-            const jsEnvMatch = textBeforeCursor.match(/js_env\.(\w*)$/);
-            if (jsEnvMatch) {
-              const r = { ...range, startColumn: position.column - jsEnvMatch[1].length };
-              return { suggestions: [
-                { label: 'sleep', kind: 1, insertText: 'sleep(${1:1000})', insertTextRules: 4, range: r },
-                { label: 'publishMQTT', kind: 1, insertText: 'publishMQTT("${1:topic}", "${2:msg}")', insertTextRules: 4, range: r },
-                { label: 'sendEmail', kind: 1, insertText: 'sendEmail(new { to = "${1}", subject = "${2}", text = "${3}" })', insertTextRules: 4, range: r },
-                { label: 'readModbusData', kind: 1, insertText: 'readModbusData("${1:ip}", 502, 1, ${2:40001}, 1)', insertTextRules: 4, range: r },
-                { label: 'writeModbusData', kind: 1, insertText: 'writeModbusData("${1:ip}", 502, 1, ${2:40001}, ${3:value})', insertTextRules: 4, range: r },
-                { label: 'db', kind: 9, insertText: 'db', range: r },
-                { label: 'crypto', kind: 9, insertText: 'crypto', range: r },
-                { label: 'bcrypt', kind: 9, insertText: 'bcrypt', range: r }
-              ]};
-            }
-
-            if (textBeforeCursor.match(/\.\w*$/)) return { suggestions: [] };
-
-            return { suggestions: [
-              { label: 'Console', kind: 5, insertText: 'Console', range },
-              { label: 'Task', kind: 5, insertText: 'Task', range },
-              { label: 'System', kind: 9, insertText: 'System', range },
-              { label: 'Environment', kind: 5, insertText: 'Environment', range },
-              { label: 'Math', kind: 5, insertText: 'Math', range },
-              { label: 'Convert', kind: 5, insertText: 'Convert', range },
-              { label: 'String', kind: 5, insertText: 'String', range },
-              { label: 'DateTime', kind: 5, insertText: 'DateTime', range },
-              { label: 'TimeSpan', kind: 5, insertText: 'TimeSpan', range },
-              { label: 'List<>', kind: 5, insertText: 'List<${1:string}>', insertTextRules: 4, range },
-              { label: 'Dictionary<>', kind: 5, insertText: 'Dictionary<${1:string}, ${2:object}>', insertTextRules: 4, range },
-              { label: 'js_env', kind: 6, insertText: 'js_env', range, detail: 'Node.js global objeleri (db, sleep vb.)' }
-            ]};
-          }
-        });
-      }); // End of C# forEach
-
-      // PYTHON PROVİDER (Zengin Standard Kütüphane ve js_env)
-      win.monaco.languages.registerCompletionItemProvider('python', {
-        triggerCharacters: ['.'],
-        provideCompletionItems: (model: any, position: any) => {
-          const word = model.getWordUntilPosition(position);
-          const lineContent = model.getLineContent(position.lineNumber);
-          const textBeforeCursor = lineContent.substring(0, position.column - 1);
-          const range = { startLineNumber: position.lineNumber, endLineNumber: position.lineNumber, startColumn: word.startColumn, endColumn: word.endColumn };
-
-          const jsEnvDbMatch = textBeforeCursor.match(/js_env\.db\.(\w*)$/);
-          if (jsEnvDbMatch) {
-            const r = { ...range, startColumn: position.column - jsEnvDbMatch[1].length };
-            return { suggestions: [
-              { label: 'unsafe', kind: 1, insertText: 'unsafe("${1:query}", [${2}])', insertTextRules: 4, range: r, detail: 'Raw SQL' }
-            ]};
-          }
-
-          const jsEnvMatch = textBeforeCursor.match(/js_env\.(\w*)$/);
-          if (jsEnvMatch) {
-            const r = { ...range, startColumn: position.column - jsEnvMatch[1].length };
-            return { suggestions: [
-              { label: 'sleep', kind: 1, insertText: 'sleep(${1:1000})', insertTextRules: 4, range: r },
-              { label: 'publishMQTT', kind: 1, insertText: 'publishMQTT("${1:topic}", "${2:msg}")', insertTextRules: 4, range: r },
-              { label: 'sendEmail', kind: 1, insertText: 'sendEmail({"to": "${1}", "subject": "${2}", "text": "${3}"})', insertTextRules: 4, range: r },
-              { label: 'readModbusData', kind: 1, insertText: 'readModbusData("${1:ip}", 502, 1, ${2:40001}, 1)', insertTextRules: 4, range: r },
-              { label: 'writeModbusData', kind: 1, insertText: 'writeModbusData("${1:ip}", 502, 1, ${2:40001}, ${3:value})', insertTextRules: 4, range: r },
-              { label: 'db', kind: 9, insertText: 'db', range: r },
-              { label: 'crypto', kind: 9, insertText: 'crypto', range: r },
-              { label: 'bcrypt', kind: 9, insertText: 'bcrypt', range: r }
-            ]};
-          }
-
-          const jsonMatch = textBeforeCursor.match(/json\.(\w*)$/);
-          if (jsonMatch) {
-            const r = { ...range, startColumn: position.column - jsonMatch[1].length };
-            return { suggestions: [
-              { label: 'dumps', kind: 1, insertText: 'dumps(${1:obj})', insertTextRules: 4, range: r },
-              { label: 'loads', kind: 1, insertText: 'loads(${1:str})', insertTextRules: 4, range: r }
-            ]};
-          }
-
-          const timeMatch = textBeforeCursor.match(/time\.(\w*)$/);
-          if (timeMatch) {
-            const r = { ...range, startColumn: position.column - timeMatch[1].length };
-            return { suggestions: [
-              { label: 'sleep', kind: 1, insertText: 'sleep(${1:secs})', insertTextRules: 4, range: r },
-              { label: 'time', kind: 1, insertText: 'time()', insertTextRules: 4, range: r }
-            ]};
-          }
-
-          if (textBeforeCursor.match(/\.\w*$/)) return { suggestions: [] };
-
-          return { suggestions: [
-            { label: 'print', kind: 1, insertText: 'print(${1})', insertTextRules: 4, range },
-            { label: 'len', kind: 1, insertText: 'len(${1})', insertTextRules: 4, range },
-            { label: 'type', kind: 1, insertText: 'type(${1})', insertTextRules: 4, range },
-            { label: 'range', kind: 1, insertText: 'range(${1:10})', insertTextRules: 4, range },
-            { label: 'open', kind: 1, insertText: 'open("${1:file.txt}", "${2:r}")', insertTextRules: 4, range },
-            { label: 'str', kind: 5, insertText: 'str(${1})', insertTextRules: 4, range },
-            { label: 'int', kind: 5, insertText: 'int(${1})', insertTextRules: 4, range },
-            { label: 'float', kind: 5, insertText: 'float(${1})', insertTextRules: 4, range },
-            { label: 'list', kind: 5, insertText: 'list(${1})', insertTextRules: 4, range },
-            { label: 'dict', kind: 5, insertText: 'dict(${1})', insertTextRules: 4, range },
-            { label: 'set', kind: 5, insertText: 'set(${1})', insertTextRules: 4, range },
-            { label: 'import', kind: 14, insertText: 'import ${1:module}', insertTextRules: 4, range },
-            { label: 'json', kind: 9, insertText: 'json', range },
-            { label: 'time', kind: 9, insertText: 'time', range },
-            { label: 'os', kind: 9, insertText: 'os', range },
-            { label: 'sys', kind: 9, insertText: 'sys', range },
-            { label: 'math', kind: 9, insertText: 'math', range },
-            { label: 'random', kind: 9, insertText: 'random', range },
-            { label: 'datetime', kind: 9, insertText: 'datetime', range },
-            { label: 're', kind: 9, insertText: 're', range },
-            { label: 'js_env', kind: 6, insertText: 'js_env', range, detail: 'Node.js global objeleri (db, sleep vb.)' }
-          ]};
-        }
-      });
-
-      win.__monaco_completion_provider_added_v7__ = true;
+      win.__monaco_completion_provider_added_v8__ = true;
     } catch (e) {
       console.warn('Monaco completion provider registration failed', e);
     }
@@ -945,16 +886,14 @@ function initEditor() {
     html: '.html',
     css: '.css',
     json: '.json',
-    sql: '.sql',
-    python: '.py',
-    csharp: '.cs',
-    dotnet: '.cs'
+    sql: '.sql'
   };
   const ext = extensionMap[language] || '.js';
   const uniqueId = Math.random().toString(36).substring(2, 10);
   const modelUri = win.monaco.Uri.parse(`file:///model_${uniqueId}${ext}`);
   
   let model = win.monaco.editor.createModel(props.modelValue, language, modelUri);
+  model.__isBackend = isBackend; // Dinamik context için model'e ekle
 
   // Vue dilinde doğrulama devre dışı bırak (Vue söz dizimi tanınmıyor)
   if (language === 'vue') {
@@ -998,9 +937,9 @@ function initEditor() {
     wordWrap: 'on',
     scrollBeyondLastLine: false,
     tabSize: 2,
-    wordBasedSuggestions: (language === 'javascript' || language === 'typescript') ? 'off' : 'currentDocument',
+    wordBasedSuggestions: 'off',
     suggest: {
-      showWords: !(language === 'javascript' || language === 'typescript')
+      showWords: false
     }
   });
 
@@ -1048,11 +987,10 @@ watch(() => props.language, (newLang) => {
     if (model) {
       win.monaco.editor.setModelLanguage(model, newLang);
       
-      const isJs = newLang === 'javascript' || newLang === 'typescript';
       editor.updateOptions({
-        wordBasedSuggestions: isJs ? 'off' : 'currentDocument',
+        wordBasedSuggestions: 'off',
         suggest: {
-          showWords: !isJs
+          showWords: false
         }
       });
     }

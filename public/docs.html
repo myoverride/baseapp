@@ -112,8 +112,8 @@
 
             <v-navigation-drawer v-model="drawer" class="nav-drawer" width="300">
                 <v-list density="compact" nav>
-                    <v-list-item v-for="(item, i) in menuItems" :key="i" :value="item.id" @click="scrollTo(item.id)"
-                        :prepend-icon="item.icon" color="primary">
+                    <v-list-item v-for="(item, i) in menuItems" :key="i" @click="scrollTo(item.id)"
+                        :active="activeSection === item.id" :prepend-icon="item.icon" color="primary">
                         <v-list-item-title class="font-weight-medium">{{ item.title }}</v-list-item-title>
                     </v-list-item>
                 </v-list>
@@ -202,8 +202,12 @@
                             <li><strong>Referer (Kapalı İstem Fallback):</strong> 3. parti veya statik dosya çağrılarında geldiği sayfanın (Referer) URL'ine bakılır.</li>
                             <li><strong>Custom Domain (Özel Alan Adı):</strong> İsteğin <code>host</code> başlığı, master veritabanındaki <code>custom_domain</code> kayıtlarıyla (LRUCache kullanılarak performanslı bir şekilde) karşılaştırılır. Eşleşme bulunursa bu tenant kullanılır.</li>
                             <li><strong>Subdomain (Açık İstem):</strong> Eğer Custom Domain değilse isteğin <code>host</code> başlığına bakılır. <code>tenant1.domain.com</code> gibi bir alt alan adı varsa, bu değer tenant olarak kabul edilir.</li>
+                            <li><strong>Sticky Cookie Fallback (Arayüz Kurtarıcı):</strong> Eğer URL veya Header üzerinden hiçbir kiracı bilgisi bulunamazsa ve yapılan istek bir login işlemi değilse (Ghost session önlemi için), backend son çare olarak <code>tenant_slug</code> çerezini (Cookie) okur ve buna güvenir.</li>
                             <li><strong>Validation & Fallback (Ana Kiracı):</strong> Bulunan tenant slug'ı aktif bir kiracı değilse sistem otomatik olarak <code>master</code> (Ana Kiracı) veritabanına Fallback yapar. Geçerli oturum kontrolü de bu aşamada token'daki tenant'ı gözetir.</li>
                         </ol>
+                        <p class="text-body-2 mb-4">
+                            <strong>Çerez (Cookie) Politikası:</strong> Sticky Cookie sadece bir Fallback'tir (Son Çare). İstemci eğer doğrudan URL yoluna <code>/tenant/acme</code> yazarsa, çerezde başka bir şey yazsa bile URL her zaman galip gelir. Bu sayede veri sızıntısı (Data Bleed) önlenir.
+                        </p>
                         <p class="text-body-2 mb-4">
                             <strong>Mismatch (Çakışma) Koruması:</strong> Bir kullanıcı <code>Tenant-A</code> çalışma alanına giriş yapıp geçerli bir token almışken, tarayıcı üzerinden manuel olarak <code>Tenant-B</code> url'ine gitmeye çalıştığında, sistem <strong>URL Tenant (Dışarıdan)</strong> ile <strong>Token Tenant (İçeriden)</strong> eşleşmediği için anında <code>403 Forbidden</code> hatası verir ve veri sızıntılarını donanımsal düzeyde engeller. Çerez (Cookie) yalnızca arayüzde "Çalışma Alanına Dön" butonunu göstermek için hatırlatıcı (Sticky Cookie) olarak Frontend katmanında kullanılır, Backend bu çereze asla güvenmez.
                         </p>
@@ -219,6 +223,19 @@
                         </ul>
                         <p class="text-body-2 mb-4">
                             Ayrıca devasa IoT telemetri verileri için kullanılan <strong>DuckDB</strong>, bu kilit kuyruğunun tamamen dışındadır (Bypass). Böylece arkada cihazlar deli gibi veri basarken, siz arayüzde sayfaları milisaniyeler içinde donmadan açabilirsiniz.
+                        </p>
+                        
+                        <h3 class="text-h6 mt-6 mb-2">1.6 Devasa Dosya Yükleme ve OOM Koruması (Streaming)</h3>
+                        <p class="text-body-2 mb-2">
+                            Sistem yöneticileri (veya müşteriler) platforma GB'larca büyüklükte yedekleme (Backup) dosyaları yükleyebilmelidir. Ancak geleneksel Node.js uygulamaları, Multipart (form-data) verileri işlerken tüm dosyayı RAM (Hafıza) üzerine almaya çalışır, bu da sunucunun <strong>"Out of Memory (OOM)"</strong> hatasıyla tamamen çökmesine neden olur.
+                        </p>
+                        <p class="text-body-2 mb-4">
+                            BaseApp, çekirdek API uç noktalarında (<span class="code-inline">/api/admin/backup</span>) bu sorunu önlemek için <strong>Busboy Streaming (Akış) Mimarisi</strong> kullanır. Gelen dosya RAM'e alınmaz, bayt bayt doğrudan diske yazılır. Bu sayede, sisteme aynı anda devasa dosyalar yüklense bile diğer müşterilerin API ve arayüz performansı zerre kadar etkilenmez.
+                        </p>
+
+                        <h3 class="text-h6 mt-6 mb-2">1.7 Otomatik SSL Sertifikası (Sıfır Konfigürasyon)</h3>
+                        <p class="text-body-2 mb-4">
+                            Sisteme yeni bir Tenant (Müşteri) kaydedildiğinde ve o müşteriye özel bir alan adı (Örn: <span class="code-inline">panel.musteri.com</span>) bağlandığında, BaseApp altyapısındaki <strong>greenlock-express</strong> modülü sayesinde NGINX veya Apache sunucusunda manuel işlem yapmanıza gerek kalmaz. Sistem; Let's Encrypt kuruluşuyla arka planda konuşarak DNS'i doğrular, ücretsiz SSL sertifikasını saniyeler içinde üretip (veya süresi dolduğunda yenileyip) HTTPS güvenliğini sıfır müdahale ile anında devreye alır.
                         </p>
                     </v-card>
 
@@ -441,6 +458,9 @@
                                 hiyerarşi geçerlidir: Kullanıcıya özel tanımlı bir menü varsa o gösterilir, yoksa
                                 kullanıcının Rolüne ait menü gösterilir. Her ikisi de boşsa "Lütfen sistem yöneticisiyle
                                 iletişime geçin" mesajı çıkar.</li>
+                            <li><strong>1. Korumalı (Protected) Sayfalar:</strong> Sayfa ayarlarına eklenen "Protected" tiki sayesinde, herhangi bir arayüz veya API uç noktası
+                            (<span class="code-inline">endpoints</span>) oluşturulurken bu sayfanın güvenlik
+                            kuralları atlanamaz.</li>
                         </ul>
 
                         <h3 class="text-h6 mt-4 mb-2">3.3 Etiket Tabanlı Yetkilendirme (Tag-Based RBAC)</h3>
@@ -472,6 +492,15 @@
                             Sistemin ayarları, port bilgileri ve çeşitli API yapılandırmaları veritabanındaki <code>system_variables</code> tablosunda tutulur. Kod mimarisi, alt kiracıların ayar karmaşasını önlemek için akıllı bir <strong>Miras (Fallback)</strong> sistemi kurgulamıştır:
                             <br>Eğer bir alt kiracı (Sub-tenant) sistemden herhangi bir değişken talep ederse (Örn: <code>SMTP_PORT</code>) ve bu değer kendi veritabanında boş/tanımsız ise; kod sessizce arka planda <strong>Master Tenant'ın (Ana Kiracı)</strong> veritabanına giderek değeri oradan çeker. Bu sayede genel ayarlar sadece Master tenant'ta yapılarak tüm kiracılara otomatik dağıtılabilir.
                         </p>
+
+                        <h3 class="text-h6 mt-4 mb-2">3.6 Hız ve Trafik Sınırlandırması (Rate Limiting)</h3>
+                        <p class="text-body-2 mb-2">
+                            Açık internete açık olan uygulamalarda Kaba Kuvvet (Brute-Force) parola denemelerini ve Hizmet Engelleme (DDOS / Spam) saldırılarını önlemek için, BaseApp çekirdeği yerleşik bir Rate Limit (Hız Sınırlandırıcı) altyapısına sahiptir.
+                        </p>
+                        <ul class="text-body-2 mb-4">
+                            <li><strong>IP Bazlı Kota:</strong> Bir IP adresi tanımlı süre içinde belirlenen istek limitini (Örn: 1 dakikada 100 istek) aşarsa, sistem veritabanı veya işlem katmanına inmeden bağlantıyı HTTP düzeyinde <span class="code-inline">429 Too Many Requests</span> yanıtıyla reddeder.</li>
+                            <li><strong>Hafıza Yönetimi:</strong> Rate limit sayaçları RAM (LRU Cache) üzerinde tutulduğu için veritabanına ek bir I/O yükü bindirmez, kilitlenmeleri donanımsal düzeyde engeller.</li>
+                        </ul>
                     </v-card>
 
                     <!-- 4. Dinamik UI Geliştirme -->
@@ -506,9 +535,8 @@
                             <li><strong>style_content:</strong> Sadece bu sayfaya özel (Scoped) CSS kodlarıdır. Sisteme
                                 sızmaması için BaseApp arka planda CSS id'lerini sayfa id'si (<span
                                     class="code-inline">#ds-xxx</span>) ile otomatik sarmalar.</li>
-                            <li><strong>dependencies:</strong> Sayfanın yüklenmeden önce ihtiyaç duyduğu dış
-                                kütüphaneler dizisidir (Örn: <span
-                                    class="code-inline">['https://cdn.jsdelivr.net/npm/chart.js']</span>).</li>
+                            <li><strong>style_content:</strong> Sadece bu sayfaya özel (Scoped) CSS kodlarıdır. Sisteme sızmaması için BaseApp arka planda CSS id'lerini sayfa id'si (<span class="code-inline">#ds-xxx</span>) ile otomatik sarmalar.</li>
+                            <li><strong>Harici Kütüphaneler (CDN):</strong> Sayfaya Chart.js gibi 3. parti kütüphaneler eklemek için HTML kısmına `&lt;script&gt;` etiketi YAZILAMAZ (sistem siler). Bunun yerine script kısmında <code>useHead({ script: [{ src: 'cdn_linki' }] })</code> composable'ı kullanılmalıdır. (Not: Harici kütüphaneler UMD/Global sürüm olmalıdır).</li>
                         </ul>
 
                         <h4 class="text-h6 mt-4 mb-2">Dinamik Script Çalışma Kuralları ve <code>setup()</code> Zorunluluğu</h4>
@@ -522,7 +550,7 @@
                             <li><strong>Alt Bileşen (Local Component):</strong> Eski usül <code>components: {}</code> bloğuna ihtiyacınız yoktur. Script içinde tanımladığınız herhangi bir bileşeni <code>return</code> ettiğiniz an, şablonda kullanabilirsiniz.</li>
                         </ul>
                         <v-alert type="warning" variant="tonal" class="mb-4">
-                            <strong>Top-Level <code>await</code> Tuzağı (Kilitlenme Riski):</strong> Script alanında doğrudan <code>const veri = await useFetch(...)</code> kullanmaktan kaçının. Dinamik sayfa mimarisi arka planda <code>&lt;Suspense&gt;</code> bileşeni tarafından yönetildiğinden, ana seviyede atılan bir asenkron istek UI'ın tamamen kilitlenmesine neden olabilir. API çağrılarınızı daima <code>onMounted</code> içine almalı veya <code>useAsyncData</code> kullanmalısınız.
+                            <strong>Top-Level <code>await</code> Tuzağı (Syntax Hatası):</strong> Script alanında doğrudan <code>const veri = await useFetch(...)</code> kullanmaktan kaçının. Dinamik sayfa mimarisinde yazdığınız JS kodları arka planda senkron (async olmayan) bir fonksiyon içine gömülerek derlenir. Bu yüzden ana seviyede atılan asenkron bir istek anında <code>SyntaxError</code> fırlatır ve sayfanın derlenmesini engeller. API çağrılarınızı daima <code>onMounted</code> içine almalı veya <code>useAsyncData</code> kullanmalısınız.
                         </v-alert>
                         <pre class="code-block mb-4" v-pre>
 // Bu kod doğrudan setup() fonksiyonu içinde çalışır!
@@ -569,7 +597,7 @@ return { count, sensorData, increment, MyCustomCard };
                                 <tbody>
                                     <tr>
                                         <td><strong>Vue 3 Core</strong></td>
-                                        <td><code>ref</code>, <code>reactive</code>, <code>computed</code>, <code>watch</code>, <code>onMounted</code>, <code>onUnmounted</code>, <code>h</code>, <code>defineComponent</code><br><small class="text-error"><strong>Kritik Eksik:</strong> <code>nextTick</code> kasten enjekte edilmemiştir.</small></td>
+                                        <td><code>ref</code>, <code>reactive</code>, <code>computed</code>, <code>watch</code>, <code>onMounted</code>, <code>onUnmounted</code>, <code>h</code>, <code>defineComponent</code>, <code>nextTick</code></td>
                                     </tr>
                                     <tr>
                                         <td><strong>Vue Router</strong></td>
@@ -586,7 +614,7 @@ return { count, sensorData, increment, MyCustomCard };
                                             <code>useUtils()</code>: Backend utilsServer çağrıları için (Gönderilen argümanlar JSON serialize edilebilir olmalıdır). <code>loadUtilities</code> ile önceden yükleyip cache'leyebilir, <code>refreshUtilities</code> ile tazeleyebilirsiniz.<br>
                                             <code>useWS('/api/ws/oda-1')</code>: WebSocket odalarına abone olmak için.<br>
                                             <code>useI18n()</code> / <code>t</code>: Çoklu dil kütüphanesi.<br>
-                                            <small class="text-error"><strong>Kısıtlama:</strong> <code>$localize(data)</code> metodu sadece HTML Template içinde kullanılabilir, script içinde çağrılamaz.</small>
+                                            <small class="text-success"><strong>Özel Enjeksiyonlar:</strong> Nuxt'un <code>$localize</code>, <code>$toast</code> metodları ve <code>useNuxtApp</code> objesi doğrudan JIT ortamına enjekte edilmiştir. Script içinde hiçbir import yapmadan (Örn: <code>$toast.success()</code>) doğrudan kullanabilirsiniz.</small>
                                         </td>
                                     </tr>
                                 </tbody>
@@ -638,50 +666,11 @@ return { count, sensorData, increment, MyCustomCard };
                             <li><strong>CrudTable:</strong> Sunucu taraflı (Server-Side) sayfalama ve arama yapan
                                 profesyonel veri tablosudur. Slotlar ile son derece esnektir. Yeni bir kayıt eklendikten
                                 veya silindikten sonra tabloyu sayfayı yenilemeden tazelemek için <code>ref</code>
-                                tanımlaması yapıp <code>loadItems()</code> fonksiyonunu çağırmalısınız:
-                                <pre class="code-block my-2" v-pre>
-&lt;!-- Arayüz (Template) Kısmı --&gt;
-&lt;CrudTable ref="tableRef" title="Kullanıcılar" apiEndpoint="/api/admin/users" :columns="columns"&gt;
-  &lt;!-- Tablonun Üst Barı (Ekleme Butonları vs.) --&gt;
-  &lt;template #top&gt;
-    &lt;v-btn color="primary" @click="yeniEkle"&gt;Yeni Kayıt&lt;/v-btn&gt;
-  &lt;/template&gt;
-
-  &lt;!-- Satırın Sonundaki İşlem Sütunu --&gt;
-  &lt;template #item.actions="{ item }"&gt;
-    &lt;v-btn icon="mdi-pencil" @click="duzenle(item)"&gt;&lt;/v-btn&gt;
-    &lt;v-btn icon="mdi-delete" color="error" @click="sil(item)"&gt;&lt;/v-btn&gt;
-  &lt;/template&gt;
-&lt;/CrudTable&gt;
-</pre>
+                                tanımlaması yapıp <code>loadItems()</code> fonksiyonunu çağırmalısınız.
                             </li>
                             <li><strong>ItemDialog:</strong> Formları pop-up (Modal) içerisinde göstermek için
                                 kullanılır. <code>v-model</code> ile açılıp kapanır ve kaydetme durumunda <code>@save</code>
-                                event'ini fırlatır:
-                                <pre class="code-block my-2" v-pre>
-&lt;ItemDialog 
-  v-model="isDialogOpen" 
-  title="Kullanıcı Düzenle" 
-  @save="veriyiKaydet"&gt;
-  
-  &lt;v-text-field v-model="formData.name" label="İsim"&gt;&lt;/v-text-field&gt;
-&lt;/ItemDialog&gt;
-</pre>
-                                <pre class="code-block my-2" v-pre>
-// Script Kısmı (Tabloyu Yenileme Mantığı)
-const tableRef = ref(null);
-
-async function veriyiKaydet() {
-    // API Kayıt İşlemi
-    await $fetch('/api/admin/users', { method: 'POST', body: formData.value });
-    isDialogOpen.value = false;
-    
-    // İşlem bittikten sonra tabloyu anında tazele!
-    if (tableRef.value) {
-        tableRef.value.loadItems();
-    }
-}
-</pre>
+                                event'ini fırlatır.
                             </li>
                             <li><strong>AdvancedFilterBuilder:</strong> Karmaşık (İç içe AND/OR) arama ve filtreleme
                                 kurallarını görsel olarak oluşturmak için kullanılır. Arayüzden oluşturulan kural ağacı,
@@ -699,7 +688,7 @@ async function veriyiKaydet() {
 </pre>
                             </li>
                             <li><strong>MonacoEditor:</strong> VS Code altyapısını kullanan profesyonel web kod
-                                editörüdür. Sistem içindeki script'leri (JS, Python, JSON) geliştiricilere veya
+                                editörüdür. Sistem içindeki script'leri (JS, JSON) geliştiricilere veya
                                 kullanıcılara yazdırırken kullanılır. Syntax highlighting ve otomatik tamamlama sunar. Ayrıca <code>@save</code> event'i ile <strong>Ctrl+S</strong> kısayolunu yakalayabilirsiniz:
                                 <pre class="code-block my-2" v-pre>
 &lt;!-- Arayüz (Template) Kullanımı --&gt;
@@ -724,9 +713,7 @@ async function veriyiKaydet() {
 /&gt;
 </pre>
                             </li>
-                            <li><strong>Görünmezlik Tuzağı ($toast ve useNuxtApp Eksikliği):</strong> Dinamik sayfa ortamında (<code>DynamicRenderer.vue</code>) <code>useNuxtApp()</code> metodu kasten enjekte <strong>edilmemiştir</strong>. Bu nedenle uygulamanın global bildirim servisine (<code>$toast</code>) ulaşmanız imkansızdır. Bir API isteği sonrası ekrana kullanıcı dostu bildirimler (Toast/Snackbar) basmak isterseniz, uyarıları kendi yazdığınız yerel bileşenlerle manuel olarak (örneğin <code>v-snackbar</code> state'leri aracılığıyla) yönetmek zorundasınız. Sayfalar arası yönlendirme yapmak için ise doğrudan <span
-                                    class="code-inline">navigateTo('/admin/dashboard')</span> metodunu çağırabilirsiniz.
-                            </li>
+                            <li><strong>Global Bildirimler ve Navigasyon ($toast, navigateTo):</strong> Dinamik sayfa ortamında (<code>DynamicRenderer.vue</code>) uygulamanın global bildirim servisi (<code>$toast</code>) ve kök uygulama objesi (<code>useNuxtApp</code>) kasten enjekte edilmiştir. Bir API isteği sonrası ekrana kullanıcı dostu bildirimler basmak isterseniz doğrudan <code>$toast.success('Kaydedildi')</code> veya <code>$toast.error('Hata')</code> metodlarını çağırabilirsiniz. Sayfalar arası yönlendirme yapmak için ise doğrudan <span class="code-inline">navigateTo('/admin/dashboard')</span> metodunu kullanabilirsiniz.</li>
                             <li><strong>Çoklu Dil (i18n):</strong> Sistem i18n altyapısına sahiptir. UI (Template)
                                 tarafında statik metin yazmak yerine <span class="code-inline" v-pre>{{
                                     $t('common.save') }}</span>; Javascript (Script) tarafında ise <span
@@ -811,7 +798,7 @@ const loading = ref(false);
 
 // 2. BaseApp'ye Özel Fonksiyonları Çağırma
 const { sysVars } = useSysVars(); // Sistem değişkenleri Proxy'si
-const { $utils } = useUtils(); // Utils Proxy'si
+const { utils } = useUtils(); // Utils Proxy'si
 const { t } = useI18n(); // Çeviri motoru
 
 // Değişkenleri Çekme (Direct Proxy üzerinden çağrılır, .value yazılmaz!)
@@ -824,7 +811,7 @@ const fetchData = async () => {
     const response = await $fetch('/api/admin/records/siparisler');
     
     // Dinamik Util Kullanımı (Örn: Hesaplama Utili)
-    const total = await $utils.calculateTotal(response.data);
+    const total = await utils.calculateTotal(response.data);
     console.log("Toplam:", total);
   } catch (err) {
     console.error(t('errors.loadFailed'), err);
@@ -876,10 +863,10 @@ return {
 </v-card>
 
                     
-                                                <h3 class="text-h6 mt-6 mb-2">4.4 Harici Kütüphane Yükleme ve AMD Koruması (Sharp Edge)</h3>
-                        <p class="text-body-2 mb-2">Sayfanızda Chart.js, Three.js gibi harici kütüphaneler kullanmak isterseniz "Dependencies" alanına <code>.js</code> veya <code>.css</code> linkleri eklersiniz.</p>
+                                                <h3 class="text-h6 mt-6 mb-2">4.4 Özel Fiziksel Dosya Sunucusu (Asset Server)</h3>
+                        <p class="text-body-2 mb-2">Her müşterinin (Tenant) kendine ait, yetkisiz erişime kapalı izole bir dosya dizini vardır. Geliştirici sayfaya müşteriye özel bir resim veya PDF koymak istediğinde bunu standart yollarla (Örn: <code>/public/resim.png</code>) yapamaz.</p>
                         <v-alert type="warning" variant="tonal" class="mb-4">
-                            <strong>AMD Koruması:</strong> Kütüphanelerin Vue ekosistemiyle çatışmasını engellemek için, sistem harici JS kütüphanelerini çalıştırırken <code>define</code> ve <code>module</code> objelerini geçici olarak gizler. Bu durum kütüphaneyi UMD modunda çalışmaya ve <code>window</code> objesine (Global) yapışmaya zorlar. Her zaman CDN üzerinden kütüphanelerin <strong>UMD / Global</strong> sürümlerini kullanmalısınız. ES Modules (<code>type="module"</code>) destekli paketler yüklenemez.
+                            <strong>İzole Dosya Erişimi:</strong> Harici dosyalar ve resimler sayfalara eklenirken mutlaka doğrudan <code>/tenant/:slug/assets/:file</code> rotası kullanılmalıdır. Aksi takdirde dosyalar yüklenmez ve güvenlik engeline takılırsınız.
                         </v-alert>
 
                         <h3 class="text-h6 mt-6 mb-2">4.5 Bellek Sızıntısı Koruması (Garbage Collection) ve Tehlikeli Tuzak</h3>
@@ -980,7 +967,7 @@ return {
                                             <code>fetch(url, opts)</code>: Dış sistemlere HTTP istekleri (Zaman aşımında hard-kill olur).<br>
                                             <code>t(key, params)</code> / <code>tAsync(args)</code>: i18n çeviri (Mikroservislerde sadece tAsync vardır).<br>
                                             <code>bcrypt</code>, <code>crypto</code>, <code>Buffer</code>: Kriptografi ve binary işlemler.<br>
-                                            <code>require(module)</code>, <code>process</code>, <code>env</code>, <code>globalThis</code>, <code>__dirname</code>, <code>__filename</code>. <small class="text-info">(<code>globalThis</code> üzerinden veri saklayarak (örn. <code>globalThis.cache = ...</code>) veritabanı sorgularını azaltabilirsiniz.)</small>
+                                            <code>require(module)</code>, <code>process</code>, <code>globalThis</code>, <code>__dirname</code>, <code>__filename</code>. <small class="text-info">(<code>globalThis</code> üzerinden veri saklayarak (örn. <code>globalThis.cache = ...</code>) veritabanı sorgularını azaltabilirsiniz.)</small>
                                         </td>
                                     </tr>
                                 </tbody>
@@ -992,8 +979,8 @@ return {
 
 
                         
-                        <v-alert type="warning" variant="tonal" class="mb-4 mt-4">
-                            <strong>Sistem Değişkenlerine Doğrudan Erişim Yoktur:</strong> Sandbox içerisinde, UI arayüzünde olduğu gibi <code>system_variables</code> tablosuna doğrudan bağlı <code>sysVars</code> objesi yoktur. Veritabanı değişkenlerini okumak için mutlaka SQL kullanmalısınız: <code>await sql`SELECT value FROM system_variables WHERE key = 'API_KEY'`;</code>
+                        <v-alert type="info" variant="tonal" class="mb-4 mt-4">
+                            <strong>Sistem Değişkenlerine Erişim:</strong> Sandbox içerisinde <code>sysVars</code> objesi kullanılarak sistem değişkenlerine (örn: API_KEY, SMTP_HOST) doğrudan ulaşılabilir. Alternatif olarak veritabanından doğrudan <code>await sql`SELECT value FROM system_variables WHERE key = 'API_KEY'`;</code> şeklinde de okuyabilirsiniz.
                         </v-alert>
 
                         <h4 class="text-subtitle-1 font-weight-bold mb-2">Veritabanı (db / sql) Özel Kullanımları:</h4>
@@ -1118,7 +1105,7 @@ const user = await sql`SELECT * FROM users WHERE email = ${payload.body.email}`;
                                 <tbody>
                                     <tr>
                                         <td><strong>Vue 3 Core</strong></td>
-                                        <td><code>ref</code>, <code>reactive</code>, <code>computed</code>, <code>watch</code>, <code>onMounted</code>, <code>onUnmounted</code>, <code>h</code>, <code>defineComponent</code><br><small class="text-error"><strong>Kritik Eksik:</strong> <code>nextTick</code> kasten enjekte edilmemiştir.</small></td>
+                                        <td><code>ref</code>, <code>reactive</code>, <code>computed</code>, <code>watch</code>, <code>onMounted</code>, <code>onUnmounted</code>, <code>h</code>, <code>defineComponent</code>, <code>nextTick</code></td>
                                     </tr>
                                     <tr>
                                         <td><strong>Vue Router</strong></td>
@@ -1156,7 +1143,7 @@ const user = await sql`SELECT * FROM users WHERE email = ${payload.body.email}`;
                             birbirleriyle <strong>IPC (Inter-Process Communication)</strong> üzerinden mesajlaşarak
                             konuşurlar. Bu sayede uygulamanın geri kalanı çöksede mikroservisler arka planda donanım
                             dinlemeye veya ağır hesaplamalar yapmaya devam eder.
-                            <br><br><strong>Uyarı (Daemon Körlüğü):</strong> Mikroservisler UI veya ağır yük taşımadıkları için <code>utils</code>, <code>sendDeviceCommand</code>, <code>t</code>, <code>recordManager</code> gibi fonksiyonlar bu ortama bilinçli olarak enjekte edilmemiştir. Bunları kullanmak servisi çökertir. Yalnızca <code>db</code>, <code>sql</code> ve iletişim protokolleri geçerlidir.
+                            <br><br><strong>Bilgi (RPC ve Proxy Entegrasyonu):</strong> Mikroservisler ayrı bir süreç (Thread) üzerinde çalışmasına rağmen, <code>utils</code>, <code>sendDeviceCommand</code>, <code>t</code>, <code>recordManager</code> gibi fonksiyonlar bu ortama özel <strong>Proxy</strong> objeleri ile enjekte edilmiştir. Bu fonksiyonları çağırdığınızda, istekleriniz IPC üzerinden (RPC - callMainThread) ana sunucuya iletilir ve çalıştırılır. Servisi çökertmeden güvenle kullanabilirsiniz.
                         </v-alert>
                         </p>
                         <p class="text-body-2 mb-4">
@@ -1211,7 +1198,7 @@ baslat();
                             kullanıcılar göremez, sadece Admin yetkisi olanların tarayıcısına aktarılır.
                         </p>
                     <v-alert type="error" variant="tonal" class="mb-4 mt-4">
-                            <strong>RAM ve Veritabanı Limitleri (OOM Koruması):</strong> Her bir mikroservis maksimum <strong>50 MB RAM</strong> limitiyle çalışır (<code>--max-old-space-size=50</code>). JavaScript içinde devasa diziler oluşturmak servisi anında çökertir (OOM). Ayrıca veritabanı kilitlenmelerini önlemek için mikroservislerde <code>sql.begin()</code> veya <code>sql.transactionSync()</code> gibi toplu kilitli işlemler mimari olarak yasaklanmış ve kapatılmıştır. Mikroserviste utils, sendDeviceCommand, t, recordManager gibi UI odaklı fonksiyonları çağırmak da yasaktır, servisi çökertir.
+                            <strong>RAM ve Veritabanı Limitleri (OOM Koruması):</strong> Her bir mikroservis maksimum <strong>50 MB RAM</strong> limitiyle çalışır (<code>--max-old-space-size=50</code>). JavaScript içinde devasa diziler oluşturmak servisi anında çökertir (OOM). Ayrıca veritabanı kilitlenmelerini önlemek için mikroservislerde <code>sql.begin()</code> veya <code>sql.transactionSync()</code> gibi toplu kilitli işlemler mimari olarak yasaklanmış ve kapatılmıştır. Not: UI odaklı fonksiyonlar (utils, sendDeviceCommand vb.) Proxy/RPC üzerinden güvenle kullanılabilir, kısıtlanmamıştır.
                         </v-alert>
 
 </v-card>
@@ -1237,7 +1224,7 @@ baslat();
                         <v-alert type="warning" border="start" border-color="warning" class="mb-4">
                             <strong class="text-subtitle-1">Zorunlu MQTT Kimlik Doğrulama Formatı</strong><br>
                             Sistem multi-tenant (çoklu-kiracı) izolasyonuna sahip olduğu için cihazlar MQTT'ye bağlanırken kimliklerini şu şekilde belirtmelidir:<br>
-                            - <strong>Username:</strong> <code>{tenantSlug}:{deviceId}</code> formatında olmalıdır (Örn: <code>acme_firmasi:cihaz_1</code>). Eğer sadece <code>cihaz_1</code> yazarsanız sistem sizi varsayılan olarak <strong><code>master</code></strong> kiracısına yönlendirir (Fallback) ve <code>master</code> veritabanında cihazı arar.<br>
+                            - <strong>Username:</strong> Cihazın veritabanına kayıtlı <code>device_id</code> değeri girilmelidir. Sistem şifre ile eşleştirme yaparken bağlı olduğu tenant'ı otomatik tespit eder.<br>
                             - <strong>Password:</strong> Cihazın veritabanına kayıtlı <code>secret_key</code> şifresi olmalıdır.
                         </v-alert>
                         <v-alert type="info" variant="tonal" class="mb-4">
@@ -1250,7 +1237,7 @@ baslat();
                             <strong>EN KRİTİK KURAL (Sıfır Güven Mimarisi):</strong> Cihazın gönderdiği JSON verisi doğrudan değerleri içeremez. Sistem donanım sahteciliğine karşı <strong>HMAC SHA256 Şifrelemesi</strong> talep eder. Gönderilen veri aşağıdaki gibi katı bir şablona sahip olmalıdır:
                             <pre class="code-block my-2" v-pre>
 {
-  "deviceId": "cihaz_1",
+  "deviceId": "cihaz_id",
   "timestamp": 1718000000,
   "payload": {
     "sicaklik": 25.4,
@@ -1269,6 +1256,16 @@ baslat();
                         </p>
 
                         <h4 class="text-subtitle-1 font-weight-bold mt-6 mb-4">Farklı Dillerde HMAC ve MQTT Kod Örnekleri</h4>
+                        <h4 class="text-subtitle-1 font-weight-bold mt-6 mb-2">Ağaç Tipi Yetkilendirme (Wildcard Routing)</h4>
+                        <p class="text-body-2 mb-4">
+                            Sistem içindeki Aedes MQTT Broker, karmaşık fabrika hiyerarşileri için MQTT standardındaki Wildcard'ları (<span class="code-inline">#</span> ve <span class="code-inline">+</span>) tam olarak destekler. Ancak rol tabanlı güvenlik (RBAC) ile sıkı sıkıya denetlenir. Bir <strong>"admin"</strong> rolündeki bağlantı, <span class="code-inline">fabrika/+/sensorler/#</span> diyerek tek bir Topic üzerinden binlerce cihazdan aynı anda veri dinleyebilir veya komut gönderebilir. "Cihaz" rolündeki istemcilerin (Device) joker karakterleri kullanması engellenerek yetkisiz dinlemelerin (Eavesdropping) önüne geçilir.
+                        </p>
+
+                        <h4 class="text-subtitle-1 font-weight-bold mt-6 mb-2">Cihaz Çevrimdışı Uyarıları (LWT - Last Will)</h4>
+                        <p class="text-body-2 mb-4">
+                            Fabrikadaki makinenin elektriği kesildiğinde veya interneti koptuğunda, cihazın "Ben çevrimdışı oldum" mesajı atacak vakti olmaz. BaseApp, bu sorunu çözmek için MQTT'nin <strong>LWT (Last Will and Testament - Vasiyet)</strong> mekanizmasını kullanır. Cihaz bağlandığı anda broker'a bir vasiyet bırakır; sunucu bağlantının koptuğunu (Heartbeat alınamadığını) algıladığı saniye, cihazın vasiyet mesajını sanki cihazdan gelmiş gibi otomatik olarak sisteme yazar. Böylece arayüzdeki "Çevrimiçi" ibaresi donanımsal kopmalarda bile %100 doğrulukla "Çevrimdışı" durumuna geçer.
+                        </p>
+
                         <p class="text-body-2 mb-2">Aşağıda hem harici donanımlarınız (C++, PHP) için, hem de BaseApp içindeki <strong>Microservice (Daemon) Sandbox</strong> ortamında çalışacak (JavaScript) cihaz simülatör kodları verilmiştir:</p>
                         
                         <v-expansion-panels class="mb-6" variant="accordion">
@@ -1312,88 +1309,6 @@ while (true) {
                                 </v-expansion-panel-text>
                             </v-expansion-panel>
 
-                            <!-- Sandbox Python -->
-                            <v-expansion-panel>
-                                <v-expansion-panel-title>Python (Microservice Sandbox Simülatörü)</v-expansion-panel-title>
-                                <v-expansion-panel-text>
-                                    <p class="text-body-2 mb-2">Microservice içinde Python ile sürekli veri üretimi. <strong>Önemli:</strong> Python'da asenkron bir döngü kurabilmek için kodunuzu <code>async def main(js_env):</code> fonksiyonu içine almanız ve beklemeleri <code>await js_env.sleep(ms)</code> ile yapmanız gerekmektedir.</p>
-                                    <pre class="code-block my-2" v-pre>
-import time
-import json
-import hmac
-import hashlib
-
-async def main(js_env):
-    device_id = "cihaz_1"
-    secret_key = b"super_gizli_anahtar"
-    
-    while True:
-        payload_obj = {"sicaklik": 25.4, "nem": 40}
-        timestamp = int(time.time() * 1000)
-        
-        # separators=(',', ':') kullanımı zorunludur (boşluksuz JSON)
-        payload_str = json.dumps(payload_obj, separators=(',', ':'))
-        
-        data_to_sign = f"{device_id}|{timestamp}|{payload_str}".encode('utf-8')
-        signature = hmac.new(secret_key, data_to_sign, hashlib.sha256).hexdigest()
-        
-        final_message = {
-            "deviceId": device_id,
-            "timestamp": timestamp,
-            "payload": payload_obj,
-            "hmac": signature
-        }
-        
-        # Sandbox ortamında publishMQTT ve sleep, js_env objesinden gelir
-        js_env.publishMQTT('telemetry', final_message)
-        print("Python Simülatörü: Veri DuckDB'ye yollandı.")
-        
-        await js_env.sleep(5000) # 5 saniye bekle
-                                    </pre>
-                                </v-expansion-panel-text>
-                            </v-expansion-panel>
-
-                            <!-- Sandbox C# -->
-                            <v-expansion-panel>
-                                <v-expansion-panel-title>C# (.NET Core) (Microservice Sandbox Simülatörü)</v-expansion-panel-title>
-                                <v-expansion-panel-text>
-                                    <p class="text-body-2 mb-2">C# kodunuz sistem tarafından otomatik olarak sarmalandığı (wrap edildiği) için dışarıya <code>public class Startup</code> yazmanıza gerek yoktur. JS global metodlarına <code>js_env</code> üzerinden dinamik (Func) olarak erişilir.</p>
-                                    <pre class="code-block my-2" v-pre>
-var deviceId = "cihaz_1";
-var secretKey = "super_gizli_anahtar";
-
-// JS'ten enjekte edilen publishMQTT ve sleep fonksiyonlarını cast ediyoruz
-var publishMQTT = (Func&lt;object, Task&lt;object&gt;&gt;)js_env.publishMQTT;
-var sleep = (Func&lt;object, Task&lt;object&gt;&gt;)js_env.sleep;
-
-while (true) {
-    var payloadObj = new { sicaklik = 25.4, nem = 40 };
-    var timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-    var payloadStr = System.Text.Json.JsonSerializer.Serialize(payloadObj);
-
-    var dataToSign = $"{deviceId}|{timestamp}|{payloadStr}";
-    using var hmac = new System.Security.Cryptography.HMACSHA256(System.Text.Encoding.UTF8.GetBytes(secretKey));
-    var hash = hmac.ComputeHash(System.Text.Encoding.UTF8.GetBytes(dataToSign));
-    var signature = BitConverter.ToString(hash).Replace("-", "").ToLower();
-
-    var finalMessage = new {
-        deviceId = deviceId,
-        timestamp = timestamp,
-        payload = payloadObj,
-        hmac = signature
-    };
-
-    // JS fonksiyonuna argümanları dizi olarak iletiyoruz
-    await publishMQTT(new object[] { "telemetry", finalMessage });
-    Console.WriteLine("C# Simülatörü: Veri DuckDB'ye gönderildi.");
-
-    await sleep(5000); // 5 saniye bekle
-}
-
-return null;
-                                    </pre>
-                                </v-expansion-panel-text>
-                            </v-expansion-panel>
 
                             <!-- External C++ (ESP32/Arduino) -->
                             <v-expansion-panel>
@@ -1584,35 +1499,30 @@ console.log("Komut PENDING olarak sıraya alındı. Takip ID:", commandId);
                             BaseApp mimarisinde, cihazlardan DuckDB'ye giden veriler veya cihazlardan gelen komut yanıtları (Downlink Response) doğrudan kaydedilmez! Her mesaj araya giren <strong>MQTT Sandbox</strong> katmanından geçer. Bu katmanda, gelen ham veriyi (payload) anında okuyabilir, değiştirebilir, DuckDB'ye yazılmasını engelleyebilir veya WebSocket/Push bildirimleri tetikleyebilirsiniz.
                         </p>
                         <ul class="text-body-2 mb-4">
-                            <li><strong>Aktifleştirme:</strong> Yönetim panelinden "Sistem Değişkenleri" altına <code>mqtt_sandbox_script</code> anahtarıyla (Key) JavaScript kodunuzu yazmanız yeterlidir. Kod otomatik olarak devreye girer.</li>
+                            <li><strong>Aktifleştirme:</strong> Yönetim panelinden "Endpoints" menüsüne girip <code>type = 'mqtt'</code> seçerek JavaScript kodunuzu yazmanız yeterlidir. Regex destekli olarak birden fazla kod oluşturabilir ve belirli topic'lere filtre uygulayabilirsiniz. Kod otomatik olarak devreye girer.</li>
                             <li><strong>DuckDB Engelleme (Throttle):</strong> Eğer script içinden <code>return false;</code> derseniz, o mesaj DuckDB'ye <strong>YAZILMAZ</strong>. Bu özellik gereksiz veritabanı şişmelerini önlemek (Filtreleme) için mükemmeldir.</li>
                             <li><strong>Payload Değiştirme:</strong> Script içinden yeni bir obje dönerseniz (Örn: <code>return { ...payload, uyari: true }</code>), orijinal mesaj atılır ve DuckDB'ye sizin döndürdüğünüz obje kaydedilir.</li>
                         </ul>
-                        <v-alert type="error" variant="tonal" class="mb-4">
-                            <strong>Önemli Uyarı: Sandbox "Stateless" Çalışır!</strong><br>
-                            Sanal Makine (Sandbox) içerisine <code>global</code> objesi veya herhangi bir bellek önbelleği (RAM Cache) enjekte <strong>edilmez!</strong> Durum (State) saklamak veya alarm sayacı tutmak (Throttling) için mecburen veritabanını (<code>db.unsafe</code>) kullanmalısınız. Aksi halde sisteminiz çöker. Aşağıdaki örnekte, geçici cache niyetine veritabanına sorgu atılarak alarm gecikmesi (Throttling) sağlanmaktadır.
+                        <v-alert type="success" variant="tonal" class="mb-4">
+                            <strong>Performans İpucu: Yerleşik RAM Cache (LRU)</strong><br>
+                            Sanal Makine (Sandbox) içerisine durum (state) saklamak veya alarm sayacı tutmak (Throttling) için doğrudan bellek önbelleği (<code>context.cache</code>) enjekte edilmiştir. Bu işlemler için veritabanına sorgu atmak sistem performansını düşüreceğinden, daima yerleşik LRU Cache altyapısını kullanmalısınız. Aşağıdaki örnekte <code>context.cache</code> ile veritabanına (diske) inmeden tamamen RAM üzerinde alarm geciktirme işlemi gösterilmiştir.
                         </v-alert>
                         <pre class="code-block" v-pre>
 // mqtt_sandbox_script Değişken İçeriği:
 
 // 1. Şartlı Alarm Üretimi
 if (payload.sicaklik > 50) {
-    // Son alarm zamanını veritabanından getir (Geçici verileri sysvars'da saklayabiliriz)
     const cacheKey = "alarm_" + context.deviceId;
-    const lastAlarmData = await db.unsafe("SELECT value FROM system_variables WHERE key = ?", [cacheKey]);
-    const lastAlarm = lastAlarmData.length > 0 ? parseInt(lastAlarmData[0].value) : 0;
-    const now = Date.now();
+    
+    // Cache'de veri var mı kontrol et (TTL mantığı)
+    const isThrottled = await context.cache.get(cacheKey);
 
-    if (now - lastAlarm > 1800000) { // 30 Dakika bekleme (Throttling)
+    if (!isThrottled) { // Eğer son 30 dakika içinde alarm atılmadıysa
         // Kullanıcılara anlık WebSocket bildirimi gönder
         publishWS('alarms', { device: context.deviceId, msg: "Yüksek Sıcaklık Alarmı!" });
         
-        // Veritabanındaki sayaç değerini (Cache) güncelle
-        if (lastAlarm === 0) {
-            await db.unsafe("INSERT INTO system_variables (key, value) VALUES (?, ?)", [cacheKey, String(now)]);
-        } else {
-            await db.unsafe("UPDATE system_variables SET value = ? WHERE key = ?", [String(now), cacheKey]);
-        }
+        // Yeniden alarm çalmasını 30 dakika (1800 saniye) boyunca engelle
+        await context.cache.set(cacheKey, true, 1800);
     }
     // Veriyi DuckDB'ye "Kritik" etiketi ekleyerek yazdır
     return { ...payload, durum: "KRİTİK" };
@@ -1696,15 +1606,16 @@ await push.broadcast({
                         </p>
                         <pre class="code-block" v-pre>
 // KANALA ABONE OLAN HERKESE BİLDİR (BROADCAST):
-// Not: publishWS ile gönderilen path, abone olan istemcilerin route_pattern'i ile regex eşleştirilir; 
-// böylece /chat/123 yayını /chat/:roomId'ye abone olan tüm istemcilere ulaşır.
+// Not: publishWS ile gönderilen path, CPU performansını korumak için önce abone olunan route_pattern ile 
+// "Birebir Eşleştirilir (Exact Match)". Eğer rota dinamik parametre (:roomId vb.) içeriyorsa, 
+// o zaman Regex eşleşmesi yapılarak /chat/123 yayını /chat/:roomId'ye ulaştırılır.
 // Not 2: publishWS senkron çalışır, await gerektirmez.
 publishWS('/dashboard/canli-sicaklik', { cihazId: 'T-100', derece: 24.5 });
                         </pre>
 
                         <h4 class="text-subtitle-1 font-weight-bold mt-4 mb-2">7.3.1 Özel WebSocket Endpoint'leri (Custom WS Endpoints) ve Sandbox Interceptor</h4>
                         <p class="text-body-2 mb-2">
-                            Tıpkı <code>custom_middlewares</code> gibi, WebSocket bağlantılarına da müdahale edebilirsiniz! Arayüzden (Admin Paneli -> WS Endpoints) eklediğiniz JavaScript kodları (Sandbox), eşleşen rotadaki <strong>her gelen mesajda (onMessage) anında çalıştırılır</strong>.
+                            Tıpkı HTTP Endpoint'ler gibi, WebSocket bağlantılarına da müdahale edebilirsiniz! Arayüzden (Admin Paneli -> Endpoints) eklediğiniz JavaScript kodları (Sandbox), eşleşen rotadaki <strong>her gelen mesajda (onMessage) anında çalıştırılır</strong>.
                         </p>
                         <ul class="text-body-2 mb-4">
                             <li><strong>Bağlam (Context) Objeleri:</strong> Kodunuzun içinde <code>context.user</code> (Bağlı kullanıcı bilgisi), <code>context.peerId</code> (Bağlantı ID'si) ve <code>context.params</code> (Regex ile URL'den yakalanan dinamik parametreler, Örn: <code>/chat/:roomId</code> için <code>context.params.roomId</code>) hazır olarak gelir.</li>
@@ -1937,9 +1848,10 @@ const productName = $localize(product.name);
         "script_content": "const { $fetch } = useNuxtApp(); ..."
       }
     ],
-    "custom_middlewares": [
+    "endpoints": [
       {
         "name": "Siparis Kontrol",
+        "type": "http",
         "route_pattern": "/api/siparisler/*",
         "code": "if(!payload.user) return { block: true }; ..."
       }
@@ -1979,7 +1891,7 @@ const productName = $localize(product.name);
 
                         <h3 class="text-h6 mt-4 mb-2">11.4 Sistem API'leri ve Katı Erişim İzolasyonu</h3>
                         <p class="text-body-2 mb-2">
-                            Sistem mimarisi gereği standart (Admin olmayan) kullanıcıların sistem API'leri üzerinden (örneğin <code>/api/admin/records/*</code>) kayıtlara erişimi kesinlikle engellenmiştir. Arayüzde veya API katmanında standart kullanıcıların doğrudan veritabanı uç noktalarına ulaşması kapalıdır. Standart kullanıcılara veri açılması veya işlem yaptırılması gerektiğinde, yöneticiler (Admin) <strong>Custom Middlewares</strong> veya <strong>Dynamic Utils</strong> yazarak sadece istedikleri özel sorguları ve iş mantıklarını dışarıya kontrollü bir API olarak açmalıdırlar.
+                            Sistem mimarisi gereği standart (Admin olmayan) kullanıcıların sistem API'leri üzerinden (örneğin <code>/api/admin/records/*</code>) kayıtlara erişimi kesinlikle engellenmiştir. Arayüzde veya API katmanında standart kullanıcıların doğrudan veritabanı uç noktalarına ulaşması kapalıdır. Standart kullanıcılara veri açılması veya işlem yaptırılması gerektiğinde, yöneticiler (Admin) <strong>HTTP Endpoints</strong> veya <strong>Dynamic Utils</strong> yazarak sadece istedikleri özel sorguları ve iş mantıklarını dışarıya kontrollü bir API olarak açmalıdırlar.
                         </p>
 
                         <!-- Çevrimdışı Mod Koruması kaldırıldı -->
@@ -2047,9 +1959,9 @@ const productName = $localize(product.name);
                             Sistem değişkenleri artık katı bir şekilde <code>target</code> (<code>ui</code>, <code>api</code>, <code>shared</code>) ve <code>is_public</code> bayraklarıyla yönetilir. Ayrıca arayüzün ana renk temasını belirleyen <code>PRIMARY_COLOR</code> dinamik değişkeni ile (örn: <code>#ff5733</code> veya <code>success</code>) tüm uygulamanın renk teması anında değiştirilebilir. <code>APP_LOGO</code> değişkeni ise ham <code>&lt;svg&gt;</code> string'lerini veya standart resim URL'lerini doğrudan DOM'da çözümleyebilir.
                         </p>
 
-                        <h3 class="text-h6 mt-4 mb-2">11.17 is_system Koruması ve Merkezi Rota Çözümlemesi</h3>
+                        <h3 class="text-h6 mt-4 mb-2">11.17 protected Koruması ve Merkezi Rota Çözümlemesi</h3>
                         <p class="text-body-2 mb-2">
-                            Kritik sistem sayfaları (Layout, Login vb.) ve değişkenleri <code>is_system=1</code> bayrağı ile korunur ve silinmeleri engellenir. Uygulamanın tüm dinamik sayfa rotaları (Home, Landing, Custom) artık <code>/api/pages/[...slug].ts</code> üzerinde merkezileştirilmiştir. Nuxt şablonları tamamen veritabanından <code>&lt;DynamicRenderer&gt;</code> vasıtasıyla derlenir.
+                            Kritik sistem sayfaları (Layout, Login vb.) ve değişkenleri <code>protected=1</code> bayrağı ile korunur ve silinmeleri engellenir. Uygulamanın tüm dinamik sayfa rotaları (Home, Landing, Custom) artık <code>/api/pages/[...slug].ts</code> üzerinde merkezileştirilmiştir. Nuxt şablonları tamamen veritabanından <code>&lt;DynamicRenderer&gt;</code> vasıtasıyla derlenir.
                         </p>
                     </v-card>
 
@@ -2059,7 +1971,7 @@ const productName = $localize(product.name);
     </div>
 
     <script>
-        const { createApp, ref } = Vue;
+        const { createApp, ref, onMounted, onUnmounted } = Vue;
         const { createVuetify } = Vuetify;
 
         const vuetify = createVuetify({
@@ -2103,7 +2015,33 @@ const productName = $localize(product.name);
                     }
                 };
 
-                return { drawer, menuItems, scrollTo };
+                const activeSection = ref('section-1');
+
+                const handleScroll = () => {
+                    const sections = document.querySelectorAll('.section-card');
+                    let current = 'section-1';
+                    
+                    const scrollPosition = window.scrollY + 150;
+
+                    sections.forEach((section) => {
+                        if (section.offsetTop <= scrollPosition) {
+                            current = section.id;
+                        }
+                    });
+                    
+                    activeSection.value = current;
+                };
+
+                onMounted(() => {
+                    window.addEventListener('scroll', handleScroll);
+                    setTimeout(handleScroll, 100);
+                });
+
+                onUnmounted(() => {
+                    window.removeEventListener('scroll', handleScroll);
+                });
+
+                return { drawer, menuItems, scrollTo, activeSection };
             }
         }).use(vuetify).mount('#app');
     </script>

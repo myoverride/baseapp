@@ -1,46 +1,66 @@
 import { useDB } from './db';
 import { bumpGlobalVersion } from './versionManager';
+import { LRUCache } from 'lru-cache';
 
-// Cache structure: tenantSlug -> Map<string, any>
-const sysVarCache = new Map<string, Map<string, any>>();
+// Master cache specifically for master variables to avoid duplicating them in memory
+const masterCache = new Map<string, any>();
+let isMasterFetched = false;
+
+// LRU Cache for tenants to avoid memory leaks with thousands of tenants
+const tenantCache = new LRUCache<string, Map<string, any>>({
+  max: 1000
+});
 
 export const invalidateSysVarCache = (tenantSlug: string) => {
-  sysVarCache.delete(tenantSlug);
   bumpGlobalVersion(tenantSlug);
   if (tenantSlug === 'master') {
-    // If master is invalidated, invalidate all tenants since they inherit from master
-    sysVarCache.clear();
-    // We should ideally bump version for all tenants here, but bumping master is a good start.
+    isMasterFetched = false;
+    masterCache.clear();
+  } else {
+    tenantCache.delete(tenantSlug);
   }
 };
 
-const getCachedVars = async (tenantSlug: string) => {
-  if (sysVarCache.has(tenantSlug)) {
-    return sysVarCache.get(tenantSlug)!;
-  }
-
-  const varsMap = new Map<string, any>();
-
-  // 1. Fetch from master first
+const fetchMasterVars = async () => {
+  if (isMasterFetched) return masterCache;
   const masterSql = useDB('master');
   const masterRows = await masterSql`SELECT * FROM system_variables`;
-  
+  masterCache.clear();
   for (const row of masterRows) {
-    varsMap.set(row.key, { ...row, is_inherited: tenantSlug !== 'master' });
+    masterCache.set(row.key, row);
+  }
+  isMasterFetched = true;
+  return masterCache;
+};
+
+const getCachedVars = async (tenantSlug: string) => {
+  const masterMap = await fetchMasterVars();
+  const merged = new Map<string, any>();
+
+  for (const [k, v] of masterMap.entries()) {
+    merged.set(k, { ...v, is_inherited: tenantSlug !== 'master' });
   }
 
-  // 2. Fetch from tenant to override
-  if (tenantSlug !== 'master') {
+  if (tenantSlug === 'master') {
+    return merged;
+  }
+
+  let tCache = tenantCache.get(tenantSlug);
+  if (!tCache) {
+    tCache = new Map<string, any>();
     const tenantSql = useDB(tenantSlug);
     const tenantRows = await tenantSql`SELECT * FROM system_variables`;
-    
     for (const row of tenantRows) {
-      varsMap.set(row.key, { ...row, is_inherited: false });
+      tCache.set(row.key, { ...row, is_inherited: false });
     }
+    tenantCache.set(tenantSlug, tCache);
   }
 
-  sysVarCache.set(tenantSlug, varsMap);
-  return varsMap;
+  for (const [k, v] of tCache.entries()) {
+    merged.set(k, v);
+  }
+
+  return merged;
 };
 
 /**

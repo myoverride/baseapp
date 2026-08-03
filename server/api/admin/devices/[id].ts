@@ -50,9 +50,9 @@ export default defineEventHandler(async (event) => {
 
       // KRİTİK: Eğer ID değiştiyse eski ID'yi RAM'den sil ki yetkisiz kalsın
       if (oldDevice[0].device_id !== body.deviceId.trim()) {
-        removeDeviceFromCache(oldDevice[0].device_id);
+        removeDeviceFromCache(event.context.tenantSlug, oldDevice[0].device_id);
       }
-      removeDeviceFromCache(body.deviceId.trim());
+      removeDeviceFromCache(event.context.tenantSlug, body.deviceId.trim());
 
       return { success: true, data: updated[0] };
     } catch (error: any) {
@@ -63,7 +63,7 @@ export default defineEventHandler(async (event) => {
   // 3. DELETE: Cihazı Sil
   if (method === 'DELETE') {
     const device = await sql`SELECT device_id FROM devices WHERE id = ${id}`;
-    if (device[0]) removeDeviceFromCache(device[0].device_id);
+    if (device[0]) removeDeviceFromCache(event.context.tenantSlug, device[0].device_id);
     
     await sql`DELETE FROM devices WHERE id = ${id}`;
     return { success: true, message: tEvent(event, 'message.entityDeleted', { name: 'entity.device' }) };

@@ -4,10 +4,8 @@ import bcrypt from 'bcryptjs';
 import { createRequire } from 'module';
 import { resolve, join } from 'path';
 import fs from 'fs';
-import Database from 'better-sqlite3';
 import { transpileQueryAndParams } from './sqlTranspiler';
-
-/**
+/*
  * Worker Process Execution Script (DAEMON)
  * 
  * Bu script ana thread'den ayrı, izole bir süreçte çalışır.
@@ -25,7 +23,7 @@ let workerData = null;
 const pendingRpc = new Map();
 let rpcIdCounter = 0;
 
-let workerDb = null;
+
 
 // Query transpiler helper for PostgreSQL syntax compatibility is now imported from sqlTranspiler.ts
 process.on('message', (msg) => {
@@ -50,9 +48,6 @@ process.on('message', (msg) => {
 
 // ANA SUNUCU (Nuxt) YENİDEN BAŞLARSA VEYA BAĞLANTI KOPARSA ZOMBİ OLMAMAK İÇİN ÇIK
 process.on('disconnect', () => {
-  if (workerDb) {
-    try { workerDb.close(); } catch (e) {}
-  }
   process.exit(0);
 });
 
@@ -65,7 +60,7 @@ try {
 
 const appRoot = process.env.APP_HOME || process.cwd();
 const pluginsDir = join(appRoot, 'plugins');
-if (!fs.existsSync(pluginsDir)) { try { fs.mkdirSync(pluginsDir, { recursive: true }); } catch {} }
+if (!fs.existsSync(pluginsDir)) { try { fs.mkdirSync(pluginsDir, { recursive: true }); } catch { } }
 const pluginsRequire = createRequire(join(pluginsDir, 'index.js'));
 
 const customRequire = (id) => {
@@ -85,7 +80,7 @@ function callMainThread(method, args) {
   });
 }
 
-let mqttEmitter = () => {};
+let mqttEmitter = () => { };
 
 async function executeInWorker() {
   const { code, tenantSlug } = workerData;
@@ -96,47 +91,12 @@ async function executeInWorker() {
     });
   };
 
-  // 1. Initialize SQLite Database directly in worker (Architectural Shield)
-  if (tenantSlug) {
-    const dbDir = join(process.env.APP_HOME || process.cwd(), 'data');
-    if (!fs.existsSync(dbDir)) { try { fs.mkdirSync(dbDir, { recursive: true }); } catch {} }
-    const dbPath = join(dbDir, `${tenantSlug}_app.db`);
-    try {
-      workerDb = new Database(dbPath);
-      // Wait for WAL to stabilize
-      workerDb.pragma('journal_mode = WAL');
-      workerDb.pragma('synchronous = NORMAL');
-      workerDb.pragma('busy_timeout = 5000'); // Add busy timeout to prevent SQLITE_BUSY under load
-    } catch (dbErr) {
-      parentPort.postMessage({ type: 'log', level: 'error', args: ['Worker DB Init Error:', dbErr.message] });
-    }
-  }
-
-  // Preserve expected db wrapper logic for custom sql strings, but use native SQLite connection
+  // Preserve expected db wrapper logic for custom sql strings, passing everything to main thread via RPC
   const sql = async (strings, ...values) => {
-    if (!workerDb) return callMainThread('db.query', { strings, values });
-    let flatValues = [];
-    let query = '';
-    for (let i = 0; i < strings.length; i++) {
-      query += strings[i];
-      if (i < values.length) {
-        flatValues.push(values[i]);
-        query += '?';
-      }
-    }
-    const transpiled = transpileQueryAndParams(query, flatValues);
-    const upperQ = transpiled.query.trim().toUpperCase();
-    const isSelect = upperQ.startsWith('SELECT') || upperQ.startsWith('WITH') || upperQ.startsWith('PRAGMA') || upperQ.includes('RETURNING');
-    const stmt = workerDb.prepare(transpiled.query);
-    return isSelect ? stmt.all(...transpiled.params) : stmt.run(...transpiled.params);
+    return callMainThread('db.query', { strings, values });
   };
   sql.unsafe = async (query, params = []) => {
-    if (!workerDb) return callMainThread('db.unsafe', { query, params });
-    const transpiled = transpileQueryAndParams(query, params);
-    const upperQ = transpiled.query.trim().toUpperCase();
-    const isSelect = upperQ.startsWith('SELECT') || upperQ.startsWith('WITH') || upperQ.startsWith('PRAGMA') || upperQ.includes('RETURNING');
-    const stmt = workerDb.prepare(transpiled.query);
-    return isSelect ? stmt.all(...transpiled.params) : stmt.run(...transpiled.params);
+    return callMainThread('db.unsafe', { query, params });
   };
   sql.begin = async () => { throw new Error("db.begin() not supported in worker."); };
   sql.json = (val) => JSON.stringify(val);
@@ -201,7 +161,7 @@ async function executeInWorker() {
       // Daemon'lar tamamen bağımsız mikroservis gibi çalışır, zaman sınırı yoktur.
       await script.runInContext(context);
     }
-    
+
     // Kod normal şekilde sonlanırsa bile thread'i açık tut (Daemon mode)
     if (workerData.isCronWorker) {
       parentPort.postMessage({ type: 'cron_worker_done' });

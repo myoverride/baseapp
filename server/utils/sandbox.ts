@@ -171,6 +171,9 @@ export function runCustomCode(tenantSlug: string, scriptCode: string, payload: a
     const signal = abortController.signal;
     // Child process tracking for zombie prevention (S3 Fix) — try dışında tanımlanmalı (catch'ten erişim)
     const spawnedPids = new Set<number>();
+    
+    let telemetryActiveQueries = 0;
+    let telemetryPendingClose = false;
     try {
       const scriptHash = crypto.createHash('md5').update(scriptCode).digest('hex');
       const cacheKey = sourceId || scriptHash;
@@ -180,22 +183,21 @@ export function runCustomCode(tenantSlug: string, scriptCode: string, payload: a
         executableCode = executableCode.replace(/^export\s+default\s+/, 'const _defaultExport = ') + '\nif (typeof _defaultExport === "function") return await _defaultExport(payload, context); else return _defaultExport;';
       }
 
-      const AsyncFunction = Object.getPrototypeOf(async function(){}).constructor;
+      const wrappedCode = `(async () => {\n${executableCode}\n})()`;
 
       let script: any;
       const finalCacheKey = sourceId ? `${tenantSlug}_${sourceId}` : undefined;
       
-      const sandboxKeys = ['payload', 'context', 'console', 'fetch', 'Buffer', 'crypto', 'process', 'env', 'require', '__dirname', '__filename', 't', 'tAsync', 'publishMQTT', 'sleep', 'sendEmail', 'readModbusData', 'writeModbusData', 'sendDeviceCommand', 'publishWS', 'filterEngine', 'recordValidator', 'recordManager', 'utils', 'bcrypt', 'db', 'telemetryDb', 'sql', 'push'];
-      
       if (finalCacheKey) {
         script = compileCache.get(finalCacheKey);
         if (!script || !compileCache.has(finalCacheKey)) {
-          script = new AsyncFunction(...sandboxKeys, executableCode);
+          script = new vm.Script(wrappedCode);
           compileCache.set(finalCacheKey, script);
         }
       } else {
-        script = new AsyncFunction(...sandboxKeys, executableCode);
+        script = new vm.Script(wrappedCode);
       }
+
       // Create a lazy proxy for ephemeralTelemetryDb so we don't open DuckDB connections for every MQTT message!
       const getTelemetryDb = async () => {
          if (!ephemeralTelemetryDb) {
@@ -335,7 +337,15 @@ export function runCustomCode(tenantSlug: string, scriptCode: string, payload: a
         }
       );
 
+      const { getAllSysVars, getSysVar } = await import('./sysvars');
+      const allVars = await getAllSysVars(tenantSlug, true);
+      const sysVarsObj: Record<string, any> = {};
+      for (const v of allVars) {
+        sysVarsObj[v.key] = v.value;
+      }
+
       const sandbox = {
+        sysVars: sysVarsObj,
         payload,
         context: {
           ...(contextParams || {}),
@@ -422,13 +432,29 @@ export function runCustomCode(tenantSlug: string, scriptCode: string, payload: a
               const db = await getTelemetryDb();
               const val = db[prop];
               if (typeof val === 'function') {
-                 return val.bind(db)(...args);
+                 telemetryActiveQueries++;
+                 try {
+                     return await val.bind(db)(...args);
+                 } finally {
+                     telemetryActiveQueries--;
+                     if (telemetryActiveQueries === 0 && telemetryPendingClose && ephemeralTelemetryDb) {
+                         try { ephemeralTelemetryDb.close(); } catch(e) {}
+                     }
+                 }
               }
               return val;
            },
            apply: async (_, __, argumentsList: any[]) => {
               const db = await getTelemetryDb();
-              return db(...argumentsList);
+              telemetryActiveQueries++;
+              try {
+                  return await db(...argumentsList);
+              } finally {
+                  telemetryActiveQueries--;
+                  if (telemetryActiveQueries === 0 && telemetryPendingClose && ephemeralTelemetryDb) {
+                      try { ephemeralTelemetryDb.close(); } catch(e) {}
+                  }
+              }
            }
         }),
         sql: safeDb,
@@ -438,8 +464,6 @@ export function runCustomCode(tenantSlug: string, scriptCode: string, payload: a
         }
       };
 
-
-      const { getSysVar } = await import('./sysvars');
       const sysVal = await getSysVar(tenantSlug, 'SANDBOX_TIMEOUT', false, '5');
       let timeoutSec = parseInt(sysVal, 10) || 5;
 
@@ -449,9 +473,11 @@ export function runCustomCode(tenantSlug: string, scriptCode: string, payload: a
       }
 
       const timeoutMs = timeoutSec * 1000;
+      const context = vm.createContext(sandbox);
+      
       let execPromise: Promise<any>;
-      const sandboxValues = sandboxKeys.map(key => (sandbox as any)[key]);
-      execPromise = script!(...sandboxValues);
+      // vm.runInContext'in timeout parametresi senkron sonsuz döngüleri (while(true)) fiziksel olarak keser.
+      execPromise = script.runInContext(context, { timeout: timeoutMs });
 
 
       // 2. Asenkron (await ile bekleyen) işlemler için Promise.race timeout
@@ -465,7 +491,13 @@ export function runCustomCode(tenantSlug: string, scriptCode: string, payload: a
       if (timeoutId) clearTimeout(timeoutId);
 
       // Close ephemeral DB connection when execution finishes successfully
-      if (ephemeralTelemetryDb && ephemeralTelemetryDb.close) ephemeralTelemetryDb.close();
+      if (ephemeralTelemetryDb && ephemeralTelemetryDb.close) {
+        if (telemetryActiveQueries === 0) {
+          try { ephemeralTelemetryDb.close(); } catch(e) {}
+        } else {
+          telemetryPendingClose = true;
+        }
+      }
 
       resolve(result);
     } catch (e: any) {
@@ -482,11 +514,15 @@ export function runCustomCode(tenantSlug: string, scriptCode: string, payload: a
       }
       spawnedPids.clear();
 
-      // Close ephemeral DB connection immediately on error or timeout
-      // This performs a hard-kill on the background DuckDB thread (Zombie Query Protection)
+      // Close ephemeral DB connection safely on error or timeout
+      // Yalnızca aktif C++ sorgusu yoksa kapatılır, varsa bitmesi beklenir (SegFault Koruması)
       try {
         if (ephemeralTelemetryDb && ephemeralTelemetryDb.close) {
-          ephemeralTelemetryDb.close();
+          if (telemetryActiveQueries === 0) {
+            ephemeralTelemetryDb.close();
+          } else {
+            telemetryPendingClose = true;
+          }
         }
       } catch (err) { }
       let errMsg = e.message || 'Kod çalıştırılamadı';

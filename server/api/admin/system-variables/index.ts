@@ -29,6 +29,59 @@ export default defineEventHandler(async (event) => {
           (v.description && String(v.description).toLowerCase().includes(search))
         );
       }
+
+      const filtersParam = (query.advancedFilters || query.filters) as string;
+      if (filtersParam) {
+        try {
+          const filterAst = JSON.parse(filtersParam);
+          
+          const evaluateCondition = (item: any, condition: any): boolean => {
+            if (condition.logic && Array.isArray(condition.conditions)) {
+              if (condition.conditions.length === 0) return true;
+              const results = condition.conditions.map((c: any) => evaluateCondition(item, c));
+              let isMatch = condition.logic === 'AND' ? results.every((r: boolean) => r) : results.some((r: boolean) => r);
+              return condition.isNot ? !isMatch : isMatch;
+            } else {
+              const { field, operator, value } = condition;
+              let itemValue = item[field];
+              
+              if (field === 'hashtags' && typeof itemValue === 'string') {
+                 try { 
+                   const parsed = JSON.parse(itemValue); 
+                   if (Array.isArray(parsed)) itemValue = parsed;
+                 } catch(e) {}
+              }
+
+              if (itemValue === undefined || itemValue === null) itemValue = '';
+              const strItem = String(itemValue).toLowerCase();
+              const strVal = String(value || '').toLowerCase();
+
+              switch (operator) {
+                case 'equals': return itemValue == value;
+                case 'notEquals': return itemValue != value;
+                case 'contains':
+                  if (Array.isArray(itemValue)) return itemValue.some(v => String(v).toLowerCase().includes(strVal));
+                  return strItem.includes(strVal);
+                case 'notContains':
+                  if (Array.isArray(itemValue)) return !itemValue.some(v => String(v).toLowerCase().includes(strVal));
+                  return !strItem.includes(strVal);
+                case 'startsWith': return strItem.startsWith(strVal);
+                case 'endsWith': return strItem.endsWith(strVal);
+                case 'isEmpty': return itemValue === '' || (Array.isArray(itemValue) && itemValue.length === 0);
+                case 'isNotEmpty': return itemValue !== '' && (!Array.isArray(itemValue) || itemValue.length > 0);
+                default: return true;
+              }
+            }
+          };
+
+          const astArray = Array.isArray(filterAst) ? filterAst : [filterAst];
+          for (const ast of astArray) {
+             vars = vars.filter(v => evaluateCondition(v, ast));
+          }
+        } catch (e) {
+          console.error('Error parsing advancedFilters in system-variables:', e);
+        }
+      }
       
       vars.sort((a, b) => {
         let valA = a[sortBy];

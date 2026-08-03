@@ -136,17 +136,12 @@ export default defineWebSocketHandler({
 
       const sql = useDB(tenantSlug);
 
-      // Fetch WS endpoints ordered by priority
-      const epsRes = await sql`
-        SELECT id, is_public, route_pattern, priority, code
-        FROM endpoints
-        WHERE type = 'ws' AND active = 1
-        ORDER BY priority ASC
-      `;
+      const { getActiveEndpoints, matchRoute } = await import('../../utils/endpointManager');
+      const epsRes = await getActiveEndpoints(tenantSlug, 'ws');
 
       wsLog('OPEN epsRes count=', epsRes.length, 'patterns=', epsRes.map((e: any) => e.route_pattern));
 
-      let matchedEp = null;
+      let matchedEps: any[] = [];
       let routeParams = {};
 
       function normalizeWsPath(p: string) {
@@ -156,38 +151,32 @@ export default defineWebSocketHandler({
       }
 
       for (const ep of epsRes) {
-        const pattern = normalizeWsPath(ep.route_pattern || '');
-        const compiled = compileRoutePattern(pattern);
-        const matchRes = matchRoute(normalizeWsPath(endpointPath), compiled.regex, compiled.paramNames);
-
-        wsLog('OPEN route match: pattern=', pattern, 'compiled.regex=', compiled.regex.toString(), 'isMatch=', matchRes.isMatch);
-
-        if (matchRes.isMatch) {
-          matchedEp = ep;
-          routeParams = matchRes.params;
-          break;
+        if (ep.regexPattern) {
+          const matchRes = matchRoute(normalizeWsPath(endpointPath), ep.regexPattern, ep.paramNames || []);
+          if (matchRes.isMatch) {
+            matchedEps.push(ep);
+            routeParams = { ...routeParams, ...matchRes.params };
+          }
         }
       }
 
-      if (!matchedEp) {
+      if (matchedEps.length === 0) {
         wsLog('OPEN no matching endpoint found, closing with 4004');
         wsConnections.delete(peer.id);
         try { peer.close(4004, 'Endpoint Not Found'); } catch { }
         return;
       }
 
-      const ep = matchedEp as any;
-
-      wsLog('OPEN matched ep id=', ep.id, 'is_public=', ep.is_public);
+      wsLog('OPEN matched eps ids=', matchedEps.map(e => e.id));
 
       (peer as any).__tenantSlug = tenantSlug;
       (peer as any).__endpointPath = endpointPath;
       (peer as any).__routeParams = routeParams;
-      (peer as any).__wsEpId = ep.id;
-      (peer as any).__wsCode = ep.code;
+      (peer as any).__wsEps = matchedEps;
 
-      if (ep.is_public) {
-        wsLog('OPEN endpoint is public, peer stays registered');
+      const isPublic = matchedEps.every(ep => ep.is_public);
+      if (isPublic) {
+        wsLog('OPEN endpoints are all public, peer stays registered');
         return;
       }
 
@@ -233,17 +222,20 @@ export default defineWebSocketHandler({
       const user = users[0]!;
 
       if (!user.is_admin) {
-        let epTags: string[] = [];
-        try { epTags = typeof ep.hashtags === 'string' ? JSON.parse(ep.hashtags) : (ep.hashtags || []); } catch { }
         let allowedTags: string[] = [];
         try { allowedTags = typeof user.allowed_tags === 'string' ? JSON.parse(user.allowed_tags) : (user.allowed_tags || []); } catch { }
 
-        const allowed = epTags.some((tag: string) => allowedTags.includes(tag));
-        if (!allowed) {
-          wsLog('OPEN user not allowed, removing and closing');
-          wsConnections.delete(peer.id);
-          try { peer.close(4003, 'Forbidden'); } catch { }
-          return;
+        for (const ep of matchedEps) {
+          if (ep.is_public) continue;
+          let epTags: string[] = [];
+          try { epTags = typeof ep.hashtags === 'string' ? JSON.parse(ep.hashtags) : (ep.hashtags || []); } catch { }
+          const allowed = epTags.some((tag: string) => allowedTags.includes(tag));
+          if (!allowed) {
+            wsLog('OPEN user not allowed for ep id=', ep.id, 'removing and closing');
+            wsConnections.delete(peer.id);
+            try { peer.close(4003, 'Forbidden'); } catch { }
+            return;
+          }
         }
       }
 
@@ -289,24 +281,28 @@ export default defineWebSocketHandler({
       }
 
       const p = peer as any;
-      if (p.__wsCode && String(p.__wsCode).trim().length > 0) {
+      if (p.__wsEps && p.__wsEps.length > 0) {
         try {
           const { runCustomCode } = await import('../../utils/sandbox');
-          const sandboxResult = await runCustomCode(
-            p.__tenantSlug || 'master',
-            p.__wsCode,
-            parsedPayload,
-            String(p.__wsEpId || 'unknown'),
-            { user: p.__user || null, peerId: peer.id, params: p.__routeParams || {} }
-          );
+          for (const ep of p.__wsEps) {
+            if (!ep.code || String(ep.code).trim().length === 0) continue;
+            
+            const sandboxResult = await runCustomCode(
+              p.__tenantSlug || 'master',
+              ep.code,
+              parsedPayload,
+              String(ep.id || 'unknown'),
+              { user: p.__user || null, peerId: peer.id, params: p.__routeParams || {} }
+            );
 
-          if (sandboxResult && typeof sandboxResult === 'object') {
-            if (sandboxResult.block === true || sandboxResult.broadcast === false) {
-              wsLog('MESSAGE SANDBOX BLOCKED BROADCAST');
-              return;
-            }
-            if (sandboxResult.payload !== undefined) {
-              parsedPayload = sandboxResult.payload;
+            if (sandboxResult && typeof sandboxResult === 'object') {
+              if (sandboxResult.block === true || sandboxResult.broadcast === false) {
+                wsLog(`MESSAGE SANDBOX ${ep.id} BLOCKED BROADCAST`);
+                return;
+              }
+              if (sandboxResult.payload !== undefined) {
+                parsedPayload = sandboxResult.payload;
+              }
             }
           }
         } catch (e: any) {

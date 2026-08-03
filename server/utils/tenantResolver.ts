@@ -18,6 +18,7 @@ export async function resolveTenant(req: {
   queryTenant?: string;
 }): Promise<string> {
   let tenantSlug: string | null = null;
+  let isResolvedFromCookie = false;
   const reqUrl = req.url || '/';
 
   // 1. Path tabanlı çözümleme (En yüksek öncelik)
@@ -116,11 +117,12 @@ export async function resolveTenant(req: {
       const cookieSlug = req.cookies['tenant_slug'];
       if (cookieSlug && cookieSlug !== 'master') {
         tenantSlug = cookieSlug;
+        isResolvedFromCookie = true;
       }
     }
   }
 
-  // 6. Validation and Fallback
+  // 7. Validation and Fallback
   if (tenantSlug && tenantSlug !== 'master') {
     let isValid = tenantValidationCache.get(tenantSlug);
     
@@ -136,6 +138,9 @@ export async function resolveTenant(req: {
     }
 
     if (!isValid) {
+      if (isResolvedFromCookie) {
+        return 'master';
+      }
       throw createError({ statusCode: 404, statusMessage: 'Not Found', message: 'errors.tenantNotFound' });
     }
   }

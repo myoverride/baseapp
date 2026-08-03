@@ -98,7 +98,7 @@ export async function migrateRecordsToNewSchema(tenantSlug: string, entityId: nu
     }
 
     if (sql.transactionSync) {
-      sql.transactionSync(queries);
+      await sql.transactionSync(queries);
     } else {
       for (const q of queries) {
         await sql.unsafe(q.query, q.params);

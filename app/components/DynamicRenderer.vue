@@ -30,9 +30,16 @@
 
 <script setup lang="ts">
 const { primaryColor: color } = useSysVars();
-import { ref, reactive, watch, onMounted, shallowRef, defineComponent, h, computed, onUnmounted, onErrorCaptured, markRaw, useAttrs } from 'vue';
+import { 
+  ref, reactive, computed, watch, watchEffect, watchPostEffect, watchSyncEffect,
+  onMounted, onUnmounted, onUpdated, onBeforeMount, onBeforeUnmount, onErrorCaptured, onActivated, onDeactivated,
+  shallowRef, triggerRef, customRef, shallowReactive, shallowReadonly, toRaw, markRaw,
+  toRef, toRefs, unref, isRef, isReactive, isReadonly, isProxy,
+  provide, inject, nextTick, useSlots, useCssModule, useModel,
+  defineComponent, h, useAttrs 
+} from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { useHead, useSeoMeta } from '#imports';
+import { useHead, useSeoMeta, useNuxtApp } from '#imports';
 import * as VuetifyComponents from 'vuetify/components';
 import { useUtils } from '../composables/useUtils';
 import { useI18n } from 'vue-i18n';
@@ -40,6 +47,7 @@ import CrudTable from './CrudTable.vue';
 import ItemDialog from './ItemDialog.vue';
 import RecordsManager from './RecordsManager.vue';
 import DynamicComponent from './DynamicComponent.vue';
+import AdvancedFilterBuilder from './AdvancedFilterBuilder.vue';
 
 defineOptions({ inheritAttrs: false });
 
@@ -53,6 +61,7 @@ const props = defineProps<{
 
 const globalI18nObj = useI18n();
 const { t } = globalI18nObj;
+const nuxtApp = useNuxtApp();
 const loading = ref(false);
 const activeComponent = shallowRef<any>(null);
 const loadError = ref<string | null>(null);
@@ -401,20 +410,33 @@ const createComponent = async (template: string, script: string) => {
     const customDefineEmits = (ignoredDef: any) => {
       const attrs = useAttrs();
       return (event: string, ...args: any[]) => {
-        const handlerName = 'on' + event.charAt(0).toUpperCase() + event.slice(1);
-        if (typeof attrs[handlerName] === 'function') {
-          (attrs[handlerName] as Function)(...args);
+        const camelEvent = event.replace(/-([a-z])/g, (_, p1) => p1 ? p1.toUpperCase() : '');
+        const handlerName1 = 'on' + camelEvent.charAt(0).toUpperCase() + camelEvent.slice(1);
+        const handlerName2 = 'on' + event.charAt(0).toUpperCase() + event.slice(1);
+        
+        if (typeof attrs[handlerName1] === 'function') {
+          (attrs[handlerName1] as Function)(...args);
+        } else if (typeof attrs[handlerName2] === 'function') {
+          (attrs[handlerName2] as Function)(...args);
         }
       };
     };
 
     const vueContext = {
-      ref, reactive, computed, onMounted, onUnmounted,
-      watch, h, defineComponent, useAttrs,
+      // Reactivity
+      ref, reactive, computed, watch, watchEffect, watchPostEffect, watchSyncEffect,
+      shallowRef, triggerRef, customRef, shallowReactive, shallowReadonly, toRaw, markRaw,
+      toRef, toRefs, unref, isRef, isReactive, isReadonly, isProxy,
+      // Lifecycle & Utilities
+      onMounted, onUnmounted, onUpdated, onBeforeMount, onBeforeUnmount, onErrorCaptured, onActivated, onDeactivated,
+      provide, inject, nextTick, useSlots, useCssModule, useModel,
+      h, defineComponent, useAttrs,
       defineProps: customDefineProps, defineEmits: customDefineEmits,
       useRouter, useRoute,
       useFetch, useAsyncData, useCookie, useState, navigateTo, $fetch: custom$fetch, useSysVars, useUtils, useWS,
-      useHead, useSeoMeta, useI18n,
+      useHead, useSeoMeta, useI18n, useNuxtApp,
+      $localize: (nuxtApp as any).$localize,
+      $toast: (nuxtApp as any).$toast,
       routeParams: props.routeParams,
       __props_locale: props.locale,
       __global_messages: globalI18nObj.messages.value,
@@ -447,7 +469,7 @@ const createComponent = async (template: string, script: string) => {
     const moduleCode = `
       export default function(__vueContext) {
         const { ${contextKeys.join(', ')} } = __vueContext;
-        const userSetup = function(props, ctx) {
+        const userSetup = function(__props, __ctx) {
           ${finalScript}
         };
         return {
@@ -511,6 +533,7 @@ const createComponent = async (template: string, script: string) => {
         ItemDialog,
         RecordsManager,
         DynamicComponent,
+        AdvancedFilterBuilder,
         ...(componentOptions.components || {})
       },
       template: vueContext.__props_locale ? template.replace(/\$t\s*\(/g, 't(') : template

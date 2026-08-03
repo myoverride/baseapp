@@ -72,13 +72,12 @@ export default defineEventHandler(async (event) => {
         throw createError({ statusCode: 404, message: 'errors.notFound' });
       }
 
-      await sql.unsafe('BEGIN TRANSACTION');
-      await deleteEntityWithRelationPolicy(sql, Number(id));
-      await sql.unsafe('COMMIT');
+      await sql.begin(async (tx: any) => {
+        await deleteEntityWithRelationPolicy(tx, Number(id));
+      });
 
       return { success: true, deletedId: id };
     } catch (e: any) {
-      try { await sql.unsafe('ROLLBACK'); } catch {}
       if (e?.statusCode) {
         throw createError({ statusCode: e.statusCode, message: e.message });
       }

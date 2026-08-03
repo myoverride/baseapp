@@ -59,23 +59,11 @@ export const initMasterDb = () => {
         name VARCHAR(100) NOT NULL,
         slug VARCHAR(100) UNIQUE NOT NULL,
         custom_domain VARCHAR(255) UNIQUE,
+        hashtags TEXT DEFAULT '[]',
         status VARCHAR(50) DEFAULT 'active',
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       );
     `);
-
-
-    try {
-      masterDb.exec('ALTER TABLE tenants ADD COLUMN custom_domain VARCHAR(255) UNIQUE;');
-    } catch (e) {
-      // Column already exists or other error
-    }
-
-    try {
-      masterDb.exec('ALTER TABLE tenants ADD COLUMN hashtags TEXT DEFAULT \'[]\';');
-    } catch (e) {
-      // Column already exists
-    }
 
     masterDb.exec(`
       CREATE TABLE IF NOT EXISTS global_users (
@@ -124,7 +112,7 @@ export const getTenantRefs = async (tenantSlug: string): Promise<TenantDbRefs> =
     refs.lastAccessed = Date.now();
     return refs;
   }
-  
+
   if (tenantInitPromises.has(tenantSlug)) {
     return tenantInitPromises.get(tenantSlug)!;
   }
@@ -183,9 +171,9 @@ export const getTenantRefs = async (tenantSlug: string): Promise<TenantDbRefs> =
       let duckDbInst: duckdb.Database | null = null;
       let duckDbConn: duckdb.Connection | null = null;
       const duckPath = path.join(getDbDir(), `${tenantSlug}_telemetry.duckdb`);
-      
+
       let runAsync!: (query: string) => Promise<unknown>;
-      
+
       const initDuckDbWithRetry = async (retries = 10) => {
         try {
           duckDbInst = new duckdb.Database(duckPath);
@@ -263,28 +251,45 @@ export const getTenantRefs = async (tenantSlug: string): Promise<TenantDbRefs> =
 
   return initPromise;
 };
+async function safeCloseTenantDb(refs: any, tenantSlug: string) {
+  // Wait for active operations to drain (max 5 seconds)
+  let retries = 50;
+  while (refs.activeOperations > 0 && retries > 0) {
+    await new Promise(resolve => setTimeout(resolve, 100));
+    retries--;
+  }
+  if (refs.activeOperations > 0) {
+    console.warn(`[DB] Force closing tenant ${tenantSlug} with ${refs.activeOperations} active operations.`);
+  }
+
+  if (refs.duckDbConn) await new Promise<void>((resolve) => refs.duckDbConn!.close(() => resolve()));
+  if (refs.duckDbInst) await new Promise<void>((resolve) => refs.duckDbInst!.close(() => resolve()));
+  try { refs.sqlite.close(); } catch { }
+  try { if (refs.sqliteRead) refs.sqliteRead.close(); } catch { }
+}
+
 export async function evictTenantDb(tenantSlug: string) {
   if (tenantPool.has(tenantSlug)) {
     const refs = tenantPool.get(tenantSlug)!;
     tenantPool.delete(tenantSlug);
-    if (refs.duckDbConn) await new Promise<void>((resolve) => refs.duckDbConn!.close(() => resolve()));
-    if (refs.duckDbInst) await new Promise<void>((resolve) => refs.duckDbInst!.close(() => resolve()));
-    refs.sqlite.close();
-    if (refs.sqliteRead) refs.sqliteRead.close();
+    await safeCloseTenantDb(refs, tenantSlug);
     TenantEventManager.emit('tenant:evict', tenantSlug);
     console.log(`[LRU Pool] Manually evicted tenant: ${tenantSlug}`);
   }
 }
+
 export async function closeDatabases() {
+  const closePromises: Promise<void>[] = [];
+
   for (const [slug, refs] of tenantPool.entries()) {
-    if (refs.duckDbConn) await new Promise<void>((resolve) => refs.duckDbConn!.close(() => resolve()));
-    if (refs.duckDbInst) await new Promise<void>((resolve) => refs.duckDbInst!.close(() => resolve()));
-    refs.sqlite.close();
-    if (refs.sqliteRead) refs.sqliteRead.close();
+    closePromises.push(safeCloseTenantDb(refs, slug));
   }
+
+  await Promise.all(closePromises);
   tenantPool.clear();
+
   if (masterDb) {
-    masterDb.close();
+    try { masterDb.close(); } catch { }
     masterDb = null;
     (globalThis as any).__masterDb = null;
   }
@@ -293,11 +298,8 @@ export async function closeDatabases() {
 export async function closeTenantDb(tenantSlug: string) {
   if (tenantPool.has(tenantSlug)) {
     const refs = tenantPool.get(tenantSlug)!;
-    if (refs.duckDbConn) await new Promise<void>((resolve) => refs.duckDbConn!.close(() => resolve()));
-    if (refs.duckDbInst) await new Promise<void>((resolve) => refs.duckDbInst!.close(() => resolve()));
-    refs.sqlite.close();
-    if (refs.sqliteRead) refs.sqliteRead.close();
     tenantPool.delete(tenantSlug);
+    await safeCloseTenantDb(refs, tenantSlug);
     TenantEventManager.emit('tenant:evict', tenantSlug);
     console.log(`[LRU Pool] Closed and removed tenant DB: ${tenantSlug}`);
   }
@@ -306,7 +308,7 @@ import { transpileQueryAndParams } from './sqlTranspiler';
 
 export const executeWithLock = async <T>(tenantSlug: string, fn: (refs: TenantDbRefs) => Promise<T> | T): Promise<T> => {
   const refs = await getTenantRefs(tenantSlug);
-  
+
   if (refs.activeOperations > 1000) {
     const err: any = new Error(`Database write queue is full for tenant ${tenantSlug}`);
     err.statusCode = 429;
@@ -525,6 +527,9 @@ export const useDB = (tenantSlug?: string, _internalRefs?: TenantDbRefs) => {
       }
       return executeWithLock(finalSlug, async (refs) => {
         try {
+          if (refs.sqlite.inTransaction) {
+            try { refs.sqlite.exec('ROLLBACK;'); } catch (e) { }
+          }
           refs.sqlite.exec('BEGIN TRANSACTION;');
           const txSql = createSqlObj(false, refs);
           const result = await callback(txSql);
@@ -539,6 +544,9 @@ export const useDB = (tenantSlug?: string, _internalRefs?: TenantDbRefs) => {
     sql.transactionSync = (queries: { query: string; params?: any[] }[]) => {
       if (withLock) {
         return executeWithLock(finalSlug, async (refs) => {
+          if (refs.sqlite.inTransaction) {
+            try { refs.sqlite.exec('ROLLBACK;'); } catch (e) { }
+          }
           refs.sqlite.exec('BEGIN TRANSACTION;');
           try {
             const results = [];
@@ -568,39 +576,6 @@ export async function setupTenantDatabase(tenantSlug: string, refs: TenantDbRefs
   try {
     const mainSql = useDB(tenantSlug, refs);
     console.log(`[Tenant: ${tenantSlug}] Checking tables and schema...`);
-
-    // --- EARLY MIGRATION SCRIPT: Rename tables before CREATE TABLE statements ---
-    try {
-      const existingTables = await mainSql.unsafe(`SELECT name FROM sqlite_master WHERE type='table'`);
-      const tableNames = existingTables.map((t: any) => t.name);
-
-      // Since pages/utils tables are newly created, we might have an empty new table and data in the old one
-      if (tableNames.includes('custom_pages') && tableNames.includes('pages')) {
-        const pagesCount = await mainSql.unsafe(`SELECT COUNT(*) as c FROM pages`);
-        if (pagesCount[0].c === 0) {
-          await mainSql.unsafe(`DROP TABLE pages`);
-          await mainSql.unsafe(`ALTER TABLE custom_pages RENAME TO pages`);
-          console.log('[Auto-Migration] custom_pages -> pages (dropped empty target)');
-        }
-      } else if (tableNames.includes('custom_pages') && !tableNames.includes('pages')) {
-        await mainSql.unsafe(`ALTER TABLE custom_pages RENAME TO pages`);
-        console.log('[Auto-Migration] custom_pages -> pages');
-      }
-
-      if (tableNames.includes('dynamic_utils') && tableNames.includes('utils')) {
-        const utilsCount = await mainSql.unsafe(`SELECT COUNT(*) as c FROM utils`);
-        if (utilsCount[0].c === 0) {
-          await mainSql.unsafe(`DROP TABLE utils`);
-          await mainSql.unsafe(`ALTER TABLE dynamic_utils RENAME TO utils`);
-          console.log('[Auto-Migration] dynamic_utils -> utils (dropped empty target)');
-        }
-      } else if (tableNames.includes('dynamic_utils') && !tableNames.includes('utils')) {
-        await mainSql.unsafe(`ALTER TABLE dynamic_utils RENAME TO utils`);
-        console.log('[Auto-Migration] dynamic_utils -> utils');
-      }
-    } catch (e: any) {
-      console.error('[Auto-Migration] Early migration error:', e?.message || e);
-    }
     // --------------------------------------------------------------------------
 
     console.log('Tablolar ve Güvenlik Altyapısı (Pure JS Memory) Kontrol Ediliyor...');
@@ -639,19 +614,6 @@ export async function setupTenantDatabase(tenantSlug: string, refs: TenantDbRefs
         updated_by INTEGER
       )
     `);
-    // Migration: Add profile column if it doesn't exist
-    const cols = await mainSql.unsafe(`PRAGMA table_info(users)`);
-    const hasProfile = cols.some((c: any) => c.name === 'profile');
-    if (!hasProfile) {
-      await mainSql.unsafe(`ALTER TABLE users ADD COLUMN profile TEXT DEFAULT '{}'`);
-      console.log(`[Tenant: ${tenantSlug}] Migration: Added 'profile' column to users table.`);
-    }
-    // Migration: Add hashtags column if it doesn't exist
-    const hasHashtags = cols.some((c: any) => c.name === 'hashtags');
-    if (!hasHashtags) {
-      await mainSql.unsafe(`ALTER TABLE users ADD COLUMN hashtags TEXT DEFAULT '[]'`);
-      console.log(`[Tenant: ${tenantSlug}] Migration: Added 'hashtags' column to users table.`);
-    }
     await mainSql.unsafe(`
       CREATE TABLE IF NOT EXISTS devices (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -802,8 +764,6 @@ export async function setupTenantDatabase(tenantSlug: string, refs: TenantDbRefs
         active BOOLEAN DEFAULT 1,
         is_public BOOLEAN DEFAULT 0,
         is_default_layout BOOLEAN DEFAULT 0,
-        is_landing_page BOOLEAN DEFAULT 0,
-        is_login_page BOOLEAN DEFAULT 0,
         protected BOOLEAN DEFAULT 0,
         layout_id INTEGER DEFAULT NULL REFERENCES pages(id) ON DELETE SET NULL,
         hashtags TEXT DEFAULT '[]',
@@ -837,283 +797,13 @@ export async function setupTenantDatabase(tenantSlug: string, refs: TenantDbRefs
     await mainSql.unsafe(`CREATE UNIQUE INDEX IF NOT EXISTS idx_workers_name ON workers(name)`);
     await mainSql.unsafe(`CREATE UNIQUE INDEX IF NOT EXISTS idx_pages_title ON pages(title)`);
     await mainSql.unsafe(`CREATE UNIQUE INDEX IF NOT EXISTS idx_utils_name ON utils(name)`);
-    // MIGRATION SCRIPT
-    try {
-      const endpointsCols = await mainSql.unsafe(`PRAGMA table_info('endpoints')`);
-      const workersCols = await mainSql.unsafe(`PRAGMA table_info('workers')`);
-      if (endpointsCols.length > 0 && workersCols.length > 0) {
-
-        try {
-          const cmCols = await mainSql.unsafe(`PRAGMA table_info('custom_middlewares')`);
-          if (cmCols.length > 0) {
-            await mainSql.unsafe(`INSERT INTO endpoints (name, type, route_pattern, code, priority, active, is_public, hashtags, created_at, updated_at, created_by, updated_by) SELECT name, 'http', route_pattern, code, priority, active, is_public, hashtags, created_at, updated_at, created_by, updated_by FROM custom_middlewares WHERE name NOT IN (SELECT name FROM endpoints)`);
-            await mainSql.unsafe(`DROP TABLE custom_middlewares`);
-            console.log('[Auto-Migration] custom_middlewares -> endpoints taşındı ve tablo silindi.');
-          }
-        } catch (e) { }
-
-        try {
-          const wsCols = await mainSql.unsafe(`PRAGMA table_info('ws_endpoints')`);
-          if (wsCols.length > 0) {
-            await mainSql.unsafe(`INSERT INTO endpoints (name, type, route_pattern, code, priority, active, is_public, hashtags, created_at, updated_at, created_by, updated_by) SELECT name, 'ws', route_pattern, code, priority, 1, is_public, hashtags, created_at, updated_at, created_by, updated_by FROM ws_endpoints WHERE name NOT IN (SELECT name FROM endpoints)`);
-            await mainSql.unsafe(`DROP TABLE ws_endpoints`);
-            console.log('[Auto-Migration] ws_endpoints -> endpoints taşındı ve tablo silindi.');
-          }
-        } catch (e) { }
-
-        try {
-          const msCols = await mainSql.unsafe(`PRAGMA table_info('microservices')`);
-          if (msCols.length > 0) {
-            await mainSql.unsafe(`INSERT INTO workers (name, type, code, autostart, active, status, error_msg, hashtags, created_at, updated_at, created_by, updated_by) SELECT name, 'daemon', code, autostart, active, status, error_msg, hashtags, created_at, updated_at, created_by, updated_by FROM microservices WHERE name NOT IN (SELECT name FROM workers)`);
-            await mainSql.unsafe(`DROP TABLE microservices`);
-            console.log('[Auto-Migration] microservices -> workers taşındı ve tablo silindi.');
-          }
-        } catch (e) { }
-
-        try {
-          const scCols = await mainSql.unsafe(`PRAGMA table_info('schedulers')`);
-          if (scCols.length > 0) {
-            await mainSql.unsafe(`INSERT INTO workers (name, type, code, cron_expression, active, last_run_second, hashtags, created_at, updated_at, created_by, updated_by) SELECT name, 'cron', code, cron_expression, active, last_run_second, hashtags, created_at, updated_at, created_by, updated_by FROM schedulers WHERE name NOT IN (SELECT name FROM workers)`);
-            await mainSql.unsafe(`DROP TABLE schedulers`);
-            console.log('[Auto-Migration] schedulers -> workers taşındı ve tablo silindi.');
-          }
-        } catch (e) { }
-
-        try {
-          const mqttScript = await mainSql.unsafe(`SELECT * FROM system_variables WHERE key = 'mqtt_sandbox_script'`);
-          if (mqttScript.length > 0) {
-            await mainSql.unsafe(`INSERT OR IGNORE INTO endpoints (name, type, route_pattern, code, active) VALUES ('Legacy MQTT Sandbox', 'mqtt', '#', ?, 1)`, [mqttScript[0].value]);
-            await mainSql.unsafe(`DELETE FROM system_variables WHERE key = 'mqtt_sandbox_script'`);
-            console.log('[Auto-Migration] mqtt_sandbox_script -> endpoints taşındı.');
-          }
-        } catch (e) { }
-
-        // Drop language from utils
-        try {
-          const duCols = await mainSql.unsafe(`PRAGMA table_info('utils')`);
-          if (duCols.some((c: any) => c.name === 'language')) {
-            await mainSql.unsafe(`ALTER TABLE utils DROP COLUMN language`);
-            console.log('[Auto-Migration] utils.language silindi.');
-          }
-        } catch (e) { }
-      }
-    } catch (e) {
-      console.error('[Auto-Migration] Veri taşıma hatası:', e);
-    }
-    // AUTO-MIGRATION
-    const tablesToSync = [
-      {
-        name: 'endpoints',
-        columns: [
-          { name: 'is_public', def: "BOOLEAN DEFAULT 0" },
-          { name: 'created_by', def: "INTEGER" },
-          { name: 'updated_by', def: "INTEGER" },
-          { name: 'hashtags', def: "TEXT DEFAULT '[]'" }
-        ]
-      },
-      {
-        name: 'workers',
-        columns: [
-          { name: 'autostart', def: "BOOLEAN DEFAULT 0" },
-          { name: 'active', def: "BOOLEAN DEFAULT 1" },
-          { name: 'status', def: "VARCHAR(50) DEFAULT 'stopped'" },
-          { name: 'error_msg', def: "TEXT DEFAULT NULL" },
-          { name: 'created_at', def: "DATETIME DEFAULT CURRENT_TIMESTAMP" },
-          { name: 'updated_at', def: "DATETIME DEFAULT CURRENT_TIMESTAMP" },
-          { name: 'created_by', def: "INTEGER" },
-          { name: 'updated_by', def: "INTEGER" },
-          { name: 'hashtags', def: "TEXT DEFAULT '[]'" }
-        ]
-      },
-      {
-        name: 'pages',
-        columns: [
-          { name: 'page_type', def: "VARCHAR(50) DEFAULT 'regular'" },
-          { name: 'script_content', def: "TEXT DEFAULT ''" },
-          { name: 'style_content', def: "TEXT DEFAULT ''" },
-          { name: 'active', def: "BOOLEAN DEFAULT 1" },
-          { name: 'is_public', def: "BOOLEAN DEFAULT 0" },
-          { name: 'created_at', def: "DATETIME DEFAULT CURRENT_TIMESTAMP" },
-          { name: 'updated_at', def: "DATETIME DEFAULT CURRENT_TIMESTAMP" },
-          { name: 'created_by', def: "INTEGER" },
-          { name: 'updated_by', def: "INTEGER" },
-          { name: 'hashtags', def: "TEXT DEFAULT '[]'" },
-          { name: 'priority', def: "INTEGER NOT NULL DEFAULT 0" },
-          { name: 'is_default_layout', def: "BOOLEAN DEFAULT 0" },
-          { name: 'protected', def: "BOOLEAN DEFAULT 0" },
-          { name: 'layout_id', def: "INTEGER DEFAULT NULL REFERENCES pages(id) ON DELETE SET NULL" }
-        ]
-      },
-      {
-        name: 'utils',
-        columns: [
-          { name: 'name', def: "VARCHAR(255) DEFAULT ''" },
-          { name: 'key', def: "VARCHAR(255) UNIQUE NOT NULL" },
-          { name: 'target', def: "VARCHAR(50) NOT NULL" },
-          { name: 'code', def: "TEXT NOT NULL" },
-          { name: 'scope', def: "TEXT DEFAULT '[]'" },
-          { name: 'active', def: "BOOLEAN DEFAULT 1" },
-          { name: 'created_by', def: "INTEGER" },
-          { name: 'updated_by', def: "INTEGER" },
-          { name: 'hashtags', def: "TEXT DEFAULT '[]'" }
-        ]
-      },
-      {
-        name: 'records',
-        columns: [
-          { name: 'updated_by', def: "INTEGER" },
-          { name: 'hashtags', def: "TEXT DEFAULT '[]'" }
-        ]
-      },
-      {
-        name: 'system_variables',
-        columns: [
-          { name: 'is_public', def: "BOOLEAN DEFAULT 0" },
-          { name: 'is_secret', def: "BOOLEAN DEFAULT 0" },
-          { name: 'type', def: "VARCHAR(50) DEFAULT 'string'" },
-          { name: 'hashtags', def: "TEXT DEFAULT '[]'" }
-        ]
-      },
-      {
-        name: 'roles',
-        columns: [
-          { name: 'hashtags', def: "TEXT DEFAULT '[]'" }
-        ]
-      },
-      {
-        name: 'users',
-        columns: [
-          { name: 'token_expires_at', def: "DATETIME DEFAULT NULL" },
-          { name: 'token_tenant', def: "VARCHAR(100) DEFAULT NULL" }
-        ]
-      },
-      {
-        name: 'entities',
-        columns: [
-          { name: 'hashtags', def: "TEXT DEFAULT '[]'" }
-        ]
-      },
-      {
-        name: 'devices',
-        columns: [
-          { name: 'hashtags', def: "TEXT DEFAULT '[]'" }
-        ]
-      }
-    ];
-    for (const table of tablesToSync) {
-      try {
-        const cols = await mainSql.unsafe(`PRAGMA table_info('${table.name}')`);
-        const existingColNames = cols.map((c: any) => c.name.toLowerCase());
-        for (const col of table.columns) {
-          if (!existingColNames.includes(col.name.toLowerCase())) {
-            await mainSql.unsafe(`ALTER TABLE ${table.name} ADD COLUMN ${col.name} ${col.def}`);
-            console.log(`[Auto-Migration] Sütun eklendi: ${table.name}.${col.name}`);
-          }
-        }
-        // Sütun ismi değişiklikleri
-        if (table.name === 'pages' && existingColNames.includes('slug') && !existingColNames.includes('route_pattern')) {
-          await mainSql.unsafe(`ALTER TABLE pages RENAME COLUMN slug TO route_pattern`);
-          console.log(`[Auto-Migration] Sütun yeniden adlandırıldı: pages.slug -> route_pattern`);
-        }
-      } catch {
-        // Tablo yoksa PRAGMA hata verebilir, yoksay
-      }
-    }
-        // utils versionless schema migration (drops obsolete columns safely)
-    try {
-      const duCols = await mainSql.unsafe(`PRAGMA table_info('utils')`);
-      const duNames = duCols.map((c: any) => String(c.name).toLowerCase());
-      const hasLegacyCols = ['version', 'published_version', 'description', 'tags', 'published_at'].some((c) => duNames.includes(c));
-      if (hasLegacyCols) {
-        await mainSql.unsafe(`
-          CREATE TABLE IF NOT EXISTS utils_new (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            key VARCHAR(255) UNIQUE NOT NULL,
-            target VARCHAR(50) NOT NULL CHECK(target IN ('ui', 'api', 'shared')),
-            code TEXT NOT NULL,
-            scope TEXT DEFAULT '[]',
-            active BOOLEAN DEFAULT 1,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            created_by INTEGER,
-            updated_by INTEGER
-          )
-        `);
-        await mainSql.unsafe(`
-          INSERT INTO utils_new (id, key, target, code, scope, active, created_at, updated_at, created_by, updated_by)
-          SELECT id, key, target, code, COALESCE(scope, '[]'), COALESCE(active, 1), created_at, updated_at, created_by, updated_by
-          FROM utils
-        `);
-        await mainSql.unsafe(`DROP TABLE utils`);
-        await mainSql.unsafe(`ALTER TABLE utils_new RENAME TO utils`);
-        await mainSql.unsafe(`CREATE UNIQUE INDEX IF NOT EXISTS idx_utils_key ON utils(key)`);
-        console.log('[Auto-Migration] utils versiyonsuz şemaya taşındı.');
-      }
-    } catch (e: any) {
-      console.error('[Auto-Migration] utils şema dönüşüm hatası:', e?.message || e);
-    }
-
-    // system_variables target architecture migration
-    try {
-      const svCols = await mainSql.unsafe(`PRAGMA table_info('system_variables')`);
-      const svNames = svCols.map((c: any) => String(c.name).toLowerCase());
-      if (svNames.includes('is_admin') || !svNames.includes('target') || !svNames.includes('is_public') || !svNames.includes('protected')) {
-        await mainSql.unsafe(`
-          CREATE TABLE IF NOT EXISTS system_variables_new (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            key VARCHAR(255) UNIQUE NOT NULL,
-            value TEXT,
-            target VARCHAR(50) NOT NULL DEFAULT 'shared' CHECK(target IN ('ui', 'api', 'shared')),
-            is_public BOOLEAN DEFAULT 0,
-            is_secret BOOLEAN DEFAULT 0,
-            protected BOOLEAN DEFAULT 0,
-            type VARCHAR(50) DEFAULT 'string',
-            description TEXT,
-            hashtags TEXT DEFAULT '[]',
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            created_by INTEGER,
-            updated_by INTEGER
-          )
-        `);
-        
-        const hasIsAdmin = svNames.includes('is_admin');
-        const hasIsPublic = svNames.includes('is_public');
-        const hasTarget = svNames.includes('target');
-        const hasIsSystem = svNames.includes('protected');
-
-        const targetSelect = hasTarget
-          ? `target`
-          : (hasIsAdmin ? `CASE WHEN is_admin = 1 OR is_secret = 1 THEN 'api' ELSE 'shared' END as target` : `'shared' as target`);
-
-        const isPublicSelect = hasIsPublic
-          ? `is_public`
-          : `CASE WHEN key IN ('APP_NAME', 'APP_LOGO', 'ALLOW_HTTP') THEN 1 ELSE 0 END as is_public`;
-          
-        const isSystemSelect = hasIsSystem ? 'protected' : '0';
-
-        await mainSql.unsafe(`
-          INSERT INTO system_variables_new (id, key, value, target, is_public, is_secret, protected, type, description, hashtags, created_at, updated_at, created_by, updated_by)
-          SELECT id, key, value, 
-                 ${targetSelect},
-                 ${isPublicSelect},
-                 is_secret, ${isSystemSelect}, type, description, hashtags, created_at, updated_at, created_by, updated_by
-          FROM system_variables
-        `);
-        await mainSql.unsafe(`DROP TABLE system_variables`);
-        await mainSql.unsafe(`ALTER TABLE system_variables_new RENAME TO system_variables`);
-        await mainSql.unsafe(`CREATE UNIQUE INDEX IF NOT EXISTS idx_system_variables_key ON system_variables(key)`);
-        console.log('[Auto-Migration] system_variables şemasına protected eklendi ve taşındı.');
-      }
-    } catch (e: any) {
-      console.error('[Auto-Migration] system_variables şema dönüşüm hatası:', e?.message || e);
-    }    // =========================================================================
+    // =========================================================================
     // --- NEW ISOLATED SEED LOGIC ---
     if (isNewDb) {
       const seedModule = await import('./seed/index');
       await seedModule.runSeed(tenantSlug, refs);
     }
-    
+
     // --- INIT PENDING COMMAND TIMEOUTS INTO RAM ---
     const { initCommandTimeouts } = await import('./deviceCommands');
     await initCommandTimeouts(tenantSlug, mainSql);

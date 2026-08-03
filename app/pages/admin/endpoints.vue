@@ -13,6 +13,7 @@
       :title="$t('menu.endpoints')"
       default-sort-key="priority"
       default-sort-order="desc"
+      :enable-multi-select="true"
       @create="openCreateDialog"
       @edit="openEditDialog"
       @delete="handleDelete"

@@ -7,7 +7,7 @@ export interface RouteMatchResult {
   params: Record<string, string>;
 }
 
-export function compileRoutePattern(pattern: string): { regex: RegExp; paramNames: string[] } {
+export function compileRoutePattern(pattern: string, type: string = 'http'): { regex: RegExp; paramNames: string[] } {
   const paramNames: string[] = [];
   const rawPattern = String(pattern || '').trim();
   const normalizedPattern = rawPattern.startsWith('/') ? rawPattern : `/${rawPattern}`;
@@ -30,6 +30,20 @@ export function compileRoutePattern(pattern: string): { regex: RegExp; paramName
       paramNames.push(paramName);
       regexParts.push('(.*)');
       break; // Catch-all can only be at the end
+    }
+
+    // MQTT Wildcards
+    if (type === 'mqtt') {
+      if (seg === '#') {
+        paramNames.push('wildcard');
+        regexParts.push('(.*)');
+        break; // # can only be at the end
+      }
+      if (seg === '+') {
+        paramNames.push('plusSegment');
+        regexParts.push('([^/]+)');
+        continue;
+      }
     }
 
     // Named parameters
@@ -79,20 +93,26 @@ export interface CachedEndpoint {
   paramNames: string[];
 }
 
-const CACHE_TTL = 60000; // 60 seconds
-const cache = new Map<string, { data: CachedEndpoint[], lastFetchTime: number }>();
+interface TenantEndpointCache {
+  endpoints: Map<string, CachedEndpoint[]>; // key: type (http, ws, mqtt)
+  isFetched: Map<string, boolean>; // key: type
+}
+const tenantCaches = new Map<string, TenantEndpointCache>();
 
 TenantEventManager.on('tenant:evict', (tenantSlug: string) => {
-  cache.delete(tenantSlug);
+  invalidateEndpointCache(tenantSlug);
 });
 
-export async function getActiveEndpoints(tenantSlug: string): Promise<CachedEndpoint[]> {
+export async function getActiveEndpoints(tenantSlug: string, type: 'http' | 'ws' | 'mqtt' = 'http'): Promise<CachedEndpoint[]> {
   if (!tenantSlug) return [];
 
-  const now = Date.now();
-  const entry = cache.get(tenantSlug);
-  if (entry && entry.lastFetchTime > 0 && (now - entry.lastFetchTime < CACHE_TTL)) {
-    return entry.data;
+  if (!tenantCaches.has(tenantSlug)) {
+    tenantCaches.set(tenantSlug, { endpoints: new Map(), isFetched: new Map() });
+  }
+  const cache = tenantCaches.get(tenantSlug)!;
+
+  if (cache.isFetched.get(type)) {
+    return cache.endpoints.get(type) || [];
   }
 
   try {
@@ -100,26 +120,33 @@ export async function getActiveEndpoints(tenantSlug: string): Promise<CachedEndp
     const rows = await sql<{ id: number, name: string, route_pattern: string, code: string, is_public: boolean, hashtags: string | null }[]>`
       SELECT id, name, route_pattern, code, is_public, hashtags
       FROM endpoints 
-      WHERE type = 'http' AND active = true 
+      WHERE type = ${type} AND active = true 
       ORDER BY priority ASC
     `;
 
     const data = rows.map((row: any) => {
-      const { regex, paramNames } = compileRoutePattern(row.route_pattern);
+      const { regex, paramNames } = compileRoutePattern(row.route_pattern, type);
       return {
         ...row,
         regexPattern: regex,
         paramNames
       };
     });
-    cache.set(tenantSlug, { data, lastFetchTime: Date.now() });
+    
+    cache.endpoints.set(type, data);
+    cache.isFetched.set(type, true);
     return data;
   } catch (err) {
-    console.error(`[Endpoint Cache Error] Tenant ${tenantSlug}:`, err);
-    return entry ? entry.data : [];
+    console.error(`[Endpoint Cache Error] Tenant ${tenantSlug} (type: ${type}):`, err);
+    return cache.endpoints.get(type) || [];
   }
 }
 
 export function invalidateEndpointCache(tenantSlug: string) {
-  cache.delete(tenantSlug);
+  if (tenantCaches.has(tenantSlug)) {
+    const cache = tenantCaches.get(tenantSlug)!;
+    cache.isFetched.set('http', false);
+    cache.isFetched.set('ws', false);
+    cache.isFetched.set('mqtt', false);
+  }
 }

@@ -85,7 +85,7 @@ export const useUtils = () => {
   };
 
   // Proxy objesi ile fonksiyonlara dogrudan erisim
-  const $utils = new Proxy({} as Record<string, Function>, {
+  const utils = new Proxy({} as Record<string, Function>, {
     get: (_, prop: string) => (...args: any[]) => executeUtil(prop, ...args)
   });
 
@@ -96,6 +96,6 @@ export const useUtils = () => {
     getUtil,
     loadUtilities,
     refreshUtilities,
-    $utils
+    utils
   };
 };

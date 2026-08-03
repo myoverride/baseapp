@@ -211,7 +211,7 @@ export default defineEventHandler(async (event) => {
       // 4. İŞ MANTIĞI VE ARAYÜZ (AŞAMA 4)
       await upsertTable('endpoints', c.endpoints, 'name');
       await upsertTable('workers', c.workers, 'name');
-      await upsertTable('pages', c.pages, 'route_pattern');
+      await upsertTable('pages', c.pages, 'title');
 
     });
   } catch (e: any) {

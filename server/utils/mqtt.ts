@@ -4,6 +4,7 @@ import { validateTelemetry } from './validator';
 import { appendTelemetry } from './duckdb-appender';
 import { updateCommandStatus } from './deviceCommands';
 import { runCustomCode } from './sandbox';
+import { getActiveEndpoints, matchRoute } from './endpointManager';
 
 import { LRUCache } from 'lru-cache';
 
@@ -11,29 +12,6 @@ import { LRUCache } from 'lru-cache';
 // OOM riskine karşı maksimum 50.000 cihaz önbellekte tutulur ve 30 dk (1800000ms) TTL uygulanır.
 const deviceCache = new LRUCache<string, { secretKey: string, schema: any, expiresAt: number }>({ max: 50000, ttl: 1800000 });
 const pendingFetches = new LRUCache<string, Promise<any>>({ max: 50000, ttl: 60000 });
-
-let sandboxScriptsCache: { id: number, code: string }[] = [];
-let sandboxScriptLoadedAt = 0;
-
-export function invalidateMqttSandboxScriptCache() {
-  sandboxScriptsCache = [];
-  sandboxScriptLoadedAt = 0;
-}
-
-async function getSandboxScripts(sql: any) {
-  const now = Date.now();
-  if (now - sandboxScriptLoadedAt > 30000) { // Her 30 sn'de bir tazele
-    try {
-      const endpoints = await sql`SELECT id, code FROM endpoints WHERE type = 'mqtt' AND active = 1 ORDER BY priority ASC`;
-      sandboxScriptsCache = endpoints;
-      
-      sandboxScriptLoadedAt = now;
-    } catch (e) {
-      console.error('MQTT Sandbox script yüklenemedi:', e);
-    }
-  }
-  return { scripts: sandboxScriptsCache || [] };
-}
 
 const g: any = globalThis;
 
@@ -76,17 +54,23 @@ export async function handleMqttMessage(tenantSlug: string, topic: string, messa
         let cleanResponse = response || {};
 
         // 2. [FATAL] KOMUT YANITI İÇİN ÖNCE SANDBOX ÇALIŞTIR
-        const { scripts } = await getSandboxScripts(sql);
+        const scripts = await getActiveEndpoints(tenantSlug, 'mqtt');
         if (scripts && scripts.length > 0) {
           try {
             const deviceIdMatch = topic.match(/^commands\/(.+)\/response$/);
             const extractedDeviceId = deviceIdMatch ? deviceIdMatch[1] : 'unknown';
             
-            const rpcContext = { deviceId: extractedDeviceId, timestamp: Date.now(), topic, isRpcResponse: true };
+            const rpcContext: any = { deviceId: extractedDeviceId, timestamp: Date.now(), topic, isRpcResponse: true };
             
             for (let i = 0; i < scripts.length; i++) {
               const sandboxObj = scripts[i];
               if (!sandboxObj || !sandboxObj.code || sandboxObj.code.trim() === '') continue;
+
+              if (sandboxObj.regexPattern) {
+                const matchRes = matchRoute('/' + topic, sandboxObj.regexPattern, sandboxObj.paramNames || []);
+                if (!matchRes.isMatch) continue;
+                rpcContext.params = matchRes.params;
+              }
 
               const rpcPayload = { correlationId, status: cleanStatus, response: cleanResponse };
               const result = await runCustomCode(tenantSlug, sandboxObj.code, rpcPayload, String(sandboxObj.id), rpcContext);
@@ -122,13 +106,19 @@ export async function handleMqttMessage(tenantSlug: string, topic: string, messa
         const extractedDeviceId = deviceIdMatch ? deviceIdMatch[1] : 'unknown';
         
         // Sandbox Context'inde bunun bir simülasyon olduğunu belirtiyoruz
-        const rpcContext = { deviceId: extractedDeviceId, timestamp: Date.now(), topic, isCommandSimulation: true };
+        const rpcContext: any = { deviceId: extractedDeviceId, timestamp: Date.now(), topic, isCommandSimulation: true };
         
-        const { scripts } = await getSandboxScripts(sql);
+        const scripts = await getActiveEndpoints(tenantSlug, 'mqtt');
         if (scripts && scripts.length > 0) {
           for (let i = 0; i < scripts.length; i++) {
             const sandboxObj = scripts[i];
             if (!sandboxObj || !sandboxObj.code || sandboxObj.code.trim() === '') continue;
+
+            if (sandboxObj.regexPattern) {
+              const matchRes = matchRoute('/' + topic, sandboxObj.regexPattern, sandboxObj.paramNames || []);
+              if (!matchRes.isMatch) continue;
+              rpcContext.params = matchRes.params;
+            }
             
             // Komutu sandbox'a ilet, sanal cihaz isterse publishMQTT ile '/response' dönebilir
             await runCustomCode(tenantSlug, sandboxObj.code, data, String(sandboxObj.id), rpcContext);
@@ -169,16 +159,17 @@ export async function handleMqttMessage(tenantSlug: string, topic: string, messa
     // REPLAY ATTACK KORUMASI: Auth/ACL katmanı güçlü olduğu için devre dışı bırakıldı.
 
     // 1. RAM CACHE KONTROLÜ: Cihazın gizli şifresini ve şemasını bul
-    let deviceMeta = deviceCache.get(deviceId);
+    const cacheKey = `${tenantSlug}:${deviceId}`;
+    let deviceMeta = deviceCache.get(cacheKey);
 
     // TTL Kontrolü (Süresi geçmiş cache'i sil)
     if (deviceMeta && Date.now() > deviceMeta.expiresAt) {
-      deviceCache.delete(deviceId);
+      deviceCache.delete(cacheKey);
       deviceMeta = undefined;
     }
 
     if (!deviceMeta) {
-      let fetchPromise = pendingFetches.get(deviceId);
+      let fetchPromise = pendingFetches.get(cacheKey);
 
       if (!fetchPromise) {
         fetchPromise = (async () => {
@@ -186,16 +177,16 @@ export async function handleMqttMessage(tenantSlug: string, topic: string, messa
           const row = dbDevice[0];
           if (row) {
             const meta = { secretKey: row.secret_key, schema: row.schema, expiresAt: Date.now() + 1800000 };
-            deviceCache.set(deviceId, meta);
+            deviceCache.set(cacheKey, meta);
             return meta;
           }
           return null;
         })();
 
-        pendingFetches.set(deviceId, fetchPromise);
+        pendingFetches.set(cacheKey, fetchPromise);
 
         fetchPromise.finally(() => {
-          pendingFetches.delete(deviceId);
+          pendingFetches.delete(cacheKey);
         });
       }
 
@@ -224,13 +215,19 @@ export async function handleMqttMessage(tenantSlug: string, topic: string, messa
 
     // 3. MQTT SANDBOX KATMANI (İsteğe bağlı Payload Manipülasyonu / Filtreleme)
     let activePayload = payload;
-    const { scripts } = await getSandboxScripts(sql);
+    const scripts = await getActiveEndpoints(tenantSlug, 'mqtt');
     if (scripts && scripts.length > 0) {
       try {
-        const contextObj = { deviceId, timestamp, topic, hmac };
+        const contextObj: any = { deviceId, timestamp, topic, hmac };
         for (let i = 0; i < scripts.length; i++) {
           const sandboxObj = scripts[i];
           if (!sandboxObj || !sandboxObj.code || sandboxObj.code.trim() === '') continue;
+
+          if (sandboxObj.regexPattern) {
+            const matchRes = matchRoute('/' + topic, sandboxObj.regexPattern, sandboxObj.paramNames || []);
+            if (!matchRes.isMatch) continue;
+            contextObj.params = matchRes.params;
+          }
 
           const result = await runCustomCode(tenantSlug, sandboxObj.code, activePayload, String(sandboxObj.id), contextObj);
           if (result === false) {
@@ -278,9 +275,10 @@ export function isMqttConnected() {
   return !!g.__aedesApp;
 }
 
-export function removeDeviceFromCache(deviceId: string) {
-  deviceCache.delete(deviceId);
-  pendingFetches.delete(deviceId);
+export function removeDeviceFromCache(tenantSlug: string, deviceId: string) {
+  const cacheKey = `${tenantSlug}:${deviceId}`;
+  deviceCache.delete(cacheKey);
+  pendingFetches.delete(cacheKey);
 }
 
 export function publishMQTT(topic: string, message: any) {

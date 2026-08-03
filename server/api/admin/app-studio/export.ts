@@ -53,7 +53,28 @@ export default defineEventHandler(async (event) => {
           JOIN entities e ON r.entity_id = e.id
           WHERE ${whereClause.replace(/hashtags LIKE/g, 'r.hashtags LIKE')}
         `;
-        components[table] = await sql.unsafe(query, likeTags);
+        const recs = await sql.unsafe(query, likeTags);
+        const ents = await sql.unsafe(`SELECT id, slug, schema FROM entities`);
+        for (const rec of recs) {
+           const dataObj = typeof rec.data === 'string' ? JSON.parse(rec.data) : (rec.data || {});
+           const ent = ents.find((e: any) => e.slug === rec.entity_slug);
+           if (ent) {
+              const schema = typeof ent.schema === 'string' ? JSON.parse(ent.schema) : (ent.schema || {});
+              for (const [key, def] of Object.entries(schema) as any) {
+                 if (def.type === 'relation' && dataObj[key]) {
+                    const targetId = dataObj[key];
+                    try {
+                       const strValRes = await sql.unsafe(`SELECT val_str FROM record_fields WHERE record_id = $1 AND val_str IS NOT NULL LIMIT 1`, [targetId]);
+                       if (strValRes.length > 0) {
+                          dataObj[key] = strValRes[0].val_str;
+                       }
+                    } catch(e) {}
+                 }
+              }
+              rec.data = JSON.stringify(dataObj);
+           }
+        }
+        components[table] = recs;
       } else if (table === 'languages') {
         let matchingKeys: string[] = [];
         try {
@@ -120,6 +141,14 @@ export default defineEventHandler(async (event) => {
           }
         }
         components[table] = ents;
+      } else if (table === 'users') {
+        const query = `
+          SELECT u.*, r.name as role_name 
+          FROM users u
+          LEFT JOIN roles r ON u.role_id = r.id
+          WHERE ${whereClause.replace(/hashtags LIKE/g, 'u.hashtags LIKE')}
+        `;
+        components[table] = await sql.unsafe(query, likeTags);
       } else {
         components[table] = await sql.unsafe(`SELECT * FROM ${table} WHERE ${whereClause}`, likeTags);
       }

@@ -19,6 +19,7 @@ const { primaryColor: color } = useSysVars();
 import { ref, onMounted, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import DynamicRenderer from './DynamicRenderer.vue';
+import { getCachedData } from '../utils/offlineStore';
 
 defineOptions({ inheritAttrs: false });
 
@@ -53,9 +54,27 @@ const fetchComponent = async () => {
     return;
   }
 
-  const fetchPromise = $fetch(`/api/pages/components/${props.slug}`, {
-    headers: tenantSlug ? { 'x-tenant-slug': tenantSlug } : {}
-  });
+  const fetchPromise = (async () => {
+    // 1. Try IndexedDB (Offline First)
+    if (import.meta.client) {
+      try {
+        const cachedPages = (await getCachedData('pages', tenantSlug) || []) as any[];
+        const matchedPage = cachedPages.find((p: any) => 
+          p.page_type === 'component' && p.route_pattern === props.slug
+        );
+        if (matchedPage) {
+          return matchedPage;
+        }
+      } catch (err) {
+        console.warn('Failed to read component from IndexedDB', err);
+      }
+    }
+
+    // 2. Fallback to API if not found in offline store
+    return $fetch(`/api/pages/components/${props.slug}`, {
+      headers: tenantSlug ? { 'x-tenant-slug': tenantSlug } : {}
+    });
+  })();
   
   cache.set(cacheKey, fetchPromise);
   

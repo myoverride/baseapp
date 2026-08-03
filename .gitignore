@@ -37,3 +37,8 @@ repomix-output.xml
 *.bak
 *.tmp
 *.temp
+
+# Trash and Deprecated Docs
+trash/
+*.md
+pages.html

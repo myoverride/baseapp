@@ -82,7 +82,7 @@
       <template v-slot:item.hashtags="{ item }">
         <div class="d-flex flex-wrap gap-1">
           <v-chip
-            v-for="tag in (typeof item.hashtags === 'string' ? JSON.parse(item.hashtags || '[]') : (item.hashtags || []))"
+            v-for="tag in safeJsonParse(item.hashtags)"
             :key="tag"
             size="x-small"
             :color="color"
@@ -256,7 +256,7 @@
                   v-model="fd.template_string"
                   language="html"
                   height="100%"
-                  :theme="monacoTheme"
+                  contextType="frontend"
                   @save="saveCodeOnly"
                 />
               </div>
@@ -266,7 +266,7 @@
                   v-model="fd.script_content"
                   language="javascript"
                   height="100%"
-                  :theme="monacoTheme"
+                  contextType="frontend"
                   @save="saveCodeOnly"
                 />
               </div>
@@ -276,7 +276,7 @@
                   v-model="fd.style_content"
                   language="css"
                   height="100%"
-                  :theme="monacoTheme"
+                  contextType="frontend"
                   @save="saveCodeOnly"
                 />
               </div>
@@ -371,7 +371,14 @@ const initialFormData = ref<any>({});
 const editId = ref<number | null>(null);
 
 const tab = ref('template');
-const monacoTheme = ref('vs-dark');
+
+const safeJsonParse = (val: any) => {
+  if (Array.isArray(val)) return val;
+  if (typeof val === 'string') {
+    try { return JSON.parse(val || '[]'); } catch { return []; }
+  }
+  return [];
+};
 
 const pageTypes = computed(() => {
   return [
@@ -408,17 +415,8 @@ const fetchLayouts = async () => {
 
 
 onMounted(() => {
-  const saved = localStorage.getItem('monaco-theme');
-  if (saved) {
-    monacoTheme.value = saved;
-  }
   fetchLayouts();
 });
-
-const toggleMonacoTheme = () => {
-  monacoTheme.value = monacoTheme.value === 'vs-dark' ? 'vs' : 'vs-dark';
-  localStorage.setItem('monaco-theme', monacoTheme.value);
-};
 
 const generateRandomId = () => Math.random().toString(36).substring(2, 8);
 
@@ -583,16 +581,9 @@ const saveItem = async (payload: any) => {
   }
 
   const body = {
-    route_pattern: payload.route_pattern,
+    ...payload,
     title: typeof payload.title === 'object' ? JSON.stringify(payload.title) : payload.title,
-    page_type: payload.page_type || 'regular',
-    template_string: payload.template_string,
     script_content: payload.script_content,
-    style_content: payload.style_content,
-    active: payload.active,
-    is_public: payload.is_public,
-    is_default_layout: payload.is_default_layout,
-    layout_id: payload.layout_id,
     hashtags: payload.hashtags || []
   };
 

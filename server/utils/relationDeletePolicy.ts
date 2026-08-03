@@ -158,17 +158,34 @@ export const deleteRecordWithRelationPolicy = async (
     }
   }
 
-  // 2. Batch Deletes (I/O Darboğazını ve Lock durumunu engellemek için transactionSync kullan)
+  // 2. Batch Deletes (I/O Darboğazını ve Lock durumunu engellemek için IN() ile gruplandır)
   const deleteItems = Array.from(toDelete);
-  const queries: {query: string, params: any[]}[] = [];
+  const deleteMap = new Map<number, number[]>();
   
   for (const item of deleteItems) {
      const [eId, rId] = item.split(':');
-     queries.push({ query: `DELETE FROM records WHERE id = $1 AND entity_id = $2`, params: [Number(rId), Number(eId)] });
+     const entityId = Number(eId);
+     const recordId = Number(rId);
+     if (!deleteMap.has(entityId)) deleteMap.set(entityId, []);
+     deleteMap.get(entityId)!.push(recordId);
+  }
+
+  const queries: {query: string, params: any[]}[] = [];
+  
+  for (const [entityId, ids] of deleteMap.entries()) {
+     // SQLite variables limit (999-32766) limitine takılmamak için 900'lük paketlere böl
+     for (let i = 0; i < ids.length; i += 900) {
+         const chunk = ids.slice(i, i + 900);
+         const placeholders = chunk.map((_, idx) => `$${idx + 2}`).join(', ');
+         queries.push({ 
+           query: `DELETE FROM records WHERE entity_id = $1 AND id IN (${placeholders})`, 
+           params: [entityId, ...chunk] 
+         });
+     }
   }
 
   if (sql.transactionSync && queries.length > 0) {
-     sql.transactionSync(queries);
+     await sql.transactionSync(queries);
   } else {
      for (const q of queries) {
        await sql.unsafe(q.query, q.params);

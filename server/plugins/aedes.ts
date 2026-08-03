@@ -35,6 +35,7 @@ export default defineNitroPlugin((_nitroApp) => {
         const isLocalhost = clientIp === '127.0.0.1' || clientIp === '::1' || clientIp.includes('127.0.0.1');
         if (!isLocalhost) {
           if (!checkRateLimit(rateLimitKey, 10, 60 * 1000)) {
+            console.warn(`[MQTT Debug] Rate Limit Exceeded for IP: ${clientIp}`);
             const error: any = new Error('Too many connection attempts');
             error.returnCode = 4;
             return callback(error, false);
@@ -93,15 +94,16 @@ export default defineNitroPlugin((_nitroApp) => {
         }
 
         if (!tenantSlug) {
+          console.warn(`[MQTT Debug] Auth Failed - Tenant or Device not found for DeviceID: "${devId}"`);
           const error: any = new Error('Not Authorized');
           error.returnCode = 4;
           return callback(error, false);
         }
 
-        client.__tenantSlug = tenantSlug;
-        client.__deviceId = devId;
-        client.__role = role;
-        client.username = devId; // override aedes username for internals
+        (client as any).__tenantSlug = tenantSlug;
+        (client as any).__deviceId = devId;
+        (client as any).__role = role;
+        (client as any).username = devId; // override aedes username for internals
         
         return callback(null, true);
       } catch (err) {
@@ -149,7 +151,8 @@ export default defineNitroPlugin((_nitroApp) => {
             err.returnCode = 135;
             return callback(err);
           }
-        } catch {
+        } catch (e: any) {
+          console.warn(`[MQTT Debug] Publish reddedildi (JSON Parse Hatası)! Topic: ${topic}, İstemci: ${username}, Hata: ${e.message}, Payload: ${packet.payload.toString()}`);
           const err = new Error('Invalid payload format') as any;
           err.returnCode = 135;
           return callback(err);
