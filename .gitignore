@@ -41,4 +41,5 @@ repomix-output.xml
 # Trash and Deprecated Docs
 trash/
 *.md
+*.xml
 pages.html
