@@ -1,0 +1,48 @@
+<v-container class="fill-height">
+  <v-card max-width="600" width="100%" class="mx-auto pa-6" elevation="4">
+    <v-btn variant="text" prepend-icon="mdi-arrow-left" to="/" class="mb-4 px-0">Ana Sayfaya Dön</v-btn>
+    
+    <v-card-title class="text-h5 font-weight-bold text-center mb-4">
+      İşletme ve Yönetici Kaydı (Makas)
+    </v-card-title>
+    
+    <v-card-text>
+      <v-form @submit.prevent="submitRegister">
+        
+        <h3 class="text-subtitle-1 font-weight-bold text-primary mb-3">İşletme Bilgileri</h3>
+        <v-text-field v-model="form.company_title" label="İşletme Ünvanı" variant="outlined" required></v-text-field>
+        <v-text-field v-model="form.company_contact" label="İşletme İletişim (Tel vb.)" variant="outlined" required></v-text-field>
+        <v-textarea v-model="form.company_address" label="Açık Adres" variant="outlined" rows="2" required></v-textarea>
+        
+        <v-row>
+          <v-col cols="12" md="6">
+            <v-select v-model="form.company_target" :items="['Erkek', 'Kadın', 'Karma']" label="Hedef Kitle" variant="outlined" required></v-select>
+          </v-col>
+          <v-col cols="12" md="6">
+            <v-select v-model="form.company_dayoff" :items="['Yok', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi', 'Pazar']" label="Tatil Günü" variant="outlined" required></v-select>
+          </v-col>
+        </v-row>
+
+        <v-divider class="my-5"></v-divider>
+        
+        <h3 class="text-subtitle-1 font-weight-bold text-secondary mb-3">Yönetici Personel Bilgileri</h3>
+        <v-text-field v-model="form.admin_full_name" label="Yönetici Adı Soyadı" variant="outlined" required></v-text-field>
+        
+        <v-row>
+          <v-col cols="12" md="6">
+            <v-text-field v-model="form.admin_username" label="Sistem Kullanıcı Adı" variant="outlined" required></v-text-field>
+          </v-col>
+          <v-col cols="12" md="6">
+            <v-text-field v-model="form.admin_password" type="password" label="Sistem Şifresi" variant="outlined" required></v-text-field>
+          </v-col>
+        </v-row>
+        <v-select v-model="form.admin_gender" :items="[{title:'Erkek', value:false}, {title:'Kadın', value:true}]" label="Cinsiyetiniz" variant="outlined" required></v-select>
+        
+        <v-btn color="primary" size="large" block type="submit" :loading="loading" class="mt-4">
+          Kaydı Tamamla
+        </v-btn>
+        
+      </v-form>
+    </v-card-text>
+  </v-card>
+</v-container>

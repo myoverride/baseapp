@@ -145,9 +145,9 @@ export async function handleMqttMessage(tenantSlug: string, topic: string, messa
     
     const data = JSON.parse(rawMessage);
 
-    const { deviceId, timestamp, payload, hmac } = data;
+    const { deviceId, timestamp, payload } = data;
 
-    if (!deviceId || !timestamp || !payload || !hmac) {
+    if (!deviceId || !timestamp || !payload) {
       console.warn(`[WARN] [Güvenlik Uyarısı] Eksik paket formatı reddedildi.`);
       return;
     }
@@ -198,27 +198,12 @@ export async function handleMqttMessage(tenantSlug: string, topic: string, messa
       }
     }
 
-    // 2. HMAC DOĞRULAMA (İmza Kontrolü)
-    const rawPayloadString = JSON.stringify(payload);
-    const dataToSign = `${deviceId}|${timestamp}|${rawPayloadString}`;
-
-    const computedHmac = crypto
-      .createHmac('sha256', deviceMeta.secretKey)
-      .update(dataToSign)
-      .digest('hex');
-
-    // Gelen imza ile bizim hesapladığımız imza uyuşuyor mu?
-    if (hmac !== computedHmac) {
-      console.error(`[FATAL] [GÜVENLİK ALARMI] Sahte İmza! Biri "${deviceId}" adına sahte veri basıyor!`);
-      return;
-    }
-
     // 3. MQTT SANDBOX KATMANI (İsteğe bağlı Payload Manipülasyonu / Filtreleme)
     let activePayload = payload;
     const scripts = await getActiveEndpoints(tenantSlug, 'mqtt');
     if (scripts && scripts.length > 0) {
       try {
-        const contextObj: any = { deviceId, timestamp, topic, hmac };
+        const contextObj: any = { deviceId, timestamp, topic };
         for (let i = 0; i < scripts.length; i++) {
           const sandboxObj = scripts[i];
           if (!sandboxObj || !sandboxObj.code || sandboxObj.code.trim() === '') continue;

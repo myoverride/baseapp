@@ -1,9 +1,13 @@
 import { useDB } from '../../../../utils/db';
+import { bumpGlobalVersion } from '../../../../utils/versionManager';
 
 export default defineEventHandler(async (event) => {
   const user = event.context.user;
-  if (!user || (!user.is_admin && !user.is_super_admin)) {
-    throw createError({ statusCode: 403, message: 'errors.unauthorized' });
+  if (!user) {
+    throw createError({ statusCode: 401, message: 'errors.loginRequired' });
+  }
+  if (!user.is_admin && !user.is_super_admin) {
+    throw createError({ statusCode: 403, message: 'errors.forbiddenAdminOnly' });
   }
 
   const tenantSlug = event.context.tenantSlug || 'master';
@@ -62,6 +66,7 @@ export default defineEventHandler(async (event) => {
       
       if (hasUpdate) updatedCount++;
     }
+    bumpGlobalVersion(tenantSlug);
     return { success: true, message: 'success.importSuccessful' };
   }
 
@@ -92,6 +97,7 @@ export default defineEventHandler(async (event) => {
     const hashtagsStr = Array.isArray(hashtagsArr) ? JSON.stringify(hashtagsArr) : (typeof hashtagsArr === 'string' ? hashtagsArr : '[]');
     await sql.unsafe('INSERT INTO translation_keys (key, hashtags) VALUES ($1, $2) ON CONFLICT(key) DO UPDATE SET hashtags = excluded.hashtags, updated_at = CURRENT_TIMESTAMP', [key, hashtagsStr]);
 
+    bumpGlobalVersion(tenantSlug);
     return { success: true };
   } catch (err: any) {
     throw createError({ statusCode: 500, message: err.message });

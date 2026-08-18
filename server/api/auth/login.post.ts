@@ -9,14 +9,14 @@ export default defineEventHandler(async (event) => {
   
   // 5 attempts per 5 minutes
   if (!checkRateLimit(rateLimitKey, 5, 5 * 60 * 1000)) {
-    throw createError({ statusCode: 429, message: tEvent(event, 'errors.tooManyRequests') || 'Too many login attempts. Please try again later.' });
+    throw createError({ statusCode: 429, message: 'errors.tooManyRequests' || 'Too many login attempts. Please try again later.' });
   }
 
   const body = await readBody(event);
   const { username, password } = body;
 
   if (!username || !password) {
-    throw createError({ statusCode: 400, message: tEvent(event, 'errors.usernamePasswordRequired') });
+    throw createError({ statusCode: 400, message: 'errors.usernamePasswordRequired' });
   }
 
   let tenantSlug = event.context.tenantSlug || 'master';
@@ -72,7 +72,7 @@ export default defineEventHandler(async (event) => {
   }
 
   if (users.length === 0) {
-    throw createError({ statusCode: 401, message: tEvent(event, 'errors.invalidCredentials') });
+    throw createError({ statusCode: 401, message: 'errors.invalidCredentials' });
   }
 
   const user = users[0]!;
@@ -96,13 +96,13 @@ export default defineEventHandler(async (event) => {
   }
 
   if (!passwordValid) {
-    throw createError({ statusCode: 401, message: tEvent(event, 'errors.invalidCredentials') });
+    throw createError({ statusCode: 401, message: 'errors.invalidCredentials' });
   }
 
   // Generate secure token
   const token = crypto.randomBytes(64).toString('hex');
-  const { getSysVar } = await import('../../utils/sysvars');
-  const tokenTtlStr = await getSysVar(tenantSlug, 'TOKEN_TTL_MINUTES', false, '10080'); // 7 days default in minutes
+  const {} = await import('../../utils/globalsManager');
+  const tokenTtlStr = await globals.get(tenantSlug, 'TOKEN_TTL_MINUTES', false, '10080'); // 7 days default in minutes
   const TOKEN_TTL_MINUTES = parseInt(tokenTtlStr, 10) || 10080;
   const expiresAt = new Date(Date.now() + TOKEN_TTL_MINUTES * 60 * 1000).toISOString();
   const tokenTenant = (users[0] as any).is_super_admin ? '__super_admin__' : tenantSlug;
@@ -118,7 +118,7 @@ export default defineEventHandler(async (event) => {
 
   // Set HttpOnly Cookie
   // Build sonrası HTTP üzerinden test edebilmek için ALLOW_HTTP sysvar değişkenini kullanabilirsiniz
-  const allowHttp = await getSysVar('master', 'ALLOW_HTTP', false, 'true');
+  const allowHttp = await globals.get('master', 'ALLOW_HTTP', false, 'true');
   const isSecure = process.env.NODE_ENV === 'production' && allowHttp !== 'true';
 
   setCookie(event, 'auth_token', token, {

@@ -7,11 +7,14 @@ export default defineEventHandler(async (event) => {
   const tenantSlug = event.context.tenantSlug;
 
   if (!slug || !id) {
-    throw createError({ statusCode: 400, message: tEvent(event, 'errors.validationFailed') });
+    throw createError({ statusCode: 400, message: 'errors.validationFailed' });
   }
 
   const user = event.context.user;
-  if (!user || !user.is_admin) {
+  if (!user) {
+    throw createError({ statusCode: 401, message: 'errors.loginRequired' });
+  }
+  if (!user.is_admin) {
     throw createError({ statusCode: 403, message: 'errors.forbiddenAdminOnly' });
   }
 
@@ -25,11 +28,11 @@ export default defineEventHandler(async (event) => {
         throw createError({
           statusCode: e.statusCode,
           statusMessage: e.statusMessage || e.message,
-          message: e.message,
+          message: (e.statusCode && e.statusCode < 500) ? e.message : 'errors.internalError',
           data: e.data
         });
       }
-      throw createError({ statusCode: 500, message: e.message || 'Internal Error' });
+      throw createError({ statusCode: 500, message: 'errors.internalError' });
     }
   }
 
@@ -38,7 +41,7 @@ export default defineEventHandler(async (event) => {
       const result = await deleteRecord(tenantSlug, slug, id);
       return result;
     } catch (e: any) {
-      throw createError({ statusCode: e.statusCode || 500, message: e.message || 'Internal Error' });
+      throw createError({ statusCode: e.statusCode || 500, message: (e.statusCode && e.statusCode < 500) ? (e.message || 'errors.internalError') : 'errors.internalError' });
     }
   }
 
@@ -47,7 +50,7 @@ export default defineEventHandler(async (event) => {
       const result = await getRecord(tenantSlug, slug, id);
       return result;
     } catch (e: any) {
-      throw createError({ statusCode: e.statusCode || 500, message: e.message || 'Internal Error' });
+      throw createError({ statusCode: e.statusCode || 500, message: (e.statusCode && e.statusCode < 500) ? (e.message || 'errors.internalError') : 'errors.internalError' });
     }
   }
 });

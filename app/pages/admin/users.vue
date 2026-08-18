@@ -1,7 +1,7 @@
 <template>
   <v-container>
     <div class="mb-4">
-      <v-btn prepend-icon="mdi-arrow-left" variant="text" to="/" class="text-none font-weight-medium px-0 text-body-1" color="grey-darken-2">
+      <v-btn prepend-icon="mdi-arrow-left" variant="text" to="/" class="text-none font-weight-medium px-0 text-body-1" color="primary">
         {{ $t('common.home') }}
       </v-btn>
     </div>
@@ -36,12 +36,23 @@
         <span v-else class="text-error">Rol Yok</span>
       </template>
       <template v-slot:item.home_page="{ item }">
-        <span v-if="item.home_page" class="text-caption text-grey-darken-1">{{ item.home_page }}</span>
+        <span v-if="item.home_page" class="text-caption opacity-70">{{ item.home_page }}</span>
         <span v-else class="text-caption text-grey">-</span>
       </template>
       <template v-slot:item.hashtags="{ item }">
         <v-chip class="ma-1" size="small" color="secondary" v-for="tag in (typeof item.hashtags === 'string' ? JSON.parse(item.hashtags || '[]') : (item.hashtags || []))" :key="tag">{{ tag }}</v-chip>
         <span v-if="!Array.isArray(typeof item.hashtags === 'string' ? JSON.parse(item.hashtags || '[]') : (item.hashtags || [])) || (typeof item.hashtags === 'string' ? JSON.parse(item.hashtags || '[]') : (item.hashtags || [])).length === 0" class="text-caption text-grey">-</span>
+      </template>
+      <template v-slot:item.info="{ item }">
+        <v-tooltip location="top" max-width="400">
+          <template v-slot:activator="{ props }">
+            <v-btn icon="mdi-information" v-bind="props" color="info" variant="text" size="small"></v-btn>
+          </template>
+          <div class="text-caption">
+            <div class="mb-1"><span class="font-weight-medium opacity-70">{{ $t('table.createdAt') }}:</span> {{ formatAppDate(item.created_at as any) }}</div>
+            <div><span class="font-weight-medium opacity-70">{{ $t('table.updatedAt') }}:</span> {{ formatAppDate(item.updated_at as any) }}</div>
+          </div>
+        </v-tooltip>
       </template>
     
       <template v-slot:rowActions="{ item }">
@@ -197,7 +208,7 @@
 </template>
 
 <script setup lang="ts">
-const { primaryColor: color } = useSysVars();
+const { primaryColor: color } = useGlobals();
 import { ref, onMounted, computed } from 'vue';
 import { useState } from '#app';
 import { useI18n } from 'vue-i18n';
@@ -304,7 +315,8 @@ const columns = computed(() => [
   { title: t('table.authType'), key: 'is_admin', slot: true },
   { title: t('common.role'), key: 'role_name', slot: true },
   { title: t('table.homePage'), key: 'home_page', sortable: true, filterable: true, type: 'string', slot: true },
-  { title: t('table.hashtags'), key: 'hashtags', sortable: false, filterable: true, slot: true }
+  { title: t('field.hashtags'), key: 'hashtags', sortable: false, filterable: true, slot: true },
+  { title: t('common.info'), key: 'info', sortable: false, slot: true }
 ]);
 
 const homePageOptions = computed(() => [
@@ -323,8 +335,8 @@ const fetchDependencies = async () => {
       $fetch('/api/admin/pages?limit=1000'),
       $fetch('/api/admin/users/records-lookup')
     ]);
-    roles.value = (rData as any).records || [];
-    pages.value = (pData as any).records || [];
+    roles.value = (rData as any).records || (rData as any).data || [];
+    pages.value = (pData as any).records || (pData as any).data || [];
     
     const entData = (lookupData as any).entities || [];
     const recData = (lookupData as any).records || [];
@@ -450,7 +462,11 @@ const saveItem = async (payload: any) => {
     if ($toast) $toast.success(dialogMode.value === 'edit' ? t('message.updated') : t('message.added'));
     crudTable.value?.loadItems();
   } catch (e: any) {
-    if ($toast) $toast.error(t(e.data?.message || 'errors.operationFailed'));
+        const errPayload = err?.data || e?.data;
+    const isArr = Array.isArray(errPayload?.data);
+    const errData = isArr ? errPayload.data[0] : (errPayload?.data || {});
+    const errMsg = isArr ? errPayload.data[0].message : (errPayload?.message || 'errors.operationFailed');
+    if ($toast) $toast.error(t(errMsg, errData));
   }
 };
 
@@ -463,7 +479,11 @@ const handleDelete = async (item: any) => {
     if ($toast) $toast.warning(t('message.deleted'));
     crudTable.value?.loadItems();
   } catch (e: any) {
-    if ($toast) $toast.error(t(e.data?.message || 'errors.operationFailed'));
+        const errPayload = err?.data || e?.data;
+    const isArr = Array.isArray(errPayload?.data);
+    const errData = isArr ? errPayload.data[0] : (errPayload?.data || {});
+    const errMsg = isArr ? errPayload.data[0].message : (errPayload?.message || 'errors.operationFailed');
+    if ($toast) $toast.error(t(errMsg, errData));
   }
 };
 

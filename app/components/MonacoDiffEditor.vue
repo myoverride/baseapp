@@ -16,7 +16,7 @@
       class="fullscreen-btn" 
       @click="toggleFullscreen" 
       :title="isFullscreen ? $t('common.exitFullscreen') : $t('common.fullscreen')"
-      color="grey-darken-3"
+      color="primary"
       variant="flat"
     >
       <v-icon color="white">{{ isFullscreen ? 'mdi-fullscreen-exit' : 'mdi-fullscreen' }}</v-icon>
@@ -25,7 +25,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount, watch } from 'vue';
+import { toRaw,  ref, onMounted, onBeforeUnmount, watch } from 'vue';
 
 const props = defineProps<{
   original: string;
@@ -130,7 +130,7 @@ watch(() => props.theme, (newTheme) => {
 
 onBeforeUnmount(() => {
   if (diffEditor) {
-    diffEditor.dispose();
+    if(toRaw(diffEditor).dispose) toRaw(diffEditor).dispose();
   }
 });
 </script>

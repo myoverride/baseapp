@@ -4,8 +4,11 @@ import { buildGenericFilter } from '../../../utils/queryBuilder';
 
 export default defineEventHandler(async (event) => {
   const user = event.context.user;
-  if (!user || (!user.is_admin && !user.is_super_admin)) {
-    throw createError({ statusCode: 403, message: 'errors.unauthorized' });
+  if (!user) {
+    throw createError({ statusCode: 401, message: 'errors.loginRequired' });
+  }
+  if (!user.is_admin && !user.is_super_admin) {
+    throw createError({ statusCode: 403, message: 'errors.forbiddenAdminOnly' });
   }
   const method = getMethod(event);
   const sql = useDB(event.context.tenantSlug);
@@ -14,8 +17,8 @@ export default defineEventHandler(async (event) => {
     const query = getQuery(event);
     const type = query.type as string | undefined;
     const search = ((query.search as string) || '').replace(/^#/, '');
-    const page = parseInt(query.page as string) || 1;
-    const limit = Math.min(parseInt(query.limit as string) || 25, 100);
+    const page = Math.max(1, parseInt(query.page as string) || 1);
+    const limit = Math.max(1, parseInt(query.limit as string) || 25);
     const sortBy = (query.sortBy as string) || 'priority';
     const sortOrder = (query.sortOrder as string) === 'asc' ? 'ASC' : 'DESC';
     const offset = (page - 1) * limit;
@@ -59,8 +62,7 @@ export default defineEventHandler(async (event) => {
        FROM endpoints ${whereClause} ORDER BY ${safeSort} ${sortOrder} LIMIT ? OFFSET ?`,
       [...params, limit, offset]
     );
-
-    return { records, total: countRes[0]?.c || 0, page, limit };
+    return { success: true, data: records, pagination: { total: countRes[0]?.c || 0, page, limit } };
   }
 
   if (method === 'POST') {
@@ -77,7 +79,7 @@ export default defineEventHandler(async (event) => {
           }
         }
       } catch (err: any) {
-        throw createError({ statusCode: 400, message: err.key || err.message, data: err.params });
+        throw createError({ statusCode: 400, message: err.key || 'errors.databaseError', data: err.key ? err.params : undefined });
       }
 
       let importedCount = 0;
@@ -125,21 +127,24 @@ export default defineEventHandler(async (event) => {
         const { validateJS } = await import('../../../utils/codeValidator');
         await validateJS(body.code, `Endpoint: ${body.name || 'Yeni'}`);
       } catch (err: any) {
-        throw createError({ statusCode: 400, message: err.key || err.message, data: err.params });
+        throw createError({ statusCode: 400, message: err.key || 'errors.databaseError', data: err.key ? err.params : undefined });
       }
     }
 
     const hashtagsStr = JSON.stringify(body.hashtags || []);
     
-    await sql.unsafe(`
+    const insertRes = await sql.unsafe(`
       INSERT INTO endpoints (name, type, route_pattern, code, priority, active, is_public, hashtags, created_by, updated_by)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      RETURNING *
     `, [
       body.name, body.type, body.route_pattern, body.code, body.priority || 0,
       body.active ? 1 : 0, body.is_public ? 1 : 0, hashtagsStr, user.id, user.id
     ]);
 
-    import('../../../utils/history').then(m => m.saveHistory(event.context.tenantSlug, 'endpoints', 'create', { name: body.name })).catch(console.error);
+    if (insertRes.length > 0) {
+      import('../../../utils/history').then(m => m.saveHistory(event.context.tenantSlug, 'endpoints', insertRes[0].id, insertRes[0])).catch(console.error);
+    }
     import('../../../utils/endpointManager').then(m => m.invalidateEndpointCache(event.context.tenantSlug)).catch(console.error);
     return { success: true, message: tEvent(event, 'message.entityCreated', { name: tEvent(event, 'entity.endpoint') }) };
   }

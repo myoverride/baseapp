@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { defineNuxtConfig } from 'nuxt/config';
 
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
@@ -81,7 +82,7 @@ export default defineNuxtConfig({
     experimental: {
       websocket: true
     },
-    preset: 'node',
+    preset: 'node-listener',
     serveStatic: true,
     output: {
       dir: '.output'
@@ -92,7 +93,7 @@ export default defineNuxtConfig({
     },
     prerender: {
       crawlLinks: false,
-      routes: ['/']
+      routes: []
     },
     hooks: {
       'compiled'(nitro) {

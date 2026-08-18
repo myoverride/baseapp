@@ -1,14 +1,14 @@
 import { useDB } from '../../utils/db';
-import { wsConnections, wsClients } from '../../utils/wsManager';
+import { wsConnections, wsClients, wsChannelMap } from '../../utils/wsManager';
 import { compileRoutePattern, matchRoute } from '../../utils/endpointManager';
 import fs from 'node:fs';
 import path from 'node:path';
 
 import { resolveTenant } from '../../utils/tenantResolver';
 
-// File-based debug logger (temporary - to diagnose broadcast issue)
+// Console logger for WS events
 const wsLog = (...args: any[]) => {
-  if (process.env.WS_DEBUG === 'true') {
+  if (process.env.DEBUG_WS === 'true') {
     const msg = args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' ');
     console.log('[WS]', msg);
   }
@@ -17,18 +17,36 @@ const wsLog = (...args: any[]) => {
 // 3. WS Heartbeat Interval (Architectural Shield)
 if (!(globalThis as any).__wsHeartbeatSet) {
   (globalThis as any).__wsHeartbeatSet = true;
-  setInterval(() => {
-    for (const [id, info] of wsConnections.entries()) {
-      if (info.isAlive === false) { // Strict false check to avoid killing too early before first ping
-        wsLog('HEARTBEAT peer dead:', id);
-        wsConnections.delete(id);
-        try { info.peer.close(1000, 'Ping Timeout'); } catch {}
-      } else {
-        info.isAlive = false;
-        info.send('__PING__');
+  const scheduleHeartbeat = async () => {
+    try {
+      const { globals } = await import('../../utils/globalsManager');
+      const val = await globals.get('master', 'WS_HEARTBEAT_INTERVAL', false, '30000');
+      let intervalMs = parseInt(val, 10);
+      if (isNaN(intervalMs) || intervalMs < 5000) intervalMs = 30000;
+      
+      for (const [id, info] of wsConnections.entries()) {
+        if (info.isAlive === false) { // Strict false check to avoid killing too early before first ping
+          wsLog('HEARTBEAT peer dead:', id);
+          const infoPath = (info.endpointPath || '').replace(/^\/?api\/ws/, '').replace(/^\/?ws/, '');
+          const normalizedPath = infoPath.replace(/^\/+|\/+$/g, '') || 'root';
+          const channelKey = `${info.tenantSlug}:${normalizedPath}`;
+          if (wsChannelMap.has(channelKey)) {
+              wsChannelMap.get(channelKey)!.delete(info);
+          }
+          wsConnections.delete(id);
+          try { info.peer.close(1000, 'Ping Timeout'); } catch {}
+        } else {
+          info.isAlive = false;
+          info.send('__PING__');
+        }
       }
+      setTimeout(scheduleHeartbeat, intervalMs).unref();
+    } catch (e) {
+      console.error('Heartbeat scheduler error:', e);
+      setTimeout(scheduleHeartbeat, 30000).unref();
     }
-  }, 30000).unref();
+  };
+  scheduleHeartbeat();
 }
 
 function parseCookieString(cookieHeader: string) {
@@ -55,22 +73,17 @@ export default defineWebSocketHandler({
     } else if (req.headers) {
       cookieStr = (req.headers as any).cookie || '';
     }
-    wsLog('DEBUG UPGRADE COOKIESTR:', cookieStr);
+    
     (req as any)._wsCookies = cookieStr;
   },
   async open(peer) {
     try {
-      const reqCookies = (peer as any)._wsCookies || '';
       const peerReq = (peer as any).ctx?.node?.req || (peer as any).request || (peer as any).req || {};
+      const reqCookies = (peer as any)._wsCookies || peerReq._wsCookies || '';
       const peerHeaders = peerReq.headers || (peer as any).headers || {};
       
       if (reqCookies && !peerHeaders.cookie) peerHeaders.cookie = reqCookies;
       
-      wsLog('DEBUG PEER KEYS:', Object.keys(peer).join(', '));
-      if ((peer as any).ctx) wsLog('DEBUG CTX KEYS:', Object.keys((peer as any).ctx).join(', '));
-      if ((peer as any).ctx?.node) wsLog('DEBUG NODE KEYS:', Object.keys((peer as any).ctx.node).join(', '));
-      wsLog('DEBUG HEADERS:', JSON.stringify(peerHeaders));
-
       const peerUrl = peerReq.url || (peer as any).url || '/';
       
       const urlObj = new URL(peerUrl, 'http://localhost');
@@ -80,8 +93,18 @@ export default defineWebSocketHandler({
         fullPath = fullPath.replace('/_nitro/ws', '');
       }
 
+      let cookieStr = '';
+      if (peerReq.headers && typeof peerReq.headers.get === 'function') {
+        cookieStr = peerReq.headers.get('cookie') || '';
+      } else if (peerReq.headers) {
+        cookieStr = peerReq.headers.cookie || '';
+      } else if (peerHeaders && typeof (peerHeaders as any).get === 'function') {
+        cookieStr = (peerHeaders as any).get('cookie') || '';
+      } else if (peerHeaders) {
+        cookieStr = peerHeaders['cookie'] || '';
+      }
+
       const host = peerHeaders['host'] || peerHeaders['x-forwarded-host'] || '';
-      const cookieStr = peerHeaders['cookie'] || '';
       const cookies = parseCookieString(cookieStr);
       
       let endpointPath = fullPath;
@@ -94,7 +117,7 @@ export default defineWebSocketHandler({
         if (!ep.startsWith('/')) ep = '/' + ep;
         endpointPath = '/api/ws' + ep;
       } else {
-         syncTenantSlug = peerHeaders['x-tenant-slug'] || (urlObj.searchParams.get('tenant')) || 'master';
+         syncTenantSlug = peerHeaders['x-tenant-slug'] || (urlObj.searchParams.get('tenant')) || cookies['tenant_slug'] || 'master';
       }
 
       if (!endpointPath.startsWith('/')) {
@@ -114,7 +137,7 @@ export default defineWebSocketHandler({
         tenantSlug = await resolveTenant(reqForTenant as any);
         
         // Register AFTER resolveTenant so crossws open hook is closer to completion
-        wsConnections.set(peer.id, {
+        const peerInfo = {
           tenantSlug,
           endpointPath,
           peer,
@@ -124,7 +147,16 @@ export default defineWebSocketHandler({
               peer.send(msg); 
             } catch (e: any) { wsLog('send error:', e?.message); }
           }
-        });
+        };
+        wsConnections.set(peer.id, peerInfo);
+        
+        const infoPath = (endpointPath || '').replace(/^\/?api\/ws/, '').replace(/^\/?ws/, '');
+        const normalizedPath = infoPath.replace(/^\/+|\/+$/g, '') || 'root';
+        const channelKey = `${tenantSlug}:${normalizedPath}`;
+        if (!wsChannelMap.has(channelKey)) {
+          wsChannelMap.set(channelKey, new Set());
+        }
+        wsChannelMap.get(channelKey)!.add(peerInfo);
       } catch (err: any) {
         wsConnections.delete(peer.id);
         try { peer.close(1011, 'Tenant Error'); } catch { }
@@ -136,13 +168,11 @@ export default defineWebSocketHandler({
 
       const sql = useDB(tenantSlug);
 
-      const { getActiveEndpoints, matchRoute } = await import('../../utils/endpointManager');
-      const epsRes = await getActiveEndpoints(tenantSlug, 'ws');
-
-      wsLog('OPEN epsRes count=', epsRes.length, 'patterns=', epsRes.map((e: any) => e.route_pattern));
+      const { getActiveEndpointsRouter } = await import('../../utils/endpointManager');
+      const router = await getActiveEndpointsRouter(tenantSlug, 'ws');
 
       let matchedEps: any[] = [];
-      let routeParams = {};
+      let routeParams: Record<string, any> = {};
 
       function normalizeWsPath(p: string) {
         let res = p.replace(/^\/?api\/ws/, '').replace(/^\/?ws/, '');
@@ -150,12 +180,13 @@ export default defineWebSocketHandler({
         return res;
       }
 
-      for (const ep of epsRes) {
-        if (ep.regexPattern) {
-          const matchRes = matchRoute(normalizeWsPath(endpointPath), ep.regexPattern, ep.paramNames || []);
-          if (matchRes.isMatch) {
-            matchedEps.push(ep);
-            routeParams = { ...routeParams, ...matchRes.params };
+      if (router) {
+        const match = router.lookup(normalizeWsPath(endpointPath));
+        if (match && match.payload) {
+          matchedEps.push(match.payload);
+          // Extract params (excluding 'payload' key)
+          for (const key of Object.keys(match)) {
+             if (key !== 'payload') routeParams[key] = (match as any)[key];
           }
         }
       }
@@ -250,11 +281,29 @@ export default defineWebSocketHandler({
 
   close(peer) {
     wsLog('CLOSE peer.id=', peer.id);
+    const info = wsConnections.get(peer.id);
+    if (info) {
+        const infoPath = (info.endpointPath || '').replace(/^\/?api\/ws/, '').replace(/^\/?ws/, '');
+        const normalizedPath = infoPath.replace(/^\/+|\/+$/g, '') || 'root';
+        const channelKey = `${info.tenantSlug}:${normalizedPath}`;
+        if (wsChannelMap.has(channelKey)) {
+            wsChannelMap.get(channelKey)!.delete(info);
+        }
+    }
     wsConnections.delete(peer.id);
   },
 
   error(peer, error) {
     wsLog('ERROR peer.id=', peer.id, 'error=', (error as any)?.message);
+    const info = wsConnections.get(peer.id);
+    if (info) {
+        const infoPath = (info.endpointPath || '').replace(/^\/?api\/ws/, '').replace(/^\/?ws/, '');
+        const normalizedPath = infoPath.replace(/^\/+|\/+$/g, '') || 'root';
+        const channelKey = `${info.tenantSlug}:${normalizedPath}`;
+        if (wsChannelMap.has(channelKey)) {
+            wsChannelMap.get(channelKey)!.delete(info);
+        }
+    }
     wsConnections.delete(peer.id);
   },
 

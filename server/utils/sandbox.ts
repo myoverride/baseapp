@@ -7,7 +7,7 @@ import { LRUCache } from 'lru-cache';
 import { logEvents } from './realtime';
 import { useDB, useTelemetryDB, createEphemeralTelemetryDB } from './db';
 import { queueModbusRead, queueModbusWrite } from './modbusQueue';
-import { executeServerUtil as runCustomUtil } from './utilsServer';
+import {} from './globalsManager';
 import { createRequire } from 'node:module';
 import { resolve, join } from 'node:path';
 import { publishWS } from './wsManager';
@@ -74,7 +74,7 @@ const transporterMap = new Map<string, { transporter: any; configHash: string }>
 async function getTransporter(tenantSlug: string) {
   const sql = useDB(tenantSlug);
   const getVar = async (key: string, defaultVal: string | null = null) => {
-    const res = await sql.unsafe(`SELECT value FROM system_variables WHERE key = ?`, [key]);
+    const res = await sql.unsafe(`SELECT value FROM globals WHERE type = 'variable' AND key = ?`, [key]);
     return res && res.length > 0 ? res[0].value : defaultVal;
   };
 
@@ -118,8 +118,8 @@ export const sendEmail = async (tenantSlug: string, options: {
   const sql = useDB(tenantSlug);
 
   // Sender (Gönderen) tercihi: Options'ta geldiyse o, yoksa sistem değişkeni, o da yoksa SMTP_USER
-  const customFrom = options.from || (await sql.unsafe(`SELECT value FROM system_variables WHERE key = ?`, ['EMAIL_FROM']))[0]?.value;
-  const smtpUser = (await sql.unsafe(`SELECT value FROM system_variables WHERE key = ?`, ['SMTP_USER']))[0]?.value;
+  const customFrom = options.from || (await sql.unsafe(`SELECT value FROM globals WHERE type = 'variable' AND key = ?`, ['EMAIL_FROM']))[0]?.value;
+  const smtpUser = (await sql.unsafe(`SELECT value FROM globals WHERE type = 'variable' AND key = ?`, ['SMTP_USER']))[0]?.value;
 
   const from = customFrom || smtpUser;
 
@@ -337,15 +337,14 @@ export function runCustomCode(tenantSlug: string, scriptCode: string, payload: a
         }
       );
 
-      const { getAllSysVars, getSysVar } = await import('./sysvars');
-      const allVars = await getAllSysVars(tenantSlug, true);
-      const sysVarsObj: Record<string, any> = {};
+      const {} = await import('./globalsManager');
+      const allVars = await globals.getAll(tenantSlug, true);
+      const globalsObj: Record<string, any> = {};
       for (const v of allVars) {
-        sysVarsObj[v.key] = v.value;
+        globalsObj[v.key] = v.value;
       }
 
       const sandbox = {
-        sysVars: sysVarsObj,
         payload,
         context: {
           ...(contextParams || {}),
@@ -359,6 +358,17 @@ export function runCustomCode(tenantSlug: string, scriptCode: string, payload: a
               }
             },
             delete: async (key: string) => sandboxUserCache.delete(`${tenantSlug}:${key}`)
+          },
+          publishWS: (path: string, payload: any) => publishWS(tenantSlug, path, payload),
+          publishMQTT: async (topic: string, message: any) => {
+            let finalMessage = message;
+            if (typeof message === 'object') {
+              try { finalMessage = JSON.stringify(message); } catch { }
+            } else if (typeof message !== 'string') {
+              finalMessage = String(message);
+            }
+            const { publishMQTT } = await import('./mqtt');
+            return publishMQTT(`${tenantSlug}/${topic}`, finalMessage);
           }
         },
         console: virtualConsole,
@@ -403,11 +413,8 @@ export function runCustomCode(tenantSlug: string, scriptCode: string, payload: a
           for (const prop in recordManager) {
             const val = (recordManager as any)[prop];
             if (typeof val === 'function') {
-              wrapper[prop] = async (passedTenantSlug: string, ...args: any[]) => {
-                if (tenantSlug !== 'master' && passedTenantSlug !== tenantSlug) {
-                  throw new Error(`Tenant Isolation Violation: Access to tenant '${passedTenantSlug}' is strictly forbidden from tenant '${tenantSlug}'.`);
-                }
-                return val(passedTenantSlug, ...args);
+              wrapper[prop] = async (...args: any[]) => {
+                return val(tenantSlug, ...args);
               };
             } else {
               wrapper[prop] = val;
@@ -415,14 +422,29 @@ export function runCustomCode(tenantSlug: string, scriptCode: string, payload: a
           }
           return wrapper;
         })(),
-        utils: new Proxy({}, {
-          get: (_, prop: string) => async (...args: any[]) => {
-            return runCustomUtil(tenantSlug, prop, {
-              payload,
-              db: safeDb,
-              console: virtualConsole,
-              context: contextParams || {}
-            }, ...args);
+        globals: new Proxy(globalsObj, {
+          get: (target: any, prop: string | symbol) => {
+            if (typeof prop !== 'string') {
+              return target[prop];
+            }
+            if (prop in target) {
+              return target[prop];
+            }
+            return async (...args: any[]) => {
+              return globals.run(tenantSlug, prop, {
+                tenantSlug,
+                payload,
+                userId: contextParams?.userId,
+                ...contextParams,
+                db: safeDb,
+                telemetryDb: sandbox.telemetryDb,
+                publishWS: sandbox.publishWS,
+                publishMQTT: sandbox.publishMQTT,
+                t: sandbox.t,
+                tAsync: sandbox.tAsync,
+                recordManager: sandbox.recordManager
+              }, ...args);
+            }
           }
         }),
         bcrypt,
@@ -464,16 +486,16 @@ export function runCustomCode(tenantSlug: string, scriptCode: string, payload: a
         }
       };
 
-      const sysVal = await getSysVar(tenantSlug, 'SANDBOX_TIMEOUT', false, '5');
+      const context = vm.createContext(sandbox);
+      const sysVal = await globals.get(tenantSlug, 'SANDBOX_TIMEOUT', false, '5');
       let timeoutSec = parseInt(sysVal, 10) || 5;
-
-      // Schedulers get a hard timeout of 15 minutes
+      
+      // Scheduler tasks max run time
       if (sourceId && sourceId.startsWith('scheduler_')) {
-        timeoutSec = 900;
+        timeoutSec = parseInt(await globals.get(tenantSlug, 'SANDBOX_SCHEDULER_TIMEOUT', false, '900')) || 900;
       }
 
       const timeoutMs = timeoutSec * 1000;
-      const context = vm.createContext(sandbox);
       
       let execPromise: Promise<any>;
       // vm.runInContext'in timeout parametresi senkron sonsuz döngüleri (while(true)) fiziksel olarak keser.
@@ -525,11 +547,11 @@ export function runCustomCode(tenantSlug: string, scriptCode: string, payload: a
           }
         }
       } catch (err) { }
-      let errMsg = e.message || 'Kod çalıştırılamadı';
+      let errMsg = e.message || 'error.executionFailed';
       if (e.stack) {
         const match = e.stack.match(/evalmachine\.<anonymous>:(\d+)(?::(\d+))?/);
         if (match) {
-          errMsg = `Satır ${match[1]}: ${errMsg}`;
+          errMsg = 'error.executionLine|' + match[1] + '|' + errMsg;
         }
       }
 

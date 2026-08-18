@@ -1,5 +1,5 @@
 <template>
-  <v-container class="fill-height bg-grey-lighten-4" fluid>
+  <v-container class="fill-height bg-background" fluid>
     <v-row align="center" justify="center">
       <v-col cols="12" sm="8" md="4">
         <v-card class="elevation-12 rounded-lg">
@@ -11,12 +11,12 @@
           </v-toolbar>
           <v-card-text class="pa-6">
             <v-alert type="warning" variant="tonal" class="mb-6 text-caption">
-              Sistem kurtarma (Safe Mode) modundasınız. Bu form veritabanından bağımsız olarak çalışır. Sadece yetkili yöneticiler giriş yapmalıdır.
+              {{ $t('login.safeModeWarning') || 'Sistem kurtarma (Safe Mode) modundasınız. Bu form veritabanından bağımsız olarak çalışır. Sadece yetkili yöneticiler giriş yapmalıdır.' }}
             </v-alert>
             <v-form @submit.prevent="handleLogin" ref="form">
               <v-text-field
                 v-model="username"
-                label="Kullanıcı Adı"
+                :label="$t('common.username') || 'Kullanıcı Adı'"
                 prepend-inner-icon="mdi-account"
                 variant="outlined"
                 density="comfortable"
@@ -25,7 +25,7 @@
               
               <v-text-field
                 v-model="password"
-                label="Şifre"
+                :label="$t('common.password') || 'Şifre'"
                 prepend-inner-icon="mdi-lock"
                 type="password"
                 variant="outlined"
@@ -41,7 +41,7 @@
                 :loading="loading"
                 class="mt-2 text-none"
               >
-                Giriş Yap
+                {{ $t('action.login') || 'Giriş Yap' }}
               </v-btn>
             </v-form>
           </v-card-text>
@@ -55,6 +55,7 @@
 import { ref } from 'vue';
 import { useFetch, useState, navigateTo, useCookie } from '#app';
 import { useNuxtApp } from '#app';
+import { useI18n } from 'vue-i18n';
 
 // Bu sayfa default layout'un çökme ihtimaline karşı tamamen saf çalışmalı
 definePageMeta({
@@ -67,10 +68,11 @@ const loading = ref(false);
 const user = useState<any>('user');
 const safeModeCookie = useCookie('safe_mode', { maxAge: 60 * 60 * 24 }); // 1 günlük çerez
 const { $toast } = useNuxtApp() as any;
+const { t } = useI18n();
 
 const handleLogin = async () => {
   if (!username.value || !password.value) {
-    if ($toast) $toast.error('Kullanıcı adı ve şifre zorunludur');
+    if ($toast) $toast.error(t('errors.usernamePasswordRequired'));
     return;
   }
   
@@ -87,14 +89,14 @@ const handleLogin = async () => {
     if (data && data.user) {
       user.value = data.user;
       safeModeCookie.value = '1'; // Güvenli mod bayrağını aç
-      if ($toast) $toast.success('Safe Mode: Giriş başarılı, güvenli moda geçiliyor.');
+      if ($toast) $toast.success(t('login.safeModeSuccess'));
       
       // Tam bir sayfa yenilemesi (hard reload) ile admin/pages'e git. 
       // Böylece layout baştan yüklenir ve çerezi okur.
       window.location.href = '/admin/pages';
     }
   } catch (err: any) {
-    const msg = err?.data?.message || err?.statusMessage || 'Giriş başarısız';
+    const msg = err?.data?.message || err?.statusMessage || t('error.loginFailed') || 'Giriş başarısız';
     if ($toast) $toast.error(msg);
   } finally {
     loading.value = false;

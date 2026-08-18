@@ -34,7 +34,7 @@ class ModbusConnectionManager {
 
   public addTask(task: ModbusTask) {
     if (this.queue.length > 50) {
-      task.reject(new Error('Modbus kuyruğu dolu (Queue Full). Cihaz yanıt vermiyor olabilir.'));
+      task.reject(new Error('error.modbusQueueFull'));
       return;
     }
     
@@ -46,9 +46,13 @@ class ModbusConnectionManager {
 
   private resetIdleTimeout() {
     if (this.idleTimeout) clearTimeout(this.idleTimeout);
-    this.idleTimeout = setTimeout(() => {
-      this.closeConnection();
-    }, 10000); // 10 saniye boşta kalırsa kapat
+    import('./globalsManager').then(async ({ globals }) => {
+      const idleMs = parseInt(await globals.get('master', 'MODBUS_IDLE_TIMEOUT_MS', false, '10000')) || 10000;
+      if (this.idleTimeout) clearTimeout(this.idleTimeout);
+      this.idleTimeout = setTimeout(() => {
+        this.closeConnection();
+      }, idleMs);
+    });
   }
 
   private closeConnection() {
@@ -65,12 +69,16 @@ class ModbusConnectionManager {
   private async processQueue() {
     if (this.isProcessing || this.queue.length === 0) return;
     this.isProcessing = true;
-
+    
     try {
+      const { globals } = await import('./globalsManager');
+      const timeoutMs = parseInt(await globals.get('master', 'MODBUS_RESPONSE_TIMEOUT_MS', false, '3000')) || 3000;
+      const cooldownMs = parseInt(await globals.get('master', 'MODBUS_COOLDOWN_MS', false, '50')) || 50;
+
       if (!this.client) {
         this.client = new ModbusRTU();
         await this.client.connectTCP(this.ip, { port: this.port });
-        this.client.setTimeout(3000); // 3 sn yanıt bekle
+        this.client.setTimeout(timeoutMs);
       }
 
       while (this.queue.length > 0) {
@@ -121,7 +129,7 @@ class ModbusConnectionManager {
           }
           
           // Küçük bir bekleme (cihazların nefes alması için)
-          await new Promise(r => setTimeout(r, 50));
+          await new Promise(r => setTimeout(r, cooldownMs));
         } catch (taskErr) {
           task.reject(taskErr);
           // Hata durumunda bağlantıyı kapatıp döngüden çıkıyoruz

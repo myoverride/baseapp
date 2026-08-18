@@ -132,7 +132,7 @@ export default defineEventHandler(async (event) => {
       // KURAL 2 (Mismatch & Güvenlik): Açık istem varsa ve token_tenant ile eşleşmiyorsa engelle
       if (u.token_tenant !== event.context.tenantSlug && !(u as any).is_super_admin) {
         event.context.user = null;
-        throw createError({ statusCode: 403, statusMessage: 'Forbidden', message: 'errors.sessionMismatch' });
+        throw createError({ statusCode: 403, statusMessage: 'Forbidden', message: 'errors.tenantMismatch' });
       }
     }
   } else if (!isExplicitRequest && (u as any).is_super_admin) {

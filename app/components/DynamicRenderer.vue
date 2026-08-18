@@ -5,7 +5,8 @@
       <div class="text-caption">{{ loadError }}</div>
     </v-alert>
 
-    <div v-else-if="loading || sysVarsStatus === 'pending'" class="d-flex justify-center pa-4 align-center fill-height" style="min-height: 200px;">
+    <div v-else-if="loading" class="d-flex justify-center pa-4 align-center fill-height"
+      style="min-height: 200px;">
       <v-progress-circular indeterminate :color="color" size="64"></v-progress-circular>
     </div>
 
@@ -29,23 +30,23 @@
 </template>
 
 <script setup lang="ts">
-const { primaryColor: color } = useSysVars();
-import { 
+const { primaryColor: color } = useGlobals();
+import {
   ref, reactive, computed, watch, watchEffect, watchPostEffect, watchSyncEffect,
   onMounted, onUnmounted, onUpdated, onBeforeMount, onBeforeUnmount, onErrorCaptured, onActivated, onDeactivated,
   shallowRef, triggerRef, customRef, shallowReactive, shallowReadonly, toRaw, markRaw,
   toRef, toRefs, unref, isRef, isReactive, isReadonly, isProxy,
   provide, inject, nextTick, useSlots, useCssModule, useModel,
-  defineComponent, h, useAttrs 
+  defineComponent, h, useAttrs
 } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useHead, useSeoMeta, useNuxtApp } from '#imports';
 import * as VuetifyComponents from 'vuetify/components';
-import { useUtils } from '../composables/useUtils';
+
 import { useI18n } from 'vue-i18n';
 import CrudTable from './CrudTable.vue';
 import ItemDialog from './ItemDialog.vue';
-import RecordsManager from './RecordsManager.vue';
+const RecordsManager = defineAsyncComponent(() => import('./RecordsManager.vue'));
 import DynamicComponent from './DynamicComponent.vue';
 import AdvancedFilterBuilder from './AdvancedFilterBuilder.vue';
 
@@ -69,8 +70,8 @@ const templateInlineStyle = ref('');
 
 const instanceId = ref(`ds-${Math.random().toString(36).slice(2, 10)}`);
 
-// Fetch system variables globally for all dynamic pages
-const { sysVars, status: sysVarsStatus } = useSysVars();
+// Fetch globals for all dynamic pages
+const { globals } = useGlobals();
 
 // CSS Scoping
 const scopeCss = (css: string, scopeId: string) => {
@@ -178,14 +179,14 @@ const createComponent = async (template: string, script: string) => {
     for (const item of activeListeners) {
       try {
         item.target.removeEventListener(item.type, item.listener, item.options);
-      } catch (e) {}
+      } catch (e) { }
     }
     activeListeners.clear();
 
     for (const obs of activeObservers) {
       try {
         obs.disconnect();
-      } catch (e) {}
+      } catch (e) { }
     }
     activeObservers.clear();
 
@@ -197,7 +198,7 @@ const createComponent = async (template: string, script: string) => {
     for (const controller of activeAbortControllers) {
       try {
         controller.abort();
-      } catch (e) {}
+      } catch (e) { }
     }
     activeAbortControllers.clear();
   };
@@ -251,7 +252,7 @@ const createComponent = async (template: string, script: string) => {
     const customFetch = (input: RequestInfo | URL, init?: RequestInit) => {
       const controller = new AbortController();
       activeAbortControllers.add(controller);
-      
+
       let signal = controller.signal;
       if (init?.signal) {
         const userSignal = init.signal;
@@ -279,7 +280,7 @@ const createComponent = async (template: string, script: string) => {
     const custom$fetch = (request: any, opts?: any) => {
       const controller = new AbortController();
       activeAbortControllers.add(controller);
-      
+
       let signal = controller.signal;
       if (opts?.signal) {
         const userSignal = opts.signal;
@@ -352,7 +353,7 @@ const createComponent = async (template: string, script: string) => {
         if (prop === 'cancelAnimationFrame') return customCancelAnimationFrame;
         if (prop === 'fetch') return customFetch;
         if (prop === '$fetch') return custom$fetch;
-        
+
         const val = Reflect.get(target, prop);
         if (typeof val === 'function') {
           const propStr = String(prop);
@@ -388,7 +389,7 @@ const createComponent = async (template: string, script: string) => {
             return document.removeEventListener(type, listener, options);
           };
         }
-        
+
         const val = Reflect.get(target, prop);
         if (typeof val === 'function') {
           const propStr = String(prop);
@@ -413,7 +414,7 @@ const createComponent = async (template: string, script: string) => {
         const camelEvent = event.replace(/-([a-z])/g, (_, p1) => p1 ? p1.toUpperCase() : '');
         const handlerName1 = 'on' + camelEvent.charAt(0).toUpperCase() + camelEvent.slice(1);
         const handlerName2 = 'on' + event.charAt(0).toUpperCase() + event.slice(1);
-        
+
         if (typeof attrs[handlerName1] === 'function') {
           (attrs[handlerName1] as Function)(...args);
         } else if (typeof attrs[handlerName2] === 'function') {
@@ -433,7 +434,7 @@ const createComponent = async (template: string, script: string) => {
       h, defineComponent, useAttrs,
       defineProps: customDefineProps, defineEmits: customDefineEmits,
       useRouter, useRoute,
-      useFetch, useAsyncData, useCookie, useState, navigateTo, $fetch: custom$fetch, useSysVars, useUtils, useWS,
+      useFetch, useAsyncData, useCookie, useState, navigateTo, $fetch: custom$fetch, useGlobals, useWS,
       useHead, useSeoMeta, useI18n, useNuxtApp,
       $localize: (nuxtApp as any).$localize,
       $toast: (nuxtApp as any).$toast,
@@ -441,12 +442,31 @@ const createComponent = async (template: string, script: string) => {
       __props_locale: props.locale,
       __global_messages: globalI18nObj.messages.value,
       __fetched_messages: fetchedMessages,
-      sysVars: new Proxy({}, {
+      globals: new Proxy({}, {
         get(target, prop) {
-          if (!sysVars.value) return undefined;
-          return (sysVars.value as Record<string, any>)[prop as string];
+          if (typeof prop !== 'string') return undefined;
+          // Once degiskenlere bak
+          if (globals.value && (globals.value as Record<string, any>)[prop] !== undefined) {
+            return (globals.value as Record<string, any>)[prop];
+          }
+          // Degiskende bulunamadiysa, UI Utility olarak cagir
+          return async (...args: any[]) => {
+            const { compileUIUtil } = await import('../composables/useGlobals');
+            const { getCachedData } = await import('../utils/offlineStore');
+            const cachedUtils = (await getCachedData('uiUtils')) as any[] || [];
+            const utilDef = cachedUtils.find((u: any) => u.key === prop);
+            if (!utilDef) throw new Error(`UI Utility bulunamadi: ${prop}`);
+            const fn = await compileUIUtil(prop as string, utilDef.code);
+            const frontendCtx = {
+              $router: useRouter(),
+              $toast: (nuxtApp as any).$toast,
+              $fetch: custom$fetch,
+              globals: globals.value
+            };
+            return fn(frontendCtx, ...args);
+          };
         }
-      }), // Injected reactive system variables
+      }), // Injected reactive globals + UI Utility support
       // GC-safe wrappers
       window: trackedWindow,
       document: trackedDocument,
@@ -548,7 +568,7 @@ const createComponent = async (template: string, script: string) => {
         extractedError = `${t('message.syntaxError')} ${t('message.line')} ${match[1]}, ${t('message.column')} ${match[2]}: ${e.message}`;
       }
     }
-    
+
     console.error("DynamicRenderer createComponent Error:", e);
     loadError.value = `${t('message.syntaxError')} ${extractedError}`;
     return null;
@@ -605,6 +625,7 @@ onErrorCaptured((err: any) => {
   position: relative;
   height: 100%;
 }
+
 .render-area {
   width: 100%;
   height: 100%;

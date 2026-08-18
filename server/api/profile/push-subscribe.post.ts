@@ -5,12 +5,12 @@ export default defineEventHandler(async (event) => {
   const tenantSlug = event.context.tenantSlug;
 
   if (!user || !tenantSlug) {
-    throw createError({ statusCode: 401, message: tEvent(event, 'errors.unauthorized') });
+    throw createError({ statusCode: 401, message: 'errors.unauthorized' });
   }
 
   const subscription = await readBody(event);
   if (!subscription || !subscription.endpoint) {
-    throw createError({ statusCode: 400, message: tEvent(event, 'errors.validationFailed') });
+    throw createError({ statusCode: 400, message: 'errors.validationFailed' });
   }
 
   const sql = useDB(tenantSlug);

@@ -6,11 +6,14 @@ export default defineEventHandler(async (event) => {
   const tenantSlug = event.context.tenantSlug;
 
   if (!slug) {
-    throw createError({ statusCode: 400, message: tEvent(event, 'errors.validationFailed') });
+    throw createError({ statusCode: 400, message: 'errors.validationFailed' });
   }
 
   const user = event.context.user;
-  if (!user || !user.is_admin) {
+  if (!user) {
+    throw createError({ statusCode: 401, message: 'errors.loginRequired' });
+  }
+  if (!user.is_admin) {
     throw createError({ statusCode: 403, message: 'errors.forbiddenAdminOnly' });
   }
 
@@ -20,7 +23,7 @@ export default defineEventHandler(async (event) => {
       const result = await getRecords(tenantSlug, slug, query);
       return result;
     } catch (e: any) {
-      throw createError({ statusCode: e.statusCode || 500, message: e.message || 'Internal Error' });
+      throw createError({ statusCode: e.statusCode || 500, message: (e.statusCode && e.statusCode < 500) ? (e.message || 'errors.internalError') : 'errors.internalError' });
     }
   }
 
@@ -34,7 +37,7 @@ export default defineEventHandler(async (event) => {
         if (!res.success) throw createError({ statusCode: 400, message: res.message });
         return { success: true, message: 'success.importSuccessful' };
       } catch (e: any) {
-        throw createError({ statusCode: e.statusCode || 500, message: e.message });
+        throw createError({ statusCode: e.statusCode || 500, message: (e.statusCode && e.statusCode < 500) ? (e.message || 'errors.internalError') : 'errors.internalError' });
       }
     }
 
@@ -47,11 +50,11 @@ export default defineEventHandler(async (event) => {
         throw createError({
           statusCode: e.statusCode,
           statusMessage: e.statusMessage || e.message,
-          message: e.message,
+          message: (e.statusCode && e.statusCode < 500) ? e.message : 'errors.internalError',
           data: e.data
         });
       }
-      throw createError({ statusCode: 500, message: e.message || 'Internal Error' });
+      throw createError({ statusCode: 500, message: 'errors.internalError' });
     }
   }
 });

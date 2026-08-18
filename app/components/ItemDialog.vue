@@ -55,7 +55,7 @@ const formValid = ref(false)
 const saving = ref(false)
 const formData = ref<Record<string, any>>({})
 
-const { primaryColor: color } = useSysVars();
+const { primaryColor: color } = useGlobals();
 
 const dialogOpen = computed({
     get: () => props.modelValue,

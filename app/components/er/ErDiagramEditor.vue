@@ -3,151 +3,73 @@
     <!-- Toolbar -->
     <div class="er-toolbar">
       <div class="er-toolbar-left">
-        <v-btn-group variant="tonal" density="compact" color="grey-darken-1">
+        <v-btn-group variant="tonal" density="compact" color="primary">
           <v-btn size="small" @click="zoomIn" :title="$t('er.zoomIn')" icon="mdi-magnify-plus-outline" />
           <v-btn size="small" class="er-zoom-label">{{ Math.round(zoom * 100) }}%</v-btn>
           <v-btn size="small" @click="zoomOut" :title="$t('er.zoomOut')" icon="mdi-magnify-minus-outline" />
           <v-btn size="small" @click="zoomReset" :title="$t('er.zoomReset')" icon="mdi-fit-to-screen-outline" />
         </v-btn-group>
 
-        <v-btn
-          size="small"
-          variant="tonal"
-          color="blue-grey"
-          prepend-icon="mdi-auto-fix"
-          @click="autoLayout"
-          class="ml-2"
-        >
+        <v-btn size="small" variant="tonal" color="blue-grey" prepend-icon="mdi-auto-fix" @click="autoLayout"
+          class="ml-2">
           {{ $t('er.autoLayout') }}
         </v-btn>
       </div>
 
       <div class="er-toolbar-right">
-        <v-btn
-          size="small"
-          variant="flat"
-          color="primary"
-          prepend-icon="mdi-plus"
-          @click="entityDialogOpen = true; editingEntity = null"
-        >
+        <v-btn size="small" variant="flat" color="primary" prepend-icon="mdi-plus" @click="$emit('create-entity')">
           {{ $t('er.newEntity') }}
         </v-btn>
       </div>
     </div>
 
     <!-- Canvas Area -->
-    <div
-      class="er-canvas-wrapper"
-      ref="canvasWrapper"
-      @mousedown="onCanvasMouseDown"
-      @wheel.prevent="onWheel"
-    >
+    <div class="er-canvas-wrapper" ref="canvasWrapper" @mousedown="onCanvasMouseDown" @wheel.prevent="onWheel">
       <!-- Dot Grid Background -->
       <div class="er-grid-bg" :style="gridBgStyle"></div>
 
       <!-- Zoomable/Pannable container -->
       <div class="er-canvas" ref="canvasRef" :style="canvasTransformStyle">
-        
+
         <!-- SVG Relations Overlay (Underneath Entities) -->
-        <svg
-          class="er-relations-svg"
-          :width="svgWidth"
-          :height="svgHeight"
-          :viewBox="`0 0 ${svgWidth} ${svgHeight}`"
-        >
+        <svg class="er-relations-svg" :width="svgWidth" :height="svgHeight" :viewBox="`0 0 ${svgWidth} ${svgHeight}`">
           <defs>
-            <marker
-              id="arrowhead"
-              markerWidth="8"
-              markerHeight="6"
-              refX="8"
-              refY="3"
-              orient="auto"
-            >
+            <marker id="arrowhead" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
               <polygon points="0 0, 8 3, 0 6" fill="#90A4AE" />
             </marker>
-            <marker
-              id="arrowhead-active"
-              markerWidth="8"
-              markerHeight="6"
-              refX="8"
-              refY="3"
-              orient="auto"
-            >
+            <marker id="arrowhead-active" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
               <polygon points="0 0, 8 3, 0 6" fill="#C62828" />
             </marker>
           </defs>
 
-          <ErRelationLine
-            v-for="(rel, rIdx) in computedRelations"
-            :key="rIdx"
-            :source-x="rel.sourceX"
-            :source-y="rel.sourceY"
-            :target-x="rel.targetX"
-            :target-y="rel.targetY"
-            :label="rel.fieldName"
-            :relation="rel"
-            @click="onRelationClick"
-          />
+          <ErRelationLine v-for="(rel, rIdx) in computedRelations" :key="rIdx" :source-x="rel.sourceX"
+            :source-y="rel.sourceY" :target-x="rel.targetX" :target-y="rel.targetY" :label="rel.fieldName"
+            :relation="rel" @click="onRelationClick" />
         </svg>
 
         <!-- Native Draggable Entities -->
-        <div
-          v-for="entity in entities"
-          :key="entity.id"
-          class="er-draggable-entity"
-          :style="{
-            left: `${getPosition(entity.id).x}px`,
-            top: `${getPosition(entity.id).y}px`,
-            zIndex: draggingId === String(entity.id) ? 100 : 10,
-            width: '260px'
-          }"
-          @mousedown="onEntityMouseDown($event, String(entity.id))"
-        >
-          <ErEntityCard
-            :entity="entity"
-            :color-index="getColorIndex(String(entity.id))"
-            :ref="el => setCardRef(String(entity.id), el)"
-            @edit-entity="onEditEntity"
-            @delete-entity="onDeleteEntity"
-            @add-field="onAddField"
-            @edit-field="onEditField"
-            @delete-field="onDeleteField"
-          />
+        <div v-for="entity in entities" :key="entity.id" class="er-draggable-entity" :style="{
+          left: `${getPosition(entity.id).x}px`,
+          top: `${getPosition(entity.id).y}px`,
+          zIndex: draggingId === String(entity.id) ? 100 : 10,
+          width: '260px'
+        }" @mousedown="onEntityMouseDown($event, String(entity.id))">
+          <ErEntityCard :entity="entity" :color-index="getColorIndex(String(entity.id))"
+            :ref="el => setCardRef(String(entity.id), el)" @edit-entity="onEditEntity" @delete-entity="onDeleteEntity"
+            @add-field="onAddField" @edit-field="onEditField" @delete-field="onDeleteField" />
         </div>
       </div>
 
       <!-- Empty state -->
       <div v-if="!entities || entities.length === 0" class="er-empty-state">
-        <v-icon size="64" color="grey-lighten-1">mdi-database-off-outline</v-icon>
+        <v-icon size="64" color="secondary">mdi-database-off-outline</v-icon>
         <div class="text-h6 text-grey mt-3">{{ $t('er.noEntities') }}</div>
-        <div class="text-body-2 text-grey-lighten-1 mt-1">{{ $t('er.createEntityToStart') }}</div>
-        <v-btn
-          class="mt-4"
-          variant="flat"
-          color="primary"
-          prepend-icon="mdi-plus"
-          @click="entityDialogOpen = true; editingEntity = null"
-        >
+        <div class="text-body-2 text-medium-emphasis mt-1">{{ $t('er.createEntityToStart') }}</div>
+        <v-btn class="mt-4" variant="flat" color="primary" prepend-icon="mdi-plus" @click="$emit('create-entity')">
           {{ $t('er.createFirstEntity') }}
         </v-btn>
       </div>
     </div>
-
-    <!-- Dialogs -->
-    <ErEntityDialog
-      v-model="entityDialogOpen"
-      :entity="editingEntity"
-      @save="onEntityDialogSave"
-    />
-
-    <ErFieldDialog
-      v-model="fieldDialogOpen"
-      :field="editingField"
-      :field-index="editingFieldIndex"
-      :entities="entities"
-      @save="onFieldDialogSave"
-    />
   </div>
 </template>
 
@@ -165,6 +87,8 @@ const emit = defineEmits<{
   'entity-update': [entity: any]
   'entity-create': [data: any]
   'entity-delete': [entity: any]
+  'edit-entity': [entity: any]
+  'create-entity': []
 }>()
 
 // Refs
@@ -188,13 +112,7 @@ let dragStartY = 0
 let entityStartX = 0
 let entityStartY = 0
 
-// Dialogs
-const entityDialogOpen = ref(false)
-const editingEntity = ref<any>(null)
-const fieldDialogOpen = ref(false)
-const editingField = ref<any>(null)
-const editingFieldIndex = ref<number | undefined>(undefined)
-const fieldDialogEntity = ref<any>(null)
+
 
 // SVG dimensions
 const svgWidth = ref(4000)
@@ -272,13 +190,13 @@ const onEntityMouseDown = (e: MouseEvent, id: string) => {
   // Only allow dragging from header
   const target = e.target as HTMLElement
   if (!target.closest('.er-entity-header')) return
-  
+
   if (e.button !== 0) return // only left click
-  
+
   draggingId.value = id
   dragStartX = e.clientX
   dragStartY = e.clientY
-  
+
   const currentPos = getPosition(id)
   entityStartX = currentPos.x
   entityStartY = currentPos.y
@@ -288,16 +206,16 @@ const onEntityMouseDown = (e: MouseEvent, id: string) => {
       // Calculate delta taking zoom into account
       const dx = (ev.clientX - dragStartX) / zoom.value
       const dy = (ev.clientY - dragStartY) / zoom.value
-      
+
       positions.value[id] = {
         x: Math.max(0, entityStartX + dx),
         y: Math.max(0, entityStartY + dy)
       }
-      
+
       relationTick.value++
     }
   }
-  
+
   const onMouseUp = () => {
     draggingId.value = null
     saveLayout()
@@ -305,7 +223,7 @@ const onEntityMouseDown = (e: MouseEvent, id: string) => {
     window.removeEventListener('mousemove', onMouseMove)
     window.removeEventListener('mouseup', onMouseUp)
   }
-  
+
   window.addEventListener('mousemove', onMouseMove)
   window.addEventListener('mouseup', onMouseUp)
 }
@@ -330,9 +248,9 @@ const saveLayout = () => {
 
 const initPositions = () => {
   loadSavedLayout()
-  
+
   let layoutChanged = false
-  
+
   props.entities.forEach((entity, idx) => {
     const id = String(entity.id)
     if (!positions.value[id]) {
@@ -346,25 +264,25 @@ const initPositions = () => {
       layoutChanged = true
     }
   })
-  
+
   if (layoutChanged) saveLayout()
   nextTick(() => { relationTick.value++ })
 }
 
 const autoLayout = () => {
   const cols = Math.ceil(Math.sqrt(props.entities.length))
-  
+
   props.entities.forEach((entity, idx) => {
     const id = String(entity.id)
     const col = idx % cols
     const row = Math.floor(idx / cols)
-    
+
     positions.value[id] = {
       x: 40 + col * 320,
       y: 40 + row * 250
     }
   })
-  
+
   saveLayout()
   relationTick.value++
 }
@@ -372,14 +290,14 @@ const autoLayout = () => {
 // --- Relations Computation ---
 const computedRelations = computed(() => {
   void relationTick.value // Re-run when layout moves
-  
+
   const relations: any[] = []
   if (!canvasRef.value) return relations
 
   props.entities.forEach(entity => {
     const schema = entity.schema || {}
     const sourceId = String(entity.id)
-    
+
     const sourcePos = getPosition(sourceId)
     // Find the rendered card element to compute height accurately
     const sourceCard = cardRefs.value[sourceId]?.$el || cardRefs.value[sourceId]?.cardRef
@@ -391,19 +309,19 @@ const computedRelations = computed(() => {
         const targetId = String(fieldDef.targetEntityId)
         // Check if target entity exists
         if (!props.entities.find(e => String(e.id) === targetId)) return
-        
+
         const targetPos = getPosition(targetId)
         const targetCard = cardRefs.value[targetId]?.$el || cardRefs.value[targetId]?.cardRef
         const targetHeight = targetCard ? targetCard.offsetHeight : 150
-        
+
         // Ok her zaman kaynağın sağından (anchor noktasından) çıkar
         let sx = sourcePos.x + sourceWidth
         let sy = sourcePos.y + 40 // Fallback
-        
+
         // Hedefin her zaman sol üst tarafına (header ortası) bağlanır
         let tx = targetPos.x
-        let ty = targetPos.y + 16 
-        
+        let ty = targetPos.y + 16
+
         // DOM üzerinden gerçek Y noktasını tam isabetli hesapla
         const sourceCardEl = cardRefs.value[sourceId]?.$el || cardRefs.value[sourceId]?.cardRef || cardRefs.value[sourceId]
         if (sourceCardEl) {
@@ -417,7 +335,7 @@ const computedRelations = computed(() => {
             sy = sourcePos.y + relativeY
           }
         }
-        
+
         relations.push({
           sourceEntityId: sourceId,
           targetEntityId: targetId,
@@ -436,8 +354,7 @@ const computedRelations = computed(() => {
 
 // --- Entity Operations ---
 const onEditEntity = (entity: any) => {
-  editingEntity.value = entity
-  entityDialogOpen.value = true
+  emit('edit-entity', entity)
 }
 
 const onDeleteEntity = (entity: any) => {
@@ -448,28 +365,13 @@ const onDeleteEntity = (entity: any) => {
   }
 }
 
-const onEntityDialogSave = async (data: { name: string; slug: string }, entity?: any) => {
-  if (entity) {
-    const updatedEntity = { ...entity, name: data.name, slug: data.slug }
-    emit('entity-update', updatedEntity)
-  } else {
-    emit('entity-create', { name: data.name, slug: data.slug, schema: {} })
-  }
-}
-
 // --- Field Operations ---
 const onAddField = (entity: any) => {
-  editingField.value = null
-  editingFieldIndex.value = undefined
-  fieldDialogEntity.value = entity
-  fieldDialogOpen.value = true
+  emit('edit-entity', entity)
 }
 
 const onEditField = (entity: any, field: any, index: number) => {
-  editingField.value = field
-  editingFieldIndex.value = index
-  fieldDialogEntity.value = entity
-  fieldDialogOpen.value = true
+  emit('edit-entity', entity)
 }
 
 const onDeleteField = (entity: any, field: any, _index: number) => {
@@ -484,49 +386,6 @@ const onDeleteField = (entity: any, field: any, _index: number) => {
   })
 
   emit('entity-update', { ...entity, schema })
-}
-
-const onFieldDialogSave = (fieldData: any, fieldIndex: number | undefined) => {
-  const entity = fieldDialogEntity.value
-  if (!entity) return
-
-  const schema = { ...(entity.schema || {}) }
-
-  if (fieldIndex != null) {
-    const sortedFields = Object.entries(schema)
-      .sort((a: any, b: any) => ((a[1] as any)._order || 0) - ((b[1] as any)._order || 0))
-
-    const oldFieldName = sortedFields[fieldIndex]?.[0]
-    if (oldFieldName && oldFieldName !== fieldData.name) {
-      delete schema[oldFieldName]
-    }
-
-    schema[fieldData.name] = {
-      ...fieldData,
-      rules: {
-        required: fieldData.required,
-        unique: fieldData.unique,
-        custom: fieldData.rulesList?.length ? fieldData.rulesList : undefined
-      },
-      _order: fieldIndex
-    }
-  } else {
-    const existingOrders = Object.values(schema).map((v: any) => v._order || 0)
-    const nextOrder = existingOrders.length > 0 ? Math.max(...existingOrders) + 1 : 0
-
-    schema[fieldData.name] = {
-      ...fieldData,
-      rules: {
-        required: fieldData.required,
-        unique: fieldData.unique,
-        custom: fieldData.rulesList?.length ? fieldData.rulesList : undefined
-      },
-      _order: nextOrder
-    }
-  }
-
-  emit('entity-update', { ...entity, schema })
-  nextTick(() => { relationTick.value++ })
 }
 
 const onRelationClick = (rel: any) => {
@@ -556,7 +415,6 @@ onMounted(() => {
   flex-direction: column;
   height: 600px;
   min-height: 400px;
-  background: #f5f5f5;
   border-radius: 0 0 8px 8px;
   overflow: hidden;
 }
@@ -567,8 +425,6 @@ onMounted(() => {
   align-items: center;
   justify-content: space-between;
   padding: 8px 12px;
-  background: #ffffff;
-  border-bottom: 1px solid #e0e0e0;
   flex-shrink: 0;
   z-index: 10;
 }
@@ -614,7 +470,8 @@ onMounted(() => {
   left: 0;
   width: 4000px;
   height: 4000px;
-  transition: transform 0.1s ease-out; /* Smooth zoom/pan */
+  transition: transform 0.1s ease-out;
+  /* Smooth zoom/pan */
 }
 
 /* SVG overlay for relations */

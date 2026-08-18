@@ -8,8 +8,8 @@ export async function runSeed(tenantSlug: string, refs?: any) {
     const mainSql = useDB(tenantSlug, refs);
     console.log(`[Seed] Initializing database seed for tenant: ${tenantSlug}`);
 
-    // 1. AUTO SEED DEFAULT SYSVARS (Tüm tenantlar için)
-    const defaultSysVars = [
+    // 1. AUTO SEED DEFAULT GLOBALS (Tüm tenantlar için)
+    const defaultGlobals = [
       { key: 'ALLOW_HTTP', value: 'true', description: 'Geliştirme ortamında HTTP çerezlerine izin verir', target: 'shared', is_public: 1, type: 'boolean' },
       { key: 'TELEMETRY_VALIDATION_MODE', value: 'relaxed', description: 'Telemetri doğrulama modu (relaxed/strict)', target: 'api', is_public: 0, type: 'string' },
       { key: 'SMTP_HOST', value: 'smtp.gmail.com', description: 'SMTP Sunucu Adresi', target: 'api', is_public: 0, type: 'string' },
@@ -25,16 +25,45 @@ export async function runSeed(tenantSlug: string, refs?: any) {
       { key: 'MQTT_COMMAND_TIMEOUT', value: '30', description: 'MQTT Komut Zaman Aşımı Süresi (Saniye)', target: 'api', is_public: 0, type: 'number' },
       { key: 'SANDBOX_TIMEOUT', value: '5', description: 'Sandbox Asenkron Çalışma Zaman Aşımı (Saniye)', target: 'api', is_public: 0, type: 'number' },
       { key: 'APP_NAME', value: 'BaseApp', description: 'Uygulama Adı (PWA Manifest)', target: 'shared', is_public: 1, type: 'string' },
-      { key: 'PRIMARY_COLOR', value: 'primary', description: 'Uygulama Ana Tema Rengi (HEX veya renk adı)', target: 'ui', is_public: 1, type: 'string' },
-      { key: 'APP_LOGO', value: '<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="2730 7938 15540 13824"><defs><style>.fil0{fill:#03396C} .fil1{fill:#6497B1}</style></defs><g><polygon class="fil0" points="5013,10810 11456,8438 17147,10696 15008,11483 15602,11719 17741,10932 15602,11719 11456,10074 7152,11658 5013,10810 5771,10531 7880,11390 7152,11658 "/><polygon class="fil0" points="5042,17132 5042,18768 11327,21262 17770,18890 17770,17254 11327,19626 "/><polygon class="fil1" points="3230,13815 3230,15451 9516,17945 15958,15573 15958,13937 9516,16309 "/><polygon class="fil0" points="5013,10810 5013,12446 11299,14939 17741,12568 17741,10932 11299,13303 "/><polygon class="fil0" points="17214,17034 15075,17821 13229,17089 15368,16302 "/><polygon class="fil1" points="3859,13584 5998,14433 7534,13867 5395,13019 "/></g></svg>', description: 'Uygulama Logosu SVG Ham Kodu', target: 'shared', is_public: 1, type: 'string' }
+      { key: 'LIGHT_PRIMARY', value: '#1976D2', description: 'Aydınlık Tema Ana Rengi', target: 'ui', is_public: 1, type: 'color' },
+      { key: 'DARK_PRIMARY', value: '#1976D2', description: 'Karanlık Tema Ana Rengi', target: 'ui', is_public: 1, type: 'color' },
+      { key: 'LIGHT_SECONDARY', value: '#424242', description: 'Aydınlık Tema İkincil Rengi', target: 'ui', is_public: 1, type: 'color' },
+      { key: 'DARK_SECONDARY', value: '#BDBDBD', description: 'Karanlık Tema İkincil Rengi', target: 'ui', is_public: 1, type: 'color' },
+      { key: 'LIGHT_BACKGROUND', value: '#FFFFFF', description: 'Aydınlık Tema Arkaplan Rengi', target: 'ui', is_public: 1, type: 'color' },
+      { key: 'DARK_BACKGROUND', value: '#121212', description: 'Karanlık Tema Arkaplan Rengi', target: 'ui', is_public: 1, type: 'color' },
+      { key: 'LIGHT_SURFACE', value: '#FFFFFF', description: 'Aydınlık Tema Kart Rengi', target: 'ui', is_public: 1, type: 'color' },
+      { key: 'DARK_SURFACE', value: '#1E1E1E', description: 'Karanlık Tema Kart Rengi', target: 'ui', is_public: 1, type: 'color' },
+      { key: 'APP_LOGO', value: '<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="2730 7938 15540 13824"><defs><style>.fil0{fill:#03396C} .fil1{fill:#6497B1}</style></defs><g><polygon class="fil0" points="5013,10810 11456,8438 17147,10696 15008,11483 15602,11719 17741,10932 15602,11719 11456,10074 7152,11658 5013,10810 5771,10531 7880,11390 7152,11658 "/><polygon class="fil0" points="5042,17132 5042,18768 11327,21262 17770,18890 17770,17254 11327,19626 "/><polygon class="fil1" points="3230,13815 3230,15451 9516,17945 15958,15573 15958,13937 9516,16309 "/><polygon class="fil0" points="5013,10810 5013,12446 11299,14939 17741,12568 17741,10932 11299,13303 "/><polygon class="fil0" points="17214,17034 15075,17821 13229,17089 15368,16302 "/><polygon class="fil1" points="3859,13584 5998,14433 7534,13867 5395,13019 "/></g></svg>', description: 'Uygulama Logosu SVG Ham Kodu', target: 'shared', is_public: 1, type: 'string' },
+      
+      // Master-Only Global Parametreler
+      { key: 'WS_HEARTBEAT_INTERVAL', value: '30000', description: 'WebSocket Ping/Pong döngü süresi (ms)', target: 'api', is_public: 0, type: 'number', is_master_only: true },
+      { key: 'CRON_TICK_MS', value: '1000', description: 'Cron zaman tarama döngü hızı (ms)', target: 'api', is_public: 0, type: 'number', is_master_only: true },
+      { key: 'WORKER_CRASH_WINDOW_MS', value: '60000', description: 'Worker çökme sıklığı algılama aralığı (ms)', target: 'api', is_public: 0, type: 'number', is_master_only: true },
+      { key: 'MODBUS_IDLE_TIMEOUT_MS', value: '10000', description: 'Modbus TCP boşta kapanma süresi (ms)', target: 'api', is_public: 0, type: 'number', is_master_only: true },
+      { key: 'MODBUS_RESPONSE_TIMEOUT_MS', value: '3000', description: 'Modbus cevap bekleme süresi (ms)', target: 'api', is_public: 0, type: 'number', is_master_only: true },
+      { key: 'MODBUS_COOLDOWN_MS', value: '50', description: 'İki Modbus işlemi arası statik bekleme (ms)', target: 'api', is_public: 0, type: 'number', is_master_only: true },
+
+
+      // Tenant-Specific Parametreler
+      { key: 'API_RATE_LIMIT', value: '1000', description: 'Kullanıcı başına dakikalık API istek limiti', target: 'api', is_public: 0, type: 'number' },
+      { key: 'LOGIN_RATE_LIMIT', value: '10', description: 'Dakikalık Login/Auth istek limiti (Brute-force)', target: 'api', is_public: 0, type: 'number' },
+      { key: 'CRON_WORKER_TIMEOUT_MS', value: '60000', description: 'Cron Fork yaşama süresi (ms)', target: 'api', is_public: 0, type: 'number' },
+      { key: 'SANDBOX_SCHEDULER_TIMEOUT', value: '900', description: 'Sandbox Scheduler çalışma limiti (sn)', target: 'api', is_public: 0, type: 'number' },
+      { key: 'WORKER_MEMORY_LIMIT_MB', value: '256', description: 'Fork edilen Worker RAM sınırı (MB)', target: 'api', is_public: 0, type: 'number' },
+      { key: 'TELEMETRY_BATCH_SIZE', value: '500', description: 'Telemetri DuckDB paket yazma limiti', target: 'api', is_public: 0, type: 'number' },
+      { key: 'TELEMETRY_MAX_BUFFER_SIZE', value: '10000', description: 'Telemetri biriktirme OOM sınırı', target: 'api', is_public: 0, type: 'number' },
+      { key: 'DB_MAX_ACTIVE_OPERATIONS', value: '1000', description: 'SQLite eşzamanlı sorgu kilit limiti', target: 'api', is_public: 0, type: 'number' },
+      { key: 'DUCKDB_MEMORY_LIMIT', value: '256', description: 'DuckDB motoruna verilen RAM (MB)', target: 'api', is_public: 0, type: 'number' }
     ];
 
-    for (const sysVar of defaultSysVars) {
+    for (const globalVar of defaultGlobals) {
+      if ((globalVar as any).is_master_only && tenantSlug !== 'master') continue;
+      
       await mainSql.unsafe(`
-        INSERT INTO system_variables (key, value, description, target, is_public, is_secret, protected, type)
-        SELECT ?, ?, ?, ?, ?, ?, 1, ?
-        WHERE NOT EXISTS (SELECT 1 FROM system_variables WHERE key = ?);
-      `, [sysVar.key, sysVar.value, sysVar.description, sysVar.target, sysVar.is_public, sysVar.is_secret || 0, sysVar.type || 'string', sysVar.key]);
+        INSERT INTO globals (type, key, value, description, target, is_public, is_secret, protected, data_type)
+        SELECT 'variable', ?, ?, ?, ?, ?, ?, 1, ?
+        WHERE NOT EXISTS (SELECT 1 FROM globals WHERE key = ?);
+      `, [globalVar.key, globalVar.value, globalVar.description, globalVar.target, globalVar.is_public, globalVar.is_secret || 0, globalVar.type || 'string', globalVar.key]);
     }
 
     // 2. AUTO SEED INITIAL ADMIN
@@ -67,15 +96,6 @@ export async function runSeed(tenantSlug: string, refs?: any) {
         VALUES ('/', 100, '{"en":"System Landing Page","tr":"Sistem Açılış Sayfası"}', 'regular', ?, ?, ?, 1, 1)
       `, [seedPages.DEFAULT_LANDING_TEMPLATE, seedPages.DEFAULT_LANDING_SCRIPT, seedPages.DEFAULT_LANDING_STYLE]);
       console.log(`[Seed] System Landing Page created.`);
-    }
-
-    const dashboardCount = await mainSql.unsafe("SELECT COUNT(*) as c FROM pages WHERE route_pattern = '/' AND is_public = 0 AND protected = 1");
-    if (dashboardCount[0] && dashboardCount[0].c === 0) {
-      await mainSql.unsafe(`
-        INSERT INTO pages (route_pattern, priority, title, page_type, template_string, script_content, style_content, is_public, protected)
-        VALUES ('/', 99, '{"en":"System Private Dashboard","tr":"Sistem Özel Paneli"}', 'regular', ?, ?, '', 0, 1)
-      `, [seedPages.DEFAULT_DASHBOARD_TEMPLATE, seedPages.DEFAULT_DASHBOARD_SCRIPT]);
-      console.log(`[Seed] System Dashboard Page created.`);
     }
 
     const aboutCount = await mainSql.unsafe("SELECT COUNT(*) as c FROM pages WHERE route_pattern = '/about' AND is_public = 1 AND protected = 1");
@@ -140,6 +160,15 @@ export async function runSeed(tenantSlug: string, refs?: any) {
         }
       }
 
+      // Populate translation_keys table for all keys in seedData
+      for (const key of Object.keys(seedData)) {
+        await mainSql.unsafe(`
+          INSERT INTO translation_keys (key, hashtags) 
+          VALUES (?, '[]') 
+          ON CONFLICT(key) DO NOTHING
+        `, [key]);
+      }
+
       console.log(`[Seed] Injected ${upsertedCount} translation entries.`);
     }
 
@@ -148,5 +177,3 @@ export async function runSeed(tenantSlug: string, refs?: any) {
     console.error(`[Seed] Error during seeding for tenant ${tenantSlug}:`, err);
   }
 }
-
-

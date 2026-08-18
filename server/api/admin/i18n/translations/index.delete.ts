@@ -1,9 +1,13 @@
 import { useDB } from '../../../../utils/db';
+import { bumpGlobalVersion } from '../../../../utils/versionManager';
 
 export default defineEventHandler(async (event) => {
   const user = event.context.user;
-  if (!user || (!user.is_admin && !user.is_super_admin)) {
-    throw createError({ statusCode: 403, message: 'errors.unauthorized' });
+  if (!user) {
+    throw createError({ statusCode: 401, message: 'errors.loginRequired' });
+  }
+  if (!user.is_admin && !user.is_super_admin) {
+    throw createError({ statusCode: 403, message: 'errors.forbiddenAdminOnly' });
   }
 
   const query = getQuery(event);
@@ -33,6 +37,7 @@ export default defineEventHandler(async (event) => {
         } catch (e) {}
       }
     }
+    bumpGlobalVersion(tenantSlug);
     return { success: true };
   } catch (err: any) {
     throw createError({ statusCode: 500, message: err.message });

@@ -107,7 +107,7 @@ export function buildSqlFilter(group: FilterGroup, startIndex: number = 1, optio
                 else if (typeof value === 'number') targetColumn = 'rf.val_num';
                 else if (typeof value === 'boolean') targetColumn = 'rf.val_bool';
 
-                if (isRelation) {
+                if (isRelation && typeof value === 'string') {
                     const rf2TargetColumn = targetColumn.replace('rf.', 'rf2.');
                     return `EXISTS (
                         SELECT 1 FROM record_fields rf 

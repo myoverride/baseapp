@@ -32,7 +32,7 @@
 </template>
 
 <script setup lang="ts">
-const { primaryColor: color } = useSysVars();
+const { primaryColor: color } = useGlobals();
 import { ref, watch } from 'vue'
 import type { FilterGroup } from '../utils/filterTypes'
 import FilterGroupNode from './FilterGroupNode.vue'

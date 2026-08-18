@@ -4,8 +4,11 @@ import { buildGenericFilter } from '../../../utils/queryBuilder';
 
 export default defineEventHandler(async (event) => {
   const user = event.context.user;
-  if (!user || !user.is_admin) {
-    throw createError({ statusCode: 403, message: 'errors.unauthorized' });
+  if (!user) {
+    throw createError({ statusCode: 401, message: 'errors.loginRequired' });
+  }
+  if (!user.is_admin) {
+    throw createError({ statusCode: 403, message: 'errors.forbiddenAdminOnly' });
   }
 
   const sql = useDB(event.context.tenantSlug);
@@ -52,13 +55,12 @@ export default defineEventHandler(async (event) => {
       ORDER BY id ASC
       LIMIT $${queryParams.length + 1} OFFSET $${queryParams.length + 2}
     `, [...queryParams, limit, offset]);
-
-    return { records: pagedRes, total: totalCount, page, limit };
+    return { success: true, data: pagedRes, pagination: { total: totalCount, page, limit } };
   }
 
   if (method === 'POST') {
     const body = await readBody(event);
-    
+
     if (body.records && Array.isArray(body.records)) {
       const records = body.records;
 

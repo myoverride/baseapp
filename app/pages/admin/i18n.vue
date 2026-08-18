@@ -1,7 +1,7 @@
 <template>
   <v-container>
     <div class="mb-4 d-flex align-center justify-space-between">
-      <v-btn prepend-icon="mdi-arrow-left" variant="text" to="/" class="text-none font-weight-medium px-0 text-body-1" color="grey-darken-2">
+      <v-btn prepend-icon="mdi-arrow-left" variant="text" to="/" class="text-none font-weight-medium px-0 text-body-1" color="primary">
         {{ $t('action.backToSystemPanel') }}
       </v-btn>
     </div>
@@ -57,6 +57,17 @@
           <v-chip class="ma-1" size="small" color="secondary" v-for="tag in (item as any).hashtags" :key="tag">{{ tag }}</v-chip>
           <span v-if="!Array.isArray((item as any).hashtags) || (item as any).hashtags.length === 0" class="text-caption text-grey">-</span>
         </template>
+        <template v-slot:item.info="{ item }">
+          <v-tooltip location="top" max-width="400">
+            <template v-slot:activator="{ props }">
+              <v-btn icon="mdi-information" v-bind="props" color="info" variant="text" size="small"></v-btn>
+            </template>
+            <div class="text-caption">
+              <div class="mb-1"><span class="font-weight-medium opacity-70">{{ $t('table.createdAt') }}:</span> {{ formatAppDate((item as any).created_at) }}</div>
+              <div><span class="font-weight-medium opacity-70">{{ $t('table.updatedAt') }}:</span> {{ formatAppDate((item as any).updated_at) }}</div>
+            </div>
+          </v-tooltip>
+        </template>
       </CrudTable>
     </v-card>
 
@@ -85,7 +96,7 @@
         </template>
 
         <template v-slot:item.key="{ item }">
-          <code class="text-primary bg-grey-lighten-4 px-2 py-1 rounded">{{ (item as any).key }}</code>
+          <code class="text-primary bg-background px-2 py-1 rounded">{{ (item as any).key }}</code>
         </template>
         <template v-slot:item.is_inherited="{ item }">
           <v-chip v-if="(item as any).is_inherited" size="small" color="purple" variant="tonal" prepend-icon="mdi-shield-lock-outline">
@@ -100,13 +111,24 @@
           <v-chip class="ma-1" size="small" color="secondary" v-for="tag in (item as any).hashtags" :key="tag">{{ tag }}</v-chip>
           <span v-if="!Array.isArray((item as any).hashtags) || (item as any).hashtags.length === 0" class="text-caption text-grey">-</span>
         </template>
+        <template v-slot:item.info="{ item }">
+          <v-tooltip location="top" max-width="400">
+            <template v-slot:activator="{ props }">
+              <v-btn icon="mdi-information" v-bind="props" color="info" variant="text" size="small"></v-btn>
+            </template>
+            <div class="text-caption">
+              <div class="mb-1"><span class="font-weight-medium opacity-70">{{ $t('table.createdAt') }}:</span> {{ formatAppDate((item as any).raw?.created_at || (item as any).created_at) }}</div>
+              <div><span class="font-weight-medium opacity-70">{{ $t('table.updatedAt') }}:</span> {{ formatAppDate((item as any).raw?.updated_at || (item as any).updated_at) }}</div>
+            </div>
+          </v-tooltip>
+        </template>
       </CrudTable>
     </v-card>
 
     <!-- Dil Ekleme/Düzenleme Dialog -->
     <ItemDialog
       v-model="langDialog"
-      :title="editingLang ? $t('page.editLang') : $t('action.addNew', { name: $t('entity.language') })"
+      :title="editingLang ? $t('page.editLang') : $t('action.addNew', { name: $t('common.language') })"
       :mode="editingLang ? 'edit' : 'create'"
       :loading="savingLang"
       @save="saveLanguage"
@@ -157,7 +179,7 @@
     <!-- Çeviri Ekleme/Düzenleme Dialog -->
     <ItemDialog
       v-model="transDialog"
-      :title="editingTrans ? $t('page.editTrans') : $t('action.addNew', { name: $t('table.transKey') })"
+      :title="editingTrans ? $t('page.editTrans') : $t('action.addNew', { name: $t('common.key') })"
       :mode="editingTrans ? 'edit' : 'create'"
       :loading="savingTrans"
       @save="saveTranslation"
@@ -170,7 +192,7 @@
       <v-text-field v-model="transForm.key" :label="$t('field.transKey')" variant="outlined" density="comfortable" :readonly="!!editingTrans" :disabled="!!editingTrans"></v-text-field>
       
       <div class="mt-4">
-        <div class="text-subtitle-2 mb-2 text-grey-darken-1">{{ $t('field.transForLangs') }}</div>
+        <div class="text-subtitle-2 mb-2 opacity-70">{{ $t('field.transForLangs') }}</div>
         <v-textarea 
           v-for="lang in activeLanguages" 
           :key="lang.code"
@@ -247,7 +269,8 @@ const languageColumns = computed(() => [
   { title: t('table.langDir'), key: 'dir', width: '100px', slot: true },
   { title: t('table.source'), key: 'is_inherited', width: '120px', slot: true, filterable: false },
   { title: t('common.status'), key: 'is_active', width: '100px', slot: true, filterable: false },
-  { title: t('field.hashtags'), key: 'hashtags', sortable: false, filterable: true, slot: true }
+  { title: t('field.hashtags'), key: 'hashtags', sortable: false, filterable: true, slot: true },
+  { title: t('common.info'), key: 'info', sortable: false, slot: true }
 ]);
 
 const onPredefinedLangSelect = (val: any) => {
@@ -377,13 +400,14 @@ const transForm = ref<{ key: string; values: Record<string, string>; hashtags?: 
 
 const translationColumns = computed(() => {
   const cols: any[] = [
-    { title: t('table.transKey'), key: 'key', width: '25%', slot: true }
+    { title: t('common.key'), key: 'key', width: '25%', slot: true }
   ];
   for (const lang of activeLanguages.value) {
     cols.push({ title: lang.name, key: lang.code, sortable: false, slot: true });
   }
   cols.push({ title: t('table.source'), key: 'is_inherited', width: '150px', slot: true, filterable: false });
   cols.push({ title: t('field.hashtags'), key: 'hashtags', sortable: false, filterable: true, slot: true });
+  cols.push({ title: t('common.info'), key: 'info', sortable: false, slot: true });
   return cols;
 });
 
@@ -405,7 +429,7 @@ const openTranslationDialog = (trans: any = null) => {
 
 const saveTranslation = async () => {
   if (!transForm.value.key) {
-    if ($toast) $toast.warning('Key required');
+    if ($toast) $toast.warning(t('validation.required', { field: 'Key' }));
     return;
   }
   // no hashtag stripping

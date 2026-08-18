@@ -9,7 +9,12 @@ export interface RouteMatchResult {
 
 export function compileRoutePattern(pattern: string, type: string = 'http'): { regex: RegExp; paramNames: string[] } {
   const paramNames: string[] = [];
-  const rawPattern = String(pattern || '').trim();
+  let rawPattern = String(pattern || '').trim();
+  
+  if (type === 'ws') {
+    rawPattern = rawPattern.replace(/^\/?api\/ws/, '').replace(/^\/?ws/, '');
+  }
+  
   const normalizedPattern = rawPattern.startsWith('/') ? rawPattern : `/${rawPattern}`;
   const segments = normalizedPattern.split('/');
   const regexParts: string[] = [];
@@ -82,6 +87,8 @@ export function matchRoute(path: string, compiledRegex: RegExp, paramNames: stri
 
 // --- ENDPOINT CACHE (Formerly Middleware Cache) ---
 
+import { createRouter } from 'radix3';
+
 export interface CachedEndpoint {
   id: number;
   name: string;
@@ -95,6 +102,7 @@ export interface CachedEndpoint {
 
 interface TenantEndpointCache {
   endpoints: Map<string, CachedEndpoint[]>; // key: type (http, ws, mqtt)
+  routers: Map<string, any>; // key: type (http, ws)
   isFetched: Map<string, boolean>; // key: type
 }
 const tenantCaches = new Map<string, TenantEndpointCache>();
@@ -107,7 +115,7 @@ export async function getActiveEndpoints(tenantSlug: string, type: 'http' | 'ws'
   if (!tenantSlug) return [];
 
   if (!tenantCaches.has(tenantSlug)) {
-    tenantCaches.set(tenantSlug, { endpoints: new Map(), isFetched: new Map() });
+    tenantCaches.set(tenantSlug, { endpoints: new Map(), routers: new Map(), isFetched: new Map() });
   }
   const cache = tenantCaches.get(tenantSlug)!;
 
@@ -134,12 +142,47 @@ export async function getActiveEndpoints(tenantSlug: string, type: 'http' | 'ws'
     });
     
     cache.endpoints.set(type, data);
+
+    if (type === 'http' || type === 'ws') {
+      const router = createRouter();
+      
+      const patternMap = new Map<string, CachedEndpoint[]>();
+      for (const ep of data) {
+        let radixPattern = ep.route_pattern.trim();
+        if (type === 'ws') {
+           radixPattern = radixPattern.replace(/^\/?api\/ws/, '').replace(/^\/?ws/, '');
+        }
+        if (!radixPattern.startsWith('/')) radixPattern = '/' + radixPattern;
+        // Convert Nuxt-like [...catchAll] to Radix3 /**
+        radixPattern = radixPattern.replace(/\[\.\.\.[^\]]+\]/g, '**');
+        
+        if (!patternMap.has(radixPattern)) {
+           patternMap.set(radixPattern, []);
+        }
+        patternMap.get(radixPattern)!.push(ep);
+      }
+      
+      for (const [pattern, eps] of patternMap.entries()) {
+        // Insert payload wrapped to prevent params overriding ep properties
+        router.insert(pattern, { payload: eps });
+      }
+      
+      cache.routers.set(type, router);
+    }
+
     cache.isFetched.set(type, true);
     return data;
   } catch (err) {
     console.error(`[Endpoint Cache Error] Tenant ${tenantSlug} (type: ${type}):`, err);
     return cache.endpoints.get(type) || [];
   }
+}
+
+export async function getActiveEndpointsRouter(tenantSlug: string, type: 'http' | 'ws' = 'http'): Promise<any> {
+   if (!tenantSlug) return null;
+   await getActiveEndpoints(tenantSlug, type); // Ensure it is fetched
+   const cache = tenantCaches.get(tenantSlug)!;
+   return cache.routers.get(type) || null;
 }
 
 export function invalidateEndpointCache(tenantSlug: string) {

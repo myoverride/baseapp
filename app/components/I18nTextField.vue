@@ -3,7 +3,7 @@
     <v-text-field
       v-model="values[activeTab]"
       :label="label"
-      :placeholder="placeholder ? `${placeholder} (${activeLangName})` : `Değer girin (${activeLangName})`"
+      :placeholder="placeholder ? `${placeholder} (${activeLangName})` : `${$t('common.enterValue')} (${activeLangName})`"
       variant="outlined"
       density="compact"
       hide-details
@@ -39,12 +39,12 @@
         </v-select>
       </template>
     </v-text-field>
-    <div v-if="hint" class="text-caption text-grey-darken-1 mt-1 ml-1">{{ hint }}</div>
+    <div v-if="hint" class="text-caption text-medium-emphasis mt-1 ml-1">{{ hint }}</div>
   </div>
 </template>
 
 <script setup lang="ts">
-const { primaryColor: color } = useSysVars();
+const { primaryColor: color } = useGlobals();
 import { ref, watch, onMounted, computed } from 'vue';
 import { useState } from '#app';
 import { useI18n } from 'vue-i18n';

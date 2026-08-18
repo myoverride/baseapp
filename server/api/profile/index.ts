@@ -7,7 +7,7 @@ export default defineEventHandler(async (event) => {
   const tenantSlug = event.context.tenantSlug;
 
   if (!user || !tenantSlug) {
-    throw createError({ statusCode: 401, message: tEvent(event, 'errors.unauthorized') });
+    throw createError({ statusCode: 401, message: 'errors.unauthorized' });
   }
 
   const sql = useDB(tenantSlug);
@@ -59,7 +59,7 @@ export default defineEventHandler(async (event) => {
 
     if (body.password) {
       if (!body.password.old || !body.password.new) {
-        throw createError({ statusCode: 400, message: tEvent(event, 'errors.passwordFieldsRequired') });
+        throw createError({ statusCode: 400, message: 'errors.passwordFieldsRequired' });
       }
       
       const userResult = await sql`SELECT password_hash FROM users WHERE id = ${user.id}`;
@@ -70,7 +70,7 @@ export default defineEventHandler(async (event) => {
       const bcrypt = await import('bcryptjs');
       const isValid = bcrypt.default.compareSync(body.password.old, userResult[0].password_hash);
       if (!isValid) {
-        throw createError({ statusCode: 400, message: tEvent(event, 'errors.oldPasswordIncorrect') });
+        throw createError({ statusCode: 400, message: 'errors.oldPasswordIncorrect' });
       }
       
       const newHash = bcrypt.default.hashSync(body.password.new, 10);

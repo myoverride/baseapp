@@ -14,22 +14,22 @@
           {{ error?.statusCode === 404 ? 'mdi-map-marker-question-outline' : 'mdi-alert-octagon-outline' }}
         </v-icon>
         
-        <h1 class="text-h4 font-weight-bold mb-3 text-grey-darken-4">
+        <h1 class="text-h4 font-weight-bold mb-3 text-medium-emphasis">
           {{ error?.statusCode === 404 ? translate('error.notFound') : translate('error.operationFailed') }}
         </h1>
         
         <!-- Translated Error Message -->
-        <p class="text-h6 text-grey-darken-1 mb-6 font-weight-regular">
+        <p class="text-h6 text-medium-emphasis mb-6 font-weight-regular">
           {{ translate(error?.message || 'error.operationFailed') }}
         </p>
 
         <!-- Error Details (if data exists) -->
         <v-expand-transition>
-          <div v-if="error?.data" class="text-left bg-grey-lighten-4 pa-4 rounded-lg mb-8 error-details">
+          <div v-if="error?.data" class="text-left bg-background pa-4 rounded-lg mb-8 error-details">
             <div v-if="error.data.msg" class="text-body-2 font-weight-bold text-error mb-2">
               {{ error.data.msg }}
             </div>
-            <div class="text-caption text-grey-darken-2 font-family-monospace">
+            <div class="text-caption text-medium-emphasis font-family-monospace">
               <pre style="white-space: pre-wrap;">{{ error.data }}</pre>
             </div>
           </div>
@@ -60,7 +60,7 @@ const props = defineProps({
   error: Object as () => any
 })
 
-// Graceful fallback for sysVars and i18n just in case error happens before plugins load
+// Graceful fallback for globals and i18n just in case error happens before plugins load
 let color = ref('primary');
 let translate = (key: string) => key;
 
@@ -72,10 +72,10 @@ try {
 }
 
 try {
-  const { primaryColor } = useSysVars();
+  const { primaryColor } = useGlobals();
   if (primaryColor.value) color.value = primaryColor.value;
 } catch (e) {
-  // sysVars not ready
+  // globals not ready
 }
 
 const handleError = () => clearError({ redirect: '/' })

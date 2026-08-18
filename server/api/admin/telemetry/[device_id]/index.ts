@@ -7,13 +7,13 @@ export default defineEventHandler(async (event) => {
   const telemetrySql = useTelemetryDB(event.context.tenantSlug);
 
   if (!deviceId) {
-    throw createError({ statusCode: 400, message: tEvent(event, 'errors.validationFailed') });
+    throw createError({ statusCode: 400, message: 'errors.validationFailed' });
   }
 
   // Cihazın var olup olmadığını kontrol edelim
   const deviceResult = await sql`SELECT id, device_id, schema FROM devices WHERE device_id = ${deviceId}`;
   if (deviceResult.length === 0) {
-    throw createError({ statusCode: 404, message: tEvent(event, 'error.notFound') });
+    throw createError({ statusCode: 404, message: 'errors.notFound' });
   }
   const device = deviceResult[0];
 
@@ -60,13 +60,15 @@ export default defineEventHandler(async (event) => {
 
       return {
         device: device,
-        records: finalRecords,
-        total: totalCount,
+        data: finalRecords,
+        pagination: {
+          total: totalCount
+        },
         page: page,
         limit: limit
       };
     } catch (e: any) {
-      throw createError({ statusCode: 500, message: e.message });
+      throw createError({ statusCode: 500, message: 'errors.internalError' });
     }
   }
 });

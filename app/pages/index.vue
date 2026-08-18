@@ -8,10 +8,10 @@
     />
   </div>
 
-  <div v-else class="w-100 h-100 bg-grey-lighten-4 d-flex align-center justify-center">
+  <div v-else class="w-100 h-100 bg-background d-flex align-center justify-center">
     <div class="text-center text-grey">
       <v-progress-circular indeterminate :color="color" class="mb-4"></v-progress-circular>
-      <p>Yükleniyor...</p>
+      <div class="mt-4 text-h6 text-medium-emphasis">{{ $t('message.loading') }}</div>
     </div>
   </div>
 </template>
@@ -26,7 +26,7 @@ import { compileRoutePattern, matchRoute } from '../utils/routeMatcher';
 
 const { t } = useI18n();
 useHead({ title: () => t('common.home') });
-const { primaryColor: color } = useSysVars();
+const { primaryColor: color } = useGlobals();
 
 const user = useState<any>('user');
 const route = useRoute();

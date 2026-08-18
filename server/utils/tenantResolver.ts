@@ -47,7 +47,11 @@ export async function resolveTenant(req: {
       try {
         const refererUrl = new URL(referer);
         const match = refererUrl.pathname.match(/^\/tenant\/([^\/?]+)/);
-        if (match) tenantSlug = match[1] || null;
+        if (match) {
+          tenantSlug = match[1] || null;
+        } else if (refererUrl.searchParams.has('tenant')) {
+          tenantSlug = refererUrl.searchParams.get('tenant') || null;
+        }
       } catch (e) {
         // ignore
       }
@@ -57,6 +61,14 @@ export async function resolveTenant(req: {
   const hostWithoutPort = (req.host.split(':')[0] || '').toLowerCase();
   const isIp = /^(\d{1,3}\.){3}\d{1,3}$/.test(hostWithoutPort);
   const isLocalhost = hostWithoutPort === 'localhost' || hostWithoutPort === '127.0.0.1';
+  
+  // Master Domain Check
+  const masterDomain = process.env.MASTER_DOMAIN || 'makas.override.com.tr';
+  const isMasterDomain = hostWithoutPort === masterDomain;
+
+  if (isMasterDomain) {
+    return 'master';
+  }
 
   // 4. Custom Domain tabanlı çözümleme
   if (!tenantSlug && !isIp && !isLocalhost) {

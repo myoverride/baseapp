@@ -1,8 +1,8 @@
 <template>
   <v-container>
     <div class="mb-4">
-      <v-btn prepend-icon="mdi-arrow-left" variant="text" to="/admin/devices" class="text-none font-weight-medium px-0 text-body-1" color="grey-darken-2">
-        {{ $t('page.devices') }}
+      <v-btn prepend-icon="mdi-arrow-left" variant="text" to="/admin/devices" class="text-none font-weight-medium px-0 text-body-1" color="primary">
+        {{ $t('menu.devices') }}
       </v-btn>
     </div>
     
@@ -38,7 +38,7 @@
 </template>
 
 <script setup lang="ts">
-const { primaryColor: color } = useSysVars();
+const { primaryColor: color } = useGlobals();
 import { ref, computed } from 'vue';
 import { useRoute } from 'vue-router';
 import { useI18n } from 'vue-i18n';

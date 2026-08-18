@@ -12,7 +12,7 @@
     <v-card class="pa-8 text-center rounded-xl" elevation="0" border max-width="500" width="100%">
       <v-icon size="72" color="error" class="mb-4">mdi-alert-circle-outline</v-icon>
       <h2 class="text-h5 font-weight-bold mb-2">{{ $t('error.notFound') }}</h2>
-      <p class="text-body-1 text-grey-darken-1 mb-6">{{ $t(error) }}</p>
+      <p class="text-body-1 text-medium-emphasis mb-6">{{ $t(error) }}</p>
       <v-btn :to="`/tenant/${route.params.slug}`" prepend-icon="mdi-home" size="large" rounded="pill" :color="color" elevation="0" class="px-8 text-none font-weight-bold">
         {{ $t('action.returnTenantHome') || $t('common.home') }}
       </v-btn>
@@ -30,7 +30,7 @@ import { useRoute } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 
 const route = useRoute();
-const { primaryColor: color } = useSysVars();
+const { primaryColor: color } = useGlobals();
 const { t } = useI18n();
 const pageData = ref<any>(null);
 const error = ref<string | null>(null);
@@ -45,7 +45,7 @@ onMounted(async () => {
   const slug = Array.isArray(slugSegments) ? slugSegments.join('/') : slugSegments;
   
   if (!slug) {
-    error.value = t('error.invalidRoute');
+    error.value = t('errors.invalidPath');
     return;
   }
 
@@ -59,7 +59,7 @@ onMounted(async () => {
        navigateTo(`/tenant/${tenantSlug}/login`);
        return;
     }
-    error.value = e?.data?.message || e?.statusMessage || t('error.pageLoadFailed');
+    error.value = e?.data?.message || e?.statusMessage || t('errors.pageLoadError');
   }
 });
 </script>

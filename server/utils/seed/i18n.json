@@ -1,4 +1,48 @@
 {
+  "about.ctaDesc": {
+    "en": "Experience our power by registering to our system or contacting an administrator.",
+    "tr": "Sistemimize kayıt olarak veya yönetici ile iletişime geçerek gücümüzü deneyimleyin."
+  },
+  "about.ctaTitle": {
+    "en": "Get Started Now",
+    "tr": "Hemen Başlayın"
+  },
+  "about.heroDesc": {
+    "en": "We take your production and management processes to the future with our advanced architecture, modern interface, and high performance.",
+    "tr": "Gelişmiş mimarimiz, modern arayüzümüz ve yüksek performansımız ile üretim ve yönetim süreçlerinizi geleceğe taşıyoruz."
+  },
+  "about.heroTitle": {
+    "en": "Innovative Industrial Platform",
+    "tr": "Yenilikçi Endüstriyel Platform"
+  },
+  "about.integrationDesc": {
+    "en": "You can easily integrate with any ERP, CRM, or Industry 4.0 hardware with our modular structure.",
+    "tr": "Modüler yapımız ile dilediğiniz ERP, CRM veya Endüstri 4.0 donanımı ile kolayca entegre olabilirsiniz."
+  },
+  "about.integrationTitle": {
+    "en": "Flexible Integration",
+    "tr": "Esnek Entegrasyon"
+  },
+  "about.performanceDesc": {
+    "en": "We maximize data processing speed with our in-memory architecture. Analysis and reporting in seconds.",
+    "tr": "In-memory mimarisi ile veri işleme hızını en üst seviyeye çıkarıyoruz. Saniyeler içinde analiz ve raporlama."
+  },
+  "about.performanceTitle": {
+    "en": "High Performance",
+    "tr": "Yüksek Performans"
+  },
+  "about.securityDesc": {
+    "en": "We offer data isolation and end-to-end encryption with our multi-tenant architecture.",
+    "tr": "Çok kiracılı yapımız sayesinde veri izolasyonu ve uçtan uca şifreleme sunuyoruz."
+  },
+  "about.securityTitle": {
+    "en": "Secure Infrastructure",
+    "tr": "Güvenli Altyapı"
+  },
+  "action.add": {
+    "tr": "Ekle",
+    "en": "Add"
+  },
   "action.addNew": {
     "en": "Add New {name}",
     "tr": "Yeni {name} Ekle"
@@ -15,13 +59,25 @@
     "en": "Back to System Panel",
     "tr": "Sistem Paneline Dön"
   },
+  "action.cancel": {
+    "tr": "İptal",
+    "en": "Cancel"
+  },
   "action.copyForTelemetry": {
     "en": "Copy to assign device (Telemetry)",
     "tr": "Cihaz (Telemetri) atamak için kopyala"
   },
+  "action.create": {
+    "tr": "Oluştur",
+    "en": "Create"
+  },
   "action.deleteField": {
     "en": "Delete Field",
     "tr": "Alanı Sil"
+  },
+  "action.deleteRule": {
+    "tr": "Kuralı Sil",
+    "en": "Delete Rule"
   },
   "action.disableNotifications": {
     "en": "Disable Notifications",
@@ -43,6 +99,14 @@
     "en": "Export {format}",
     "tr": "{format} Dışa Aktar"
   },
+  "action.exportFormatSingle": {
+    "tr": "(Tekli) formatta dışa aktar",
+    "en": "Export in (Single) format"
+  },
+  "action.generate": {
+    "tr": "Oluştur",
+    "en": "Generate"
+  },
   "action.goBack": {
     "en": "Go Back",
     "tr": "Geri Dön"
@@ -58,6 +122,10 @@
   "action.importFormat": {
     "en": "Import {format}",
     "tr": "{format} İçe Aktar"
+  },
+  "action.login": {
+    "tr": "Giriş Yap",
+    "en": "Login"
   },
   "action.manageRecords": {
     "en": "Manage Records",
@@ -83,9 +151,17 @@
     "en": "Return to Tenant Home",
     "tr": "Kiracı Ana Sayfasına Dön"
   },
+  "action.run": {
+    "tr": "Çalıştır",
+    "en": "Run"
+  },
   "action.saveCode": {
     "en": "Save Code",
     "tr": "Kodu Kaydet"
+  },
+  "action.saveWithShortcut": {
+    "tr": "Kaydet (Ctrl+S)",
+    "en": "Save (Ctrl+S)"
   },
   "action.sendCommand": {
     "en": "Send Command",
@@ -111,9 +187,33 @@
     "en": "Upload Backup",
     "tr": "Yedeği Yükle"
   },
+  "appStudio.confirmAndStart": {
+    "en": "Confirm and Start",
+    "tr": "Onayla ve Başlat"
+  },
+  "appStudio.criticalImportError": {
+    "en": "A critical error occurred during import.",
+    "tr": "İçe aktarım sırasında kritik bir hata oluştu."
+  },
   "appStudio.description": {
     "en": "Enter the common tag of the application to export or view the summary of the vertical application you have developed.",
-    "tr": "Geliştirdiğiniz dikey uygulamayı dışa aktarmak (Export) veya özetini görmek için uygulamanın ortak etiketini (Tag) girin."
+    "tr": "Geliştirdiğiniz dikey uygulamayı dışa aktarmak veya özetini görmek için uygulamanın ortak etiketini girin."
+  },
+  "appStudio.importConfirmDesc1": {
+    "en": "You are about to import the {app} package.",
+    "tr": "Dikkat, {app} paketini içeri aktarmak üzeresiniz."
+  },
+  "appStudio.importConfirmDesc2": {
+    "en": "How would you like to handle existing (conflicting) records in the database?",
+    "tr": "Veritabanında zaten var olan (çakışan) kayıtlar için nasıl bir yol izlenmesini istersiniz?"
+  },
+  "appStudio.importConfirmTitle": {
+    "en": "Import Confirmation",
+    "tr": "İçe Aktarım Onayı"
+  },
+  "appStudio.importWarning": {
+    "en": "Operation completed but some errors occurred. Please review the details.",
+    "tr": "İşlem tamamlandı ancak bazı hatalar oluştu. Lütfen detayları inceleyin."
   },
   "appStudio.itemsCount": {
     "en": "Items",
@@ -134,6 +234,38 @@
   "appStudio.selectTagWarning": {
     "en": "Please enter or select at least one tag.",
     "tr": "Lütfen en az bir etiket girin veya seçin."
+  },
+  "appStudio.strategy.abort.desc": {
+    "en": "If there is a conflict with even a single existing record, the entire operation is aborted to maintain safety.",
+    "tr": "Sistemde var olan tek bir kayıtla bile çakışma yaşanırsa, güvenliği korumak için işlemi tamamen iptal eder (Rollback)."
+  },
+  "appStudio.strategy.abort.title": {
+    "en": "Abort on Conflict (Rollback)",
+    "tr": "Çakışmada İptal Et (Rollback)"
+  },
+  "appStudio.strategy.newer.desc": {
+    "en": "Overwrites if the package data's update date is newer than the server's, otherwise skips.",
+    "tr": "Paketteki verinin güncellenme tarihi sunucudakinden daha yeniyse üzerine yazar, aksi halde atlar."
+  },
+  "appStudio.strategy.newer.title": {
+    "en": "Overwrite if Newer",
+    "tr": "Daha Yeniyse Ez"
+  },
+  "appStudio.strategy.overwrite.desc": {
+    "en": "Unconditionally overwrites conflicting existing records with the data in the package.",
+    "tr": "Çakışan mevcut kayıtların içeriğini paketteki veriyle koşulsuz ezer."
+  },
+  "appStudio.strategy.overwrite.title": {
+    "en": "Overwrite (Critical)",
+    "tr": "Üzerine Yaz (Tehlikeli)"
+  },
+  "appStudio.strategy.skip.desc": {
+    "en": "If a record with the same name/id exists in the database, it skips it. Only adds new ones.",
+    "tr": "Veritabanında aynı ada/id'ye sahip bir kayıt varsa ona dokunmaz, atlar. Sadece sistemde olmayan yenileri ekler."
+  },
+  "appStudio.strategy.skip.title": {
+    "en": "Keep Existing (Skip)",
+    "tr": "Mevcutları Koru (Atla)"
   },
   "appStudio.tagLabel": {
     "en": "Application Tags (e.g. hr-module)",
@@ -207,10 +339,6 @@
     "en": "Delete All",
     "tr": "Tümünü Sil"
   },
-  "common.detail": {
-    "en": "Detail",
-    "tr": "Detay"
-  },
   "common.edit": {
     "en": "Edit",
     "tr": "Düzenle"
@@ -218,6 +346,10 @@
   "common.emailFormat": {
     "en": "Email Format",
     "tr": "E-Posta Formatı"
+  },
+  "common.enterValue": {
+    "tr": "Değer girin",
+    "en": "Enter value"
   },
   "common.error": {
     "en": "Error",
@@ -251,6 +383,10 @@
     "en": "Information",
     "tr": "Bilgi"
   },
+  "common.key": {
+    "en": "Key",
+    "tr": "Anahtar"
+  },
   "common.language": {
     "en": "Language",
     "tr": "Dil"
@@ -283,6 +419,14 @@
     "en": "No data found",
     "tr": "Kayıt bulunamadı"
   },
+  "common.offlineActionNotAllowed": {
+    "tr": "Çevrimdışı modda işlem yapılamaz",
+    "en": "Action cannot be performed in offline mode"
+  },
+  "common.option": {
+    "tr": "Seçenek",
+    "en": "Option"
+  },
   "common.optionsPressEnterToAdd": {
     "en": "Options (Press Enter to add)",
     "tr": "Seçenekler (Enter ile ekleyin)"
@@ -295,9 +439,13 @@
     "en": "Passive",
     "tr": "Pasif"
   },
+  "common.password": {
+    "tr": "Şifre",
+    "en": "Password"
+  },
   "common.plainText": {
     "en": "Plain Text",
-    "tr": "Düz Metin (Plain)"
+    "tr": "Düz Metin"
   },
   "common.priority": {
     "en": "Priority",
@@ -311,6 +459,10 @@
     "en": "Public",
     "tr": "Public"
   },
+  "common.recordWithId": {
+    "tr": "Kayıt #{id}",
+    "en": "Record #{id}"
+  },
   "common.refresh": {
     "en": "Refresh",
     "tr": "Yenile"
@@ -323,10 +475,6 @@
     "en": "Role",
     "tr": "Rol"
   },
-  "common.routePattern": {
-    "en": "Route Pattern",
-    "tr": "Rota (Route)"
-  },
   "common.save": {
     "en": "Save",
     "tr": "Kaydet"
@@ -337,11 +485,15 @@
   },
   "common.secretKey": {
     "en": "Secret Key",
-    "tr": "Gizli Anahtar (Secret Key)"
+    "tr": "Gizli Anahtar"
   },
   "common.showInTable": {
     "en": "Show in Table",
     "tr": "Tabloda Göster"
+  },
+  "common.slug": {
+    "en": "URL Slug",
+    "tr": "URL Kısa Adı"
   },
   "common.status": {
     "en": "Status",
@@ -351,13 +503,9 @@
     "en": "System Settings",
     "tr": "Sistem Ayarları"
   },
-  "common.tags": {
-    "en": "Tags",
-    "tr": "Etiketler"
-  },
   "common.target": {
     "en": "Target",
-    "tr": "Target"
+    "tr": "Hedef"
   },
   "common.title": {
     "en": "Title",
@@ -387,9 +535,17 @@
     "en": "Username",
     "tr": "Kullanıcı Adı"
   },
+  "common.util": {
+    "en": "Utility",
+    "tr": "Araç"
+  },
   "common.value": {
     "en": "Value",
     "tr": "Değer"
+  },
+  "common.variable": {
+    "en": "Variable",
+    "tr": "Değişken"
   },
   "common.virtualConsole": {
     "en": "Virtual Console",
@@ -423,10 +579,6 @@
     "en": "Manage platform configuration, system variables, and general settings.",
     "tr": "Platform yapılandırmasını, sistem değişkenlerini ve genel ayarları yönetin."
   },
-  "dashboard.dataOptTitle": {
-    "en": "System Settings",
-    "tr": "Sistem Ayarları"
-  },
   "dashboard.devicesDesc": {
     "en": "Manage IoT devices and telemetry data.",
     "tr": "IoT cihazlarını ve telemetri verilerini yönetin."
@@ -455,10 +607,6 @@
     "en": "Next-Gen Industrial IoT Platform",
     "tr": "Yeni Nesil Endüstriyel IoT Platformu"
   },
-  "dashboard.login": {
-    "en": "Log In to System",
-    "tr": "Sisteme Giriş Yap"
-  },
   "dashboard.middlewaresDesc": {
     "en": "Define custom rules intercepting HTTP requests.",
     "tr": "HTTP isteklerini yakalayan özel kurallar tanımlayın."
@@ -483,6 +631,10 @@
     "en": "Device Control (Downlink):",
     "tr": "Cihaz Kontrolü (Downlink):"
   },
+  "entity.apiUiGenerator": {
+    "tr": "API & UI Jeneratör",
+    "en": "API & UI Generator"
+  },
   "entity.device": {
     "en": "Device",
     "tr": "Cihaz"
@@ -490,10 +642,6 @@
   "entity.entity": {
     "en": "Entity",
     "tr": "Varlık"
-  },
-  "entity.language": {
-    "en": "Language",
-    "tr": "Dil"
   },
   "entity.microservice": {
     "en": "Microservice",
@@ -511,6 +659,10 @@
     "en": "Record",
     "tr": "Kayıt"
   },
+  "entity.selectModulesToGenerate": {
+    "tr": "için oluşturulacak modülleri seçin",
+    "en": "select modules to generate for"
+  },
   "entity.task": {
     "en": "Task",
     "tr": "Görev"
@@ -523,13 +675,9 @@
     "en": "User",
     "tr": "Kullanıcı"
   },
-  "entity.util": {
-    "en": "Utility",
-    "tr": "Metot"
-  },
-  "entity.var": {
-    "en": "Variable",
-    "tr": "Değişken"
+  "entity.validationRules": {
+    "tr": "Geçerlilik Kuralları",
+    "en": "Validation Rules"
   },
   "entity.ws": {
     "en": "WS Channel",
@@ -567,10 +715,6 @@
     "en": "Edit Field",
     "tr": "Alanı Düzenle"
   },
-  "er.entitySlug": {
-    "en": "URL Slug",
-    "tr": "URL Kısa Adı (Slug)"
-  },
   "er.entitySlugHint": {
     "en": "Unique, lowercase, with hyphens (e.g., work-order)",
     "tr": "Benzersiz, küçük harf, tire ile (örn: is-emri)"
@@ -579,21 +723,9 @@
     "en": "Field name is required",
     "tr": "Alan adı zorunludur"
   },
-  "er.hashMethod": {
-    "en": "Hash Method",
-    "tr": "Şifreleme (Hash) Yöntemi"
-  },
-  "er.integerOnly": {
-    "en": "Integer Only",
-    "tr": "Sadece Tam Sayı"
-  },
   "er.mandatoryAccept": {
     "en": "Mandatory Accept",
     "tr": "Zorunlu Kabul"
-  },
-  "er.maxTime": {
-    "en": "Max Time",
-    "tr": "En Geç Saat"
   },
   "er.newEntity": {
     "en": "New Entity",
@@ -613,7 +745,7 @@
   },
   "er.stepMultiple": {
     "en": "Step Multiple",
-    "tr": "Artış Katı (Step)"
+    "tr": "Artış Katı"
   },
   "er.targetEntityRequired": {
     "en": "Target entity selection is required",
@@ -647,9 +779,41 @@
     "en": "Reset Zoom",
     "tr": "Sıfırla"
   },
-  "error.entityNotFound": {
-    "en": "Entity not found",
-    "tr": "Varlık bulunamadı"
+  "error.blockedByMiddleware": {
+    "tr": "İstek middleware tarafından engellendi.",
+    "en": "Request was blocked by middleware."
+  },
+  "error.createError": {
+    "tr": "Oluşturma hatası",
+    "en": "Creation error"
+  },
+  "error.daemonTestStopFailed": {
+    "tr": "Test durdurulurken hata oluştu.",
+    "en": "Error occurred while stopping test."
+  },
+  "error.dataLoadFailed": {
+    "tr": "Veri yüklenirken hata oluştu",
+    "en": "Error loading data"
+  },
+  "error.duplicateFieldName": {
+    "tr": "Alan isimleri benzersiz olmalıdır. Tekrar eden alan: {name}",
+    "en": "Field names must be unique. Duplicate field: {name}"
+  },
+  "error.entitySlugImmutable": {
+    "tr": "Entity Slug sonradan değiştirilemez.",
+    "en": "Entity Slug cannot be changed later."
+  },
+  "error.entityUpdateFailed": {
+    "tr": "Varlık güncellenemedi ({0}): {1}",
+    "en": "Entity could not be updated ({0}): {1}"
+  },
+  "error.executionFailed": {
+    "tr": "Çalıştırma hatası",
+    "en": "Execution error"
+  },
+  "error.executionLine": {
+    "tr": "Satır {0}: {1}",
+    "en": "Line {0}: {1}"
   },
   "error.fetchRecords": {
     "en": "Error fetching records.",
@@ -663,29 +827,65 @@
     "en": "Please fill in the required fields.",
     "tr": "Lütfen gerekli alanları doldurun."
   },
-  "error.forbidden": {
-    "en": "Forbidden",
-    "tr": "Yasak"
+  "error.forbiddenWord": {
+    "tr": "Yasaklı: {0} kullanılamaz.",
+    "en": "Forbidden: {0} cannot be used."
+  },
+  "error.generationFailed": {
+    "tr": "Üretim sırasında hata oluştu.",
+    "en": "An error occurred during generation."
   },
   "error.historyLoad": {
     "en": "Failed to load command history:",
     "tr": "Komut geçmişi yüklenemedi:"
   },
+  "error.import.entityNotFound": {
+    "tr": "[records] Entity bulunamadı: {0}",
+    "en": "[records] Entity not found: {0}"
+  },
   "error.importError": {
     "en": "Import error",
     "tr": "İçe aktarma hatası"
+  },
+  "error.invalidFieldSlug": {
+    "tr": "Geçersiz Field Slug: {0}. Sadece küçük harf, rakam ve alt çizgi kullanılabilir.",
+    "en": "Invalid Field Slug: {0}. Only lowercase letters, numbers, and underscores are allowed."
   },
   "error.invalidFormat": {
     "en": "Invalid format",
     "tr": "Geçersiz format"
   },
-  "error.invalidRoute": {
-    "en": "Invalid page route.",
-    "tr": "Geçersiz sayfa yolu."
+  "error.invalidJavaScript": {
+    "tr": "Geçersiz JavaScript",
+    "en": "Invalid JavaScript"
+  },
+  "error.invalidJsonPayload": {
+    "tr": "HATA: Payload geçerli JSON değil.",
+    "en": "ERROR: Payload is not valid JSON."
+  },
+  "error.invalidRelationDeleteRule": {
+    "tr": "Satır {0}: {1}",
+    "en": "Line {0}: {1}"
+  },
+  "error.loginFailed": {
+    "tr": "Giriş başarısız",
+    "en": "Login failed"
+  },
+  "error.missingSchemaFields": {
+    "tr": "Satır {0}: Varlık name, slug ve schema alanlarına sahip olmalıdır.",
+    "en": "Line {0}: Entity must have name, slug, and schema fields."
+  },
+  "error.modbusQueueFull": {
+    "tr": "Modbus kuyruğu dolu (Queue Full). Cihaz yanıt vermiyor olabilir.",
+    "en": "Modbus queue is full. Device might not be responding."
   },
   "error.noIdsProvided": {
     "en": "No ids provided",
     "tr": "Kimlik numarası belirtilmedi"
+  },
+  "error.noSetNullIfRequired": {
+    "tr": "\"{field}\" alanı zorunlu (required) olduğu için onDelete=setnull kullanılamaz.",
+    "en": "onDelete=setnull cannot be used for \"{field}\" because it is required."
   },
   "error.noTargetId": {
     "en": "No target ID specified",
@@ -699,13 +899,17 @@
     "en": "Operation failed.",
     "tr": "İşlem başarısız."
   },
-  "error.pageLoadFailed": {
-    "en": "Page failed to load.",
-    "tr": "Sayfa yüklenemedi."
+  "error.prefix": {
+    "tr": "HATA",
+    "en": "ERROR"
   },
   "error.recordNotFound": {
     "en": "Record not found",
     "tr": "Kayıt bulunamadı"
+  },
+  "error.recordNotFoundForField": {
+    "tr": "'{0}' alanı için eşleşen kayıt bulunamadı: {1}",
+    "en": "No matching record found for field '{0}': {1}"
   },
   "error.recordsArrayExpected": {
     "en": "Records array expected",
@@ -722,6 +926,38 @@
   "error.saveError": {
     "en": "Save Error:",
     "tr": "Kayıt Hatası:"
+  },
+  "error.serverUtilityFailed": {
+    "tr": "Server utility çalıştırılamadı [{0}]: {1}",
+    "en": "Server utility execution failed [{0}]: {1}"
+  },
+  "error.serverUtilityNotFound": {
+    "tr": "Server utility bulunamadı: {0}.{1}",
+    "en": "Server utility not found: {0}.{1}"
+  },
+  "error.setNullOnRequiredField": {
+    "tr": "{0} alanında required=true iken onDelete=setnull kullanılamaz.",
+    "en": "onDelete=setnull cannot be used while required=true on field {0}."
+  },
+  "error.uiUtilityOnServer": {
+    "tr": "UI utility server tarafında çalıştırılamaz: {0}",
+    "en": "UI utility cannot be executed on the server side: {0}"
+  },
+  "error.uniqueConstraintValueInUse": {
+    "tr": "\"{field}\" alanı için girilen değer zaten kullanımda.",
+    "en": "The value entered for the \"{field}\" field is already in use."
+  },
+  "error.unknown": {
+    "tr": "Bilinmeyen hata",
+    "en": "Unknown error"
+  },
+  "error.unknownVariable": {
+    "tr": "Bilinmeyen değişken veya typo: {0}",
+    "en": "Unknown variable or typo: {0}"
+  },
+  "error.usernameAndPasswordRequired": {
+    "tr": "Kullanıcı adı ve şifre zorunludur",
+    "en": "Username and password are required"
   },
   "errors.adminRequired": {
     "en": "Admin access required.",
@@ -746,6 +982,10 @@
   "errors.componentNotFound": {
     "en": "Component not found",
     "tr": "Bileşen bulunamadı"
+  },
+  "errors.databaseError": {
+    "en": "A database error occurred.",
+    "tr": "Bir veritabanı hatası oluştu."
   },
   "errors.deviceDuplicate": {
     "en": "A device with this ID already exists",
@@ -780,8 +1020,8 @@
     "tr": "Yasak"
   },
   "errors.forbiddenAdminOnly": {
-    "en": "Forbidden: API endpoints are strictly admin-only",
-    "tr": "Yasak: API uç noktaları sadece yöneticilere özeldir"
+    "en": "This resource is restricted to administrators.",
+    "tr": "Bu kaynağa sadece yöneticiler erişebilir."
   },
   "errors.importDataRequired": {
     "en": "Import data is required. Please provide a valid array",
@@ -828,8 +1068,8 @@
     "tr": "Geçersiz şablon paketi (JSON formatı hatalı)."
   },
   "errors.loginRequired": {
-    "en": "Please log in to access this page",
-    "tr": "Bu sayfaya erişmek için giriş yapmalısınız"
+    "en": "Login required to access this resource.",
+    "tr": "Bu kaynağa erişmek için giriş yapmanız gerekmektedir."
   },
   "errors.maskedSecretNotAllowed": {
     "en": "Cannot save a masked secret value. Please enter the actual value",
@@ -843,6 +1083,10 @@
     "en": "Current password is incorrect",
     "tr": "Mevcut şifre yanlış"
   },
+  "errors.operationFailed": {
+    "en": "Operation failed",
+    "tr": "İşlem başarısız oldu"
+  },
   "errors.pageLoadError": {
     "en": "Page could not be loaded.",
     "tr": "Sayfa yüklenemedi."
@@ -855,6 +1099,18 @@
     "en": "Rate limit exceeded. Please try again later.",
     "tr": "İstek sınırı aşıldı. Lütfen daha sonra tekrar deneyin."
   },
+  "errors.relationDeleteRestrictApplied": {
+    "en": "Cannot set onDelete to setnull for a required relation. Applied 'Restrict'.",
+    "tr": "Zorunlu ilişki (required) alanında onDelete 'setnull' olamaz. 'Restrict' (kısıtlama) uygulandı."
+  },
+  "errors.requiredFieldMissingInOldRecords": {
+    "en": "A newly required field is missing in some existing records. Please set it as optional, fill the data, and then set it as required.",
+    "tr": "Zorunlu olarak eklenen alan bazı eski kayıtlarda boş. Lütfen önce alanı zorunlu olmayan bir alan olarak kaydedip tüm kayıtları doldurun, ardından zorunlu hale getirin."
+  },
+  "errors.restrictDelete": {
+    "en": "Deletion restricted: This record is currently in use by another relation and cannot be deleted.",
+    "tr": "Silme engellendi: Bu kayıt aktif olarak başka bir varlık tarafından kullanılmaktadır."
+  },
   "errors.sessionExpired": {
     "en": "Access denied. Session expired.",
     "tr": "Erişim reddedildi. Oturum süresi doldu."
@@ -863,13 +1119,9 @@
     "en": "Access denied. Session invalid.",
     "tr": "Erişim reddedildi. Oturum geçersiz."
   },
-  "errors.sessionMismatch": {
-    "en": "Access denied. Session mismatch.",
-    "tr": "Erişim reddedildi. Oturum uyuşmazlığı."
-  },
   "errors.slugRequired": {
     "en": "Slug is required",
-    "tr": "Slug (Kısa Ad) zorunludur"
+    "tr": "Slug zorunludur"
   },
   "errors.superAdminRequired": {
     "en": "Super Admin access required.",
@@ -901,7 +1153,7 @@
   },
   "errors.typeRequired": {
     "en": "Type is required",
-    "tr": "Tür (Type) zorunludur"
+    "tr": "Tür zorunludur"
   },
   "errors.unauthorized": {
     "en": "Unauthorized access",
@@ -981,7 +1233,7 @@
   },
   "field.dataType": {
     "en": "Data Type",
-    "tr": "Veri Türü (Type)"
+    "tr": "Veri Türü"
   },
   "field.defaultLayout": {
     "tr": "Varsayılan Layout",
@@ -1001,7 +1253,7 @@
   },
   "field.fields": {
     "en": "Fields",
-    "tr": "Alanlar (Fields)"
+    "tr": "Alanlar"
   },
   "field.filterMax": {
     "en": "Max",
@@ -1037,11 +1289,11 @@
   },
   "field.hashAlgorithm": {
     "en": "Hash Algorithm",
-    "tr": "Şifreleme (Hash) Yöntemi"
+    "tr": "Şifreleme Yöntemi"
   },
   "field.hashtags": {
     "en": "Hashtags",
-    "tr": "Etiketler (Hashtags)"
+    "tr": "Etiketler"
   },
   "field.hashtagsHint": {
     "en": "Add tags for easy filtering in lists.",
@@ -1061,15 +1313,15 @@
   },
   "field.isAdminOnly": {
     "en": "Admin Only",
-    "tr": "Sadece Admin (Admin Only)"
+    "tr": "Sadece Admin"
   },
   "field.isSecret": {
     "en": "Secret Data",
-    "tr": "Gizli Veri (Secret)"
+    "tr": "Gizli Veri"
   },
   "field.keyExample": {
-    "en": "Key (e.g. utils.auth.hashPassword)",
-    "tr": "Key (ör: utils.auth.hashPassword)"
+    "en": "Key (e.g. globals.auth.hashPassword)",
+    "tr": "Key (ör: globals.auth.hashPassword)"
   },
   "field.langCode": {
     "en": "Language Code",
@@ -1078,10 +1330,6 @@
   "field.langDir": {
     "en": "Writing Direction",
     "tr": "Yazım Yönü"
-  },
-  "field.language": {
-    "en": "Language",
-    "tr": "Dil"
   },
   "field.linkedRecords": {
     "en": "Linked Records",
@@ -1115,13 +1363,17 @@
     "en": "Page Title",
     "tr": "Sayfa Başlığı"
   },
+  "field.pageType": {
+    "en": "Page Type",
+    "tr": "Sayfa Tipi"
+  },
   "field.password": {
     "en": "Password",
     "tr": "Şifre"
   },
   "field.permissionHashtags": {
     "en": "Permission Hashtags",
-    "tr": "Yetki Etiketleri (Hashtags)"
+    "tr": "Yetki Etiketleri"
   },
   "field.permissionHashtagsHint": {
     "en": "Set required tags for accessing the generated APIs and Pages.",
@@ -1129,7 +1381,7 @@
   },
   "field.permissionTags": {
     "en": "Permission Tags",
-    "tr": "Yetkili Etiketler (Tags)"
+    "tr": "Yetkili Etiketler"
   },
   "field.permissionTagsHint": {
     "en": "e.g., admin, finance, page-1",
@@ -1411,9 +1663,69 @@
     "en": "Version",
     "tr": "Versiyon"
   },
+  "ide.appStudio": {
+    "tr": "App Studio",
+    "en": "App Studio"
+  },
+  "ide.code": {
+    "tr": "Kod",
+    "en": "Code"
+  },
+  "ide.console": {
+    "tr": "Konsol",
+    "en": "Console"
+  },
+  "ide.css": {
+    "tr": "CSS",
+    "en": "CSS"
+  },
+  "ide.html": {
+    "tr": "HTML",
+    "en": "HTML"
+  },
+  "ide.js": {
+    "tr": "JS",
+    "en": "JS"
+  },
+  "ide.preview": {
+    "tr": "Önizleme",
+    "en": "Preview"
+  },
+  "ide.test": {
+    "tr": "Test",
+    "en": "Test"
+  },
+  "ide.testPayloadJson": {
+    "tr": "Test Payload (JSON)",
+    "en": "Test Payload (JSON)"
+  },
+  "ide.testPayloadJsonArray": {
+    "tr": "Test Payload (JSON Array)",
+    "en": "Test Payload (JSON Array)"
+  },
+  "ide.testPayloadTitle": {
+    "tr": "Test Payload (JSON Array for args)",
+    "en": "Test Payload (JSON Array for args)"
+  },
+  "ide.testResult": {
+    "tr": "Test Sonucu",
+    "en": "Test Result"
+  },
+  "ide.value": {
+    "tr": "Değer",
+    "en": "Value"
+  },
   "label.commandName": {
     "en": "Command Name (e.g., toggle_led, reboot, set_speed)",
     "tr": "Komut Adı (örn: toggle_led, reboot, set_speed)"
+  },
+  "login.safeModeSuccess": {
+    "tr": "Safe Mode: Giriş başarılı, güvenli moda geçiliyor.",
+    "en": "Safe Mode: Login successful, entering safe mode."
+  },
+  "login.safeModeWarning": {
+    "tr": "Sistem kurtarma (Safe Mode) modundasınız. Bu form veritabanından bağımsız olarak çalışır. Sadece yetkili yöneticiler giriş yapmalıdır.",
+    "en": "You are in Safe Mode. This form operates independently from the database. Only authorized administrators should log in."
   },
   "menu.contactAdmin": {
     "en": "Please contact system administrator.",
@@ -1425,11 +1737,19 @@
   },
   "menu.endpoints": {
     "en": "Endpoints",
-    "tr": "Uç Noktalar (Endpoints)"
+    "tr": "Uç Noktalar"
   },
   "menu.entities": {
     "en": "Entities",
     "tr": "Varlıklar"
+  },
+  "menu.exitSafeMode": {
+    "tr": "Güvenli Moddan Çık",
+    "en": "Exit Safe Mode"
+  },
+  "menu.globals": {
+    "en": "Globals",
+    "tr": "Küresel Nesneler"
   },
   "menu.logout": {
     "en": "Logout",
@@ -1448,8 +1768,8 @@
     "tr": "Menü Tanımlanmadı"
   },
   "menu.pages": {
-    "en": "Pages",
-    "tr": "Sayfalar"
+    "tr": "Sayfalar",
+    "en": "Pages"
   },
   "menu.records": {
     "en": "Records",
@@ -1468,8 +1788,8 @@
     "tr": "Güvenlik & Erişim"
   },
   "menu.settings": {
-    "en": "Settings",
-    "tr": "Ayarlar"
+    "tr": "Ayarlar",
+    "en": "Settings"
   },
   "menu.systemPanel": {
     "en": "System Panel",
@@ -1477,27 +1797,19 @@
   },
   "menu.tenantWorkspace": {
     "en": "Tenant Workspace",
-    "tr": "Firma (Tenant) Alanı"
+    "tr": "Firma Alanı"
   },
   "menu.tenants": {
     "en": "Tenants",
-    "tr": "Kiracılar (Tenants)"
+    "tr": "Kiracılar"
   },
   "menu.users": {
-    "en": "Users",
-    "tr": "Kullanıcılar"
-  },
-  "menu.utils": {
-    "en": "Utils",
-    "tr": "Araçlar"
+    "tr": "Kullanıcılar",
+    "en": "Users"
   },
   "menu.workers": {
     "en": "Workers",
     "tr": "Arka Plan Görevleri"
-  },
-  "message.actionSuccess": {
-    "en": "Action successful",
-    "tr": "İşlem başarılı"
   },
   "message.added": {
     "en": "Added successfully",
@@ -1506,10 +1818,6 @@
   "message.browserNoPush": {
     "en": "Your browser does not support push notifications.",
     "tr": "Tarayıcınız Push bildirimlerini desteklemiyor."
-  },
-  "message.codeSaveNotAllowed": {
-    "en": "Code Save is not allowed during creation.",
-    "tr": "Yeni kayıt oluşturulurken Kodu Kaydet kullanılamaz."
   },
   "message.codeSavedSuccess": {
     "en": "Code saved successfully",
@@ -1550,6 +1858,14 @@
   "message.daemonStarted": {
     "en": "Daemon started!",
     "tr": "Daemon başlatıldı!"
+  },
+  "message.daemonTestStarted": {
+    "tr": "Daemon arkaplanda teste başladı. Durdurmak için Testi Durdur butonunu kullanın.",
+    "en": "Daemon started testing in the background. Use the Stop Test button to stop it."
+  },
+  "message.daemonTestStopped": {
+    "tr": "Arkaplan Daemon testi durduruldu.",
+    "en": "Background Daemon test stopped."
   },
   "message.defaultPageHint": {
     "en": "Default page shown after login",
@@ -1603,9 +1919,17 @@
     "en": "Export failed",
     "tr": "Dışa aktarma başarısız"
   },
+  "message.exported": {
+    "tr": "Uygulama başarıyla indirildi.",
+    "en": "Application successfully exported."
+  },
   "message.fileReadError": {
     "en": "File could not be read.",
     "tr": "Dosya okunamadı."
+  },
+  "message.generationComplete": {
+    "tr": "Üretim Tamamlandı! {api} API, {page} Sayfa eklendi.",
+    "en": "Generation Complete! {api} APIs, {page} Pages added."
   },
   "message.historyLoaded": {
     "en": "History version loaded. You must click Save to persist.",
@@ -1622,6 +1946,14 @@
   "message.importSuccess": {
     "en": "Import completed successfully",
     "tr": "İçe aktarma başarıyla tamamlandı"
+  },
+  "message.imported": {
+    "tr": "Uygulama başarıyla içeri aktarıldı.",
+    "en": "Application imported successfully."
+  },
+  "message.importing": {
+    "tr": "İçe aktarılıyor, lütfen bekleyin...",
+    "en": "Importing, please wait..."
   },
   "message.invalidCsvFormat": {
     "en": "CSV file is empty or contains only header.",
@@ -1650,6 +1982,10 @@
   "message.loadError": {
     "en": "Failed to load data",
     "tr": "Veri yüklenemedi"
+  },
+  "message.loading": {
+    "tr": "Yükleniyor...",
+    "en": "Loading..."
   },
   "message.loadingDevice": {
     "en": "Loading device information...",
@@ -1731,6 +2067,14 @@
     "en": "Users with this role will only see these links on the left menu when they log in.",
     "tr": "Bu role sahip kullanıcılar giriş yaptığında sol menüde sadece aşağıdaki bağlantılar gösterilecektir."
   },
+  "message.running": {
+    "tr": "Çalıştırılıyor...",
+    "en": "Running..."
+  },
+  "message.safeModeWarning": {
+    "tr": "DİKKAT: Veritabanından izole edilmiş Güvenli Mod'dasınız. Sayfa şablonları şu an çalıştırılmıyor. Lütfen \"Pages\" menüsünden bozulan kodları onarın ve Güvenli Mod'dan çıkın.",
+    "en": "ATTENTION: You are in Safe Mode, isolated from the database. Page templates are currently disabled. Please repair broken code from the \"Pages\" menu and exit Safe Mode."
+  },
   "message.saveCodeNotAllowed": {
     "en": "Save Code is not available when creating a new record.",
     "tr": "Yeni kayıt oluşturulurken Kodu Kaydet kullanılamaz."
@@ -1743,13 +2087,13 @@
     "en": "Error occurred while saving",
     "tr": "Kayıt sırasında bir hata oluştu"
   },
-  "message.saveSuccess": {
-    "en": "Saved successfully",
-    "tr": "Kayıt başarıyla tamamlandı"
-  },
   "message.saved": {
-    "en": "Saved successfully",
-    "tr": "Başarıyla kaydedildi"
+    "tr": "Kaydedildi",
+    "en": "Saved"
+  },
+  "message.scanned": {
+    "tr": "başarıyla tarandı.",
+    "en": "scanned successfully."
   },
   "message.scriptMustBeObject": {
     "en": "Script must be an object (e.g. { setup() { ... } }).",
@@ -1791,10 +2135,6 @@
     "en": "WARNING: This operation will DELETE all existing data in the database (except admin). Are you sure you want to continue?",
     "tr": "DİKKAT: Bu işlem veritabanındaki tüm mevcut verileri SİLECEK (admin hariç). Devam etmek istediğinize emin misiniz?"
   },
-  "message.templateImported": {
-    "en": "Template imported successfully.",
-    "tr": "Şablon başarıyla yüklendi."
-  },
   "message.transOverrideHint": {
     "en": "This translation is inherited from Master tenant. You can enter local overrides for some or all languages.",
     "tr": "Bu çevirinin tüm dillerdeki karşılığı Master tenant'tan miras alınmıştır. Dilerseniz bazı dillere veya tüm dillere yerel olarak override girebilirsiniz."
@@ -1802,6 +2142,10 @@
   "message.undefined": {
     "en": "Undefined",
     "tr": "Tanımsız"
+  },
+  "message.unsavedChangesConfirm": {
+    "tr": "Kaydedilmemiş değişiklikleriniz var. Devam etmek istiyor musunuz?",
+    "en": "You have unsaved changes. Do you want to continue?"
   },
   "message.updated": {
     "en": "Updated",
@@ -1811,6 +2155,10 @@
     "en": "Already running",
     "tr": "Zaten çalışıyor"
   },
+  "message.workerExecutionComplete": {
+    "tr": "Çalıştırma tamamlandı.\n(Worker kodları geriye veri döndürmez. Çıktıları görmek için Sanal Konsol sekmesini kontrol ediniz.)",
+    "en": "Execution complete.\n(Worker codes do not return data. Check Virtual Console tab to see outputs.)"
+  },
   "message.workerNotRunning": {
     "en": "Not running",
     "tr": "Çalışmıyor"
@@ -1819,9 +2167,229 @@
     "en": "Started",
     "tr": "Başlatıldı"
   },
-  "message.workerStopped": {
-    "en": "Stopped",
-    "tr": "Durduruldu"
+  "monaco.darkMode": {
+    "tr": "Koyu Tema",
+    "en": "Dark Mode"
+  },
+  "monaco.exitFullscreen": {
+    "tr": "Normale Dön",
+    "en": "Exit Fullscreen"
+  },
+  "monaco.fullscreen": {
+    "tr": "Tam Ekran",
+    "en": "Fullscreen"
+  },
+  "monaco.jsdoc.bcrypt": {
+    "tr": "Şifre hashleme ve doğrulama için bcrypt kütüphanesi.\n       * Güvenli şifre hash'leri oluşturma ve karşılaştırma.",
+    "en": "bcrypt library for password hashing and verification.\n       * Create and compare secure password hashes."
+  },
+  "monaco.jsdoc.bcryptCompare": {
+    "tr": "Hash'i asenkron olarak doğrular.",
+    "en": "Verifies the hash asynchronously."
+  },
+  "monaco.jsdoc.bcryptCompareDoc": {
+    "tr": "Şifreyi mevcut bcrypt hash ile asenkron karşılaştırır.\n\nÖrnek:\n```javascript\nconst isValid = await bcrypt.compare(\"test123\", storedHash);\n```",
+    "en": "Asynchronously compares the password with an existing bcrypt hash.\n\nExample:\n```javascript\nconst isValid = await bcrypt.compare(\"test123\", storedHash);\n```"
+  },
+  "monaco.jsdoc.bcryptCompareSyncDoc": {
+    "tr": "Şifreyi mevcut bcrypt hash ile senkron karşılaştırır.\n\nÖrnek:\n```javascript\nconst isValid = bcrypt.compareSync(\"test123\", storedHash);\n```",
+    "en": "Synchronously compares the password with an existing bcrypt hash.\n\nExample:\n```javascript\nconst isValid = bcrypt.compareSync(\"test123\", storedHash);\n```"
+  },
+  "monaco.jsdoc.bcryptGenSalt": {
+    "tr": "Asenkron salt üretir.",
+    "en": "Generates salt asynchronously."
+  },
+  "monaco.jsdoc.bcryptGenSaltDoc": {
+    "tr": "Asenkron olarak bcrypt salt üretir.\n\nÖrnek:\n```javascript\nconst salt = await bcrypt.genSalt(12);\n```",
+    "en": "Asynchronously generates a bcrypt salt.\n\nExample:\n```javascript\nconst salt = await bcrypt.genSalt(12);\n```"
+  },
+  "monaco.jsdoc.bcryptGenSaltSyncDoc": {
+    "tr": "Senkron olarak bcrypt salt üretir.\n\nÖrnek:\n```javascript\nconst salt = bcrypt.genSaltSync(12);\nconst hash = bcrypt.hashSync(\"pass\", salt);\n```",
+    "en": "Synchronously generates a bcrypt salt.\n\nExample:\n```javascript\nconst salt = bcrypt.genSaltSync(12);\nconst hash = bcrypt.hashSync(\"pass\", salt);\n```"
+  },
+  "monaco.jsdoc.bcryptGetRounds": {
+    "tr": "Bir hash'in round sayısını döndürür.",
+    "en": "Returns the number of rounds of a hash."
+  },
+  "monaco.jsdoc.bcryptGetRoundsDoc": {
+    "tr": "Bir bcrypt hash'inin round sayısını döndürür.\n\nÖrnek:\n```javascript\nconst rounds = bcrypt.getRounds(storedHash); // 10\n```",
+    "en": "Returns the number of rounds of a bcrypt hash.\n\nExample:\n```javascript\nconst rounds = bcrypt.getRounds(storedHash); // 10\n```"
+  },
+  "monaco.jsdoc.bcryptHash": {
+    "tr": "Şifreyi asenkron olarak hashler.",
+    "en": "Hashes the password asynchronously."
+  },
+  "monaco.jsdoc.bcryptHashDoc": {
+    "tr": "Şifreyi asenkron olarak bcrypt ile hashler.\n\nÖrnek:\n```javascript\nconst hash = await bcrypt.hash(\"myPassword\", 10);\n```",
+    "en": "Hashes the password asynchronously with bcrypt.\n\nExample:\n```javascript\nconst hash = await bcrypt.hash(\"myPassword\", 10);\n```"
+  },
+  "monaco.jsdoc.bcryptHashSyncDoc": {
+    "tr": "Şifreyi senkron olarak bcrypt ile hashler.\n\nÖrnek:\n```javascript\nconst hash = bcrypt.hashSync(\"myPassword\", 10);\n```",
+    "en": "Hashes the password synchronously with bcrypt.\n\nExample:\n```javascript\nconst hash = bcrypt.hashSync(\"myPassword\", 10);\n```"
+  },
+  "monaco.jsdoc.bcryptjs": {
+    "tr": "Şifre Hashleme (bcryptjs)",
+    "en": "Password Hashing (bcryptjs)"
+  },
+  "monaco.jsdoc.buffer": {
+    "tr": "Ham binary, hex veya base64 veri dönüşümleri ve işlemeleri için Node.js Buffer sınıfı.",
+    "en": "Node.js Buffer class for raw binary, hex or base64 data conversions and processing."
+  },
+  "monaco.jsdoc.bufferDoc": {
+    "tr": "Ham binary, hex veya base64 veri dönüşümleri ve işlemeleri için Node.js Buffer sınıfı.\n\nÖrnek:\n```javascript\nconst buf = Buffer.from(\"data\");\n```",
+    "en": "Node.js Buffer class for raw binary, hex or base64 data conversions and processing.\n\nExample:\n```javascript\nconst buf = Buffer.from(\"data\");\n```"
+  },
+  "monaco.jsdoc.crypto": {
+    "tr": "Hash alma, HMAC imzalama veya şifreleme/çözme işlemleri için Node.js crypto modülü.",
+    "en": "Node.js crypto module for hashing, HMAC signing or encryption/decryption operations."
+  },
+  "monaco.jsdoc.cryptoDoc": {
+    "tr": "Hash alma, HMAC imzalama veya şifreleme/çözme işlemleri için Node.js crypto modülü.\n\nÖrnek:\n```javascript\nconst hash = crypto.createHash(\"sha256\").update(data).digest(\"hex\");\n```",
+    "en": "Node.js crypto module for hashing, HMAC signing or encryption/decryption operations.\n\nExample:\n```javascript\nconst hash = crypto.createHash(\"sha256\").update(data).digest(\"hex\");\n```"
+  },
+  "monaco.jsdoc.db": {
+    "tr": "Veritabanı bağlantısı. Tagged template literal kullanarak doğrudan SQL çalıştırabilirsiniz.\n       * Örnek: const rows = await db\\`SELECT * FROM devices\\`;",
+    "en": "Database connection. You can run SQL directly using tagged template literal.\n       * Example: const rows = await db\\`SELECT * FROM devices\\`;"
+  },
+  "monaco.jsdoc.dbBeginDoc": {
+    "tr": "Veritabanı transaction (işlem) başlatır. Hata durumunda otomatik rollback yapar.\n\nÖrnek:\n```javascript\nawait db.begin(async sql => {\n  await sql`INSERT INTO ...`;\n});\n```",
+    "en": "Starts a database transaction. Automatically rolls back on error.\n\nExample:\n```javascript\nawait db.begin(async sql => {\n  await sql`INSERT INTO ...`;\n});\n```"
+  },
+  "monaco.jsdoc.dbDoc": {
+    "tr": "Veritabanı bağlantısı. Tagged template literal kullanarak doğrudan SQL çalıştırabilirsiniz.\n\nÖrnek:\n```javascript\nconst rows = await db\\`SELECT * FROM devices\\`;\n```",
+    "en": "Database connection. You can run SQL directly using tagged template literal.\n\nExample:\n```javascript\nconst rows = await db\\`SELECT * FROM devices\\`;\n```"
+  },
+  "monaco.jsdoc.dbUnsafeDoc": {
+    "tr": "Parametreli raw SQL sorgusu çalıştırır.\n\nÖrnek:\n```javascript\nconst rows = await db.unsafe(\"SELECT * FROM devices WHERE id = $1\", [1]);\n```",
+    "en": "Runs a parameterized raw SQL query.\n\nExample:\n```javascript\nconst rows = await db.unsafe(\"SELECT * FROM devices WHERE id = $1\", [1]);\n```"
+  },
+  "monaco.jsdoc.dirname": {
+    "tr": "Mevcut çalışma dizini.",
+    "en": "Current working directory."
+  },
+  "monaco.jsdoc.dirnameDoc": {
+    "tr": "Mevcut çalışma dizini.",
+    "en": "Current working directory."
+  },
+  "monaco.jsdoc.fetch": {
+    "tr": "Global fetch API. HTTP istekleri yapmak için kullanılır.",
+    "en": "Global fetch API. Used to make HTTP requests."
+  },
+  "monaco.jsdoc.filename": {
+    "tr": "Mevcut dosya adı.",
+    "en": "Current file name."
+  },
+  "monaco.jsdoc.filenameDoc": {
+    "tr": "Mevcut dosya adı.",
+    "en": "Current file name."
+  },
+  "monaco.jsdoc.payload": {
+    "tr": "Gelen istek parametreleri veya görev (Scheduler) bilgileri.",
+    "en": "Incoming request parameters or task (Scheduler) information."
+  },
+  "monaco.jsdoc.payloadBody": {
+    "tr": "Middleware: Gelen istek gövdesi (JSON body)",
+    "en": "Middleware: Incoming request body (JSON body)"
+  },
+  "monaco.jsdoc.payloadDoc": {
+    "tr": "Gelen istek parametreleri ve gövdesi (sadece Middleware).\n\nÖrnek:\n```javascript\nconst id = payload.params.id;\n```",
+    "en": "Incoming request parameters and body (Middleware only).\n\nExample:\n```javascript\nconst id = payload.params.id;\n```"
+  },
+  "monaco.jsdoc.payloadHeaders": {
+    "tr": "Middleware: Gelen istek başlıkları (Headers)",
+    "en": "Middleware: Incoming request headers"
+  },
+  "monaco.jsdoc.payloadJobId": {
+    "tr": "Scheduler: Çalışan görevin benzersiz ID'si",
+    "en": "Scheduler: Unique ID of the running task"
+  },
+  "monaco.jsdoc.payloadJobName": {
+    "tr": "Scheduler: Çalışan görevin adı",
+    "en": "Scheduler: Name of the running task"
+  },
+  "monaco.jsdoc.payloadMethod": {
+    "tr": "Middleware: HTTP Metodu (GET, POST vs.)",
+    "en": "Middleware: HTTP Method (GET, POST etc.)"
+  },
+  "monaco.jsdoc.payloadParams": {
+    "tr": "Middleware: URL parametreleri (Örn: /api/:id -> payload.params.id)",
+    "en": "Middleware: URL parameters (e.g. /api/:id -> payload.params.id)"
+  },
+  "monaco.jsdoc.payloadQuery": {
+    "tr": "Middleware: Query string parametreleri",
+    "en": "Middleware: Query string parameters"
+  },
+  "monaco.jsdoc.payloadRunAt": {
+    "tr": "Scheduler: Görevin tetiklendiği zaman (Tarih/Saat)",
+    "en": "Scheduler: Trigger time of the task (Date/Time)"
+  },
+  "monaco.jsdoc.process": {
+    "tr": "Node.js process nesnesi.",
+    "en": "Node.js process object."
+  },
+  "monaco.jsdoc.publishMQTT": {
+    "tr": "Belirli bir konuya (topic) MQTT mesajı yayınlar. Başarılı ise true döner.",
+    "en": "Publishes an MQTT message to a specific topic. Returns true if successful."
+  },
+  "monaco.jsdoc.publishMQTTDoc": {
+    "tr": "Belirli bir konuya (topic) MQTT mesajı yayınlar. Başarılı ise true döner.\n\nÖrnek:\n```javascript\npublishMQTT(\"commands/led\", JSON.stringify({ status: true }));\n```",
+    "en": "Publishes an MQTT message to a specific topic. Returns true if successful.\n\nExample:\n```javascript\npublishMQTT(\"commands/led\", JSON.stringify({ status: true }));\n```"
+  },
+  "monaco.jsdoc.publishWS": {
+    "tr": "(Backend) Belirli bir WebSocket odasına (path) veri gönderir.\n       * Örnek: publishWS('/api/ws/kazan', { sicaklik: 45 });",
+    "en": "(Backend) Sends data to a specific WebSocket room (path).\n       * Example: publishWS('/api/ws/kazan', { sicaklik: 45 });"
+  },
+  "monaco.jsdoc.readModbus": {
+    "tr": "Modbus TCP üzerinden veri okur.",
+    "en": "Reads data via Modbus TCP."
+  },
+  "monaco.jsdoc.readModbusDataDoc": {
+    "tr": "Modbus TCP üzerinden veri okur.\n\nÖrnek:\n```javascript\nconst val = await readModbusData(\"192.168.1.50\", 502, 1, 40001, 1, \"holding\", \"uint16\");\n```",
+    "en": "Reads data via Modbus TCP.\n\nExample:\n```javascript\nconst val = await readModbusData(\"192.168.1.50\", 502, 1, 40001, 1, \"holding\", \"uint16\");\n```"
+  },
+  "monaco.jsdoc.require": {
+    "tr": "Node.js require modülü. Kütüphaneleri yüklemek için kullanılır.",
+    "en": "Node.js require module. Used to load libraries."
+  },
+  "monaco.jsdoc.requireDoc": {
+    "tr": "Node.js require modülü. Kütüphaneleri yüklemek için kullanılır.\n\nÖrnek:\n```javascript\nconst fs = require(\"fs\");\n```",
+    "en": "Node.js require module. Used to load libraries.\n\nExample:\n```javascript\nconst fs = require(\"fs\");\n```"
+  },
+  "monaco.jsdoc.sendEmail": {
+    "tr": "SMTP sunucusu üzerinden e-posta gönderir.",
+    "en": "Sends e-mail via SMTP server."
+  },
+  "monaco.jsdoc.sendEmailDoc": {
+    "tr": "SMTP sunucusu üzerinden e-posta gönderir.\n\nÖrnek:\n```javascript\nawait sendEmail({\n  to: \"92muratyigit@gmail.com\",\n  subject: \"Alarm\",\n  text: \"Kritik Sıcaklık!\"\n});\n```",
+    "en": "Sends e-mail via SMTP server.\n\nExample:\n```javascript\nawait sendEmail({\n  to: \"92muratyigit@gmail.com\",\n  subject: \"Alarm\",\n  text: \"Kritik Sıcaklık!\"\n});\n```"
+  },
+  "monaco.jsdoc.sleep": {
+    "tr": "Asenkron bekletme metodu (maksimum 5000 ms sınırı vardır).\n       * Örnek: await sleep(1000); // 1 saniye bekler",
+    "en": "Asynchronous wait method (maximum 5000 ms limit).\n       * Example: await sleep(1000); // waits for 1 second"
+  },
+  "monaco.jsdoc.subscribeMQTT": {
+    "tr": "(Microservices) Gelen tüm MQTT mesajlarını dinlemek için abone olur.",
+    "en": "(Microservices) Subscribes to listen to all incoming MQTT messages."
+  },
+  "monaco.jsdoc.transaction": {
+    "tr": "Transaction (SQL İşlemleri)",
+    "en": "Transaction (SQL Operations)"
+  },
+  "monaco.jsdoc.writeModbus": {
+    "tr": "Modbus TCP üzerinden veri yazar.",
+    "en": "Writes data via Modbus TCP."
+  },
+  "monaco.jsdoc.writeModbusDataDoc": {
+    "tr": "Modbus TCP üzerinden veri yazar.\n\nÖrnek:\n```javascript\nawait writeModbusData(\"192.168.1.50\", 502, 1, 40001, 123, \"uint16\");\n```",
+    "en": "Writes data via Modbus TCP.\n\nExample:\n```javascript\nawait writeModbusData(\"192.168.1.50\", 502, 1, 40001, 123, \"uint16\");\n```"
+  },
+  "monaco.lightMode": {
+    "tr": "Açık Tema",
+    "en": "Light Mode"
+  },
+  "page.about": {
+    "en": "About Us",
+    "tr": "Hakkımızda"
   },
   "page.changePassword": {
     "en": "Change Password",
@@ -1830,10 +2398,6 @@
   "page.customMiddlewares": {
     "en": "Custom Middlewares",
     "tr": "Özel Middleware'ler"
-  },
-  "page.devices": {
-    "en": "Device Management",
-    "tr": "Cihaz Yönetimi"
   },
   "page.editLang": {
     "en": "Edit Language",
@@ -1857,7 +2421,7 @@
   },
   "page.noLandingPage": {
     "en": "You have not created a landing page for this tenant yet.",
-    "tr": "Bu kiracı (tenant) için henüz bir landing page (karşılama sayfası) oluşturmadınız."
+    "tr": "Bu kiracı için henüz bir landing page oluşturmadınız."
   },
   "page.notifications": {
     "en": "Notifications",
@@ -1865,7 +2429,7 @@
   },
   "page.pushDesc": {
     "en": "Allow push notifications on this device.",
-    "tr": "Bu cihazda anlık bildirim (Push Notification) almak için izin verin."
+    "tr": "Bu cihazda anlık bildirim almak için izin verin."
   },
   "page.returnToWorkspace": {
     "en": "Return to {slug} workspace",
@@ -1909,15 +2473,15 @@
   },
   "pageType.landing": {
     "en": "Landing Page",
-    "tr": "Landing Page (Karşılama)"
+    "tr": "Landing Page"
   },
   "pageType.layout": {
     "en": "System Layout",
-    "tr": "Sistem Ana Şablonu (Layout)"
+    "tr": "Sistem Ana Şablonu"
   },
   "pageType.login": {
     "en": "System Login Screen",
-    "tr": "Sistem Giriş Ekranı (Login)"
+    "tr": "Sistem Giriş Ekranı"
   },
   "pageType.regular": {
     "en": "Regular Page",
@@ -1927,21 +2491,33 @@
     "en": "Enter value...",
     "tr": "Değer girin..."
   },
+  "placeholder.minMaxDate": {
+    "tr": "2024-01-01 veya today()-2d",
+    "en": "2024-01-01 or today()-2d"
+  },
+  "placeholder.minMaxTime": {
+    "tr": "08:30",
+    "en": "08:30"
+  },
+  "placeholder.requiredKeys": {
+    "tr": "isim, yas, tcNo",
+    "en": "name, age, ssn"
+  },
   "placeholder.tenantExample": {
     "en": "e.g: Akpa",
     "tr": "Örn: Akpa"
   },
   "policy.cascade": {
     "en": "Cascade",
-    "tr": "Zincirleme (Cascade)"
+    "tr": "Zincirleme"
   },
   "policy.restrict": {
     "en": "Restrict",
-    "tr": "Kısıtla (Restrict)"
+    "tr": "Kısıtla"
   },
   "policy.setNull": {
     "en": "Set Null",
-    "tr": "Boş Bırak (Set Null)"
+    "tr": "Boş Bırak"
   },
   "record.prefix": {
     "en": "Record #",
@@ -1957,11 +2533,11 @@
   },
   "rule.isInteger": {
     "en": "Integer Only",
-    "tr": "Sadece Tam Sayı (Integer)"
+    "tr": "Sadece Tam Sayı"
   },
   "rule.isTrue": {
     "en": "Must be True",
-    "tr": "Zorunlu Kabul (Sadece True)"
+    "tr": "Zorunlu Kabul"
   },
   "rule.maxDate": {
     "en": "Maximum Date",
@@ -2005,11 +2581,11 @@
   },
   "rule.requiredKeys": {
     "en": "Required JSON Keys",
-    "tr": "Gerekli JSON Anahtarları (Keys)"
+    "tr": "Gerekli JSON Anahtarları"
   },
   "rule.step": {
     "en": "Step Increment",
-    "tr": "Belirli Katlarda Artış (Step)"
+    "tr": "Belirli Katlarda Artış"
   },
   "rule.timeStep": {
     "en": "Time Step (Minutes)",
@@ -2119,10 +2695,6 @@
     "en": "Template imported successfully.",
     "tr": "Şablon başarıyla içe aktarıldı."
   },
-  "tab.code": {
-    "en": "Code",
-    "tr": "Kod"
-  },
   "tab.console": {
     "en": "Console",
     "tr": "Konsol"
@@ -2130,10 +2702,6 @@
   "tab.preview": {
     "en": "Preview",
     "tr": "Önizleme"
-  },
-  "tab.script": {
-    "tr": "Kod",
-    "en": "Script"
   },
   "tab.style": {
     "tr": "Stil",
@@ -2147,17 +2715,9 @@
     "en": "Additional Info",
     "tr": "Ek Bilgiler"
   },
-  "table.allowedTags": {
-    "en": "Allowed Tags",
-    "tr": "Yetkili Etiketler"
-  },
   "table.authType": {
     "en": "Auth Type",
     "tr": "Yetki Tipi"
-  },
-  "table.autostart": {
-    "en": "Autostart",
-    "tr": "Autostart"
   },
   "table.createdAt": {
     "en": "Created At",
@@ -2167,33 +2727,41 @@
     "en": "Cron / Autostart",
     "tr": "Zamanlayıcı / Otomatik Başlatma"
   },
-  "table.cronExpression": {
-    "en": "Cron Expression",
-    "tr": "Cron İfadesi"
-  },
   "table.description": {
     "en": "Description",
     "tr": "Açıklama"
   },
-  "table.deviceId": {
-    "en": "Device ID",
-    "tr": "Cihaz ID"
+  "table.deviceCount": {
+    "tr": "Cihaz (Device)",
+    "en": "Device"
   },
-  "table.hashtags": {
-    "en": "Hashtags",
-    "tr": "Etiketler (Hashtags)"
+  "table.duckdbTelemetry": {
+    "tr": "DuckDB (Telemetry)",
+    "en": "DuckDB (Telemetry)"
+  },
+  "table.endpointCount": {
+    "tr": "Uç Nokta (Endpoint)",
+    "en": "Endpoint"
+  },
+  "table.entityCount": {
+    "tr": "Varlık Şeması (Entity)",
+    "en": "Entity"
   },
   "table.homePage": {
     "en": "Home Page",
     "tr": "Ana Sayfa"
   },
-  "table.id": {
-    "en": "ID",
-    "tr": "ID"
-  },
   "table.langDir": {
     "en": "Direction",
     "tr": "Yön"
+  },
+  "table.languageCount": {
+    "tr": "Dil (Language)",
+    "en": "Language"
+  },
+  "table.pageCount": {
+    "tr": "Sayfa (Page)",
+    "en": "Page"
   },
   "table.pageType": {
     "en": "Page Type",
@@ -2203,13 +2771,13 @@
     "en": "Payload (JSON)",
     "tr": "Payload (JSON)"
   },
-  "table.priority": {
-    "en": "Priority",
-    "tr": "Öncelik"
+  "table.recordCount": {
+    "tr": "Veri Kaydı (Record)",
+    "en": "Record"
   },
-  "table.routePattern": {
-    "en": "Route Pattern",
-    "tr": "Route Pattern"
+  "table.roleCount": {
+    "tr": "Rol (Role)",
+    "en": "Role"
   },
   "table.schema": {
     "en": "Schema",
@@ -2219,29 +2787,33 @@
     "en": "Secret",
     "tr": "Gizli"
   },
-  "table.slug": {
-    "en": "URL Slug",
-    "tr": "URL Kısa Adı"
-  },
   "table.source": {
     "en": "Source",
     "tr": "Kaynak"
   },
+  "table.sqliteAppDb": {
+    "tr": "SQLite (App DB)",
+    "en": "SQLite (App DB)"
+  },
   "table.targetRecordId": {
     "en": "Target Record",
-    "tr": "Bağlı Varlık (Record ID)"
+    "tr": "Bağlı Varlık"
   },
   "table.timestamp": {
     "en": "Timestamp",
-    "tr": "Zaman (Timestamp)"
-  },
-  "table.transKey": {
-    "en": "Key",
-    "tr": "Anahtar (Key)"
+    "tr": "Zaman"
   },
   "table.updatedAt": {
     "en": "Updated At",
     "tr": "Güncellenme"
+  },
+  "table.userCount": {
+    "tr": "Kullanıcı (User)",
+    "en": "User"
+  },
+  "table.workerCount": {
+    "tr": "Görev (Worker)",
+    "en": "Worker"
   },
   "theme.darkMode": {
     "en": "Switch to Dark Mode",
@@ -2258,6 +2830,10 @@
   "validation.alphanumeric": {
     "en": "Only letters and numbers are allowed.",
     "tr": "Sadece harf ve rakam kullanılabilir."
+  },
+  "validation.alphanumericOnly": {
+    "tr": "Sadece küçük harf, rakam ve alt çizgi kullanılabilir.",
+    "en": "Only lowercase letters, numbers, and underscores are allowed."
   },
   "validation.enterFieldName": {
     "en": "Enter field name",
@@ -2331,6 +2907,10 @@
     "en": "must be approved.",
     "tr": "onaylanmalıdır."
   },
+  "validation.noSetNullIfRequired": {
+    "tr": "Required alanlarda setnull kullanılamaz.",
+    "en": "setnull cannot be used for required fields."
+  },
   "validation.noWeekend": {
     "en": "Weekends cannot be selected.",
     "tr": "Hafta sonu seçilemez."
@@ -2348,8 +2928,12 @@
     "tr": "İstenen formata uymuyor."
   },
   "validation.required": {
-    "en": "This field is required",
-    "tr": "Bu alan zorunludur"
+    "en": "Please fill in the {field} field",
+    "tr": "Lütfen {field} alanını doldurun"
+  },
+  "validation.reservedWord": {
+    "tr": "Bu kelime sistem tarafından rezerve edilmiştir.",
+    "en": "This word is reserved by the system."
   },
   "validation.stepMismatch": {
     "en": "Value must be {0} or its multiples.",
@@ -2358,53 +2942,5 @@
   "validation.tenantSlugPattern": {
     "en": "Can only contain lowercase letters, numbers, and dashes (-)",
     "tr": "Sadece kck harf, rakam ve tire (-) icerebilir"
-  },
-  "page.about": {
-    "en": "About Us",
-    "tr": "Hakkımızda"
-  },
-  "about.heroTitle": {
-    "en": "Innovative Industrial Platform",
-    "tr": "Yenilikçi Endüstriyel Platform"
-  },
-  "about.heroDesc": {
-    "en": "We take your production and management processes to the future with our advanced architecture, modern interface, and high performance.",
-    "tr": "Gelişmiş mimarimiz, modern arayüzümüz ve yüksek performansımız ile üretim ve yönetim süreçlerinizi geleceğe taşıyoruz."
-  },
-  "about.performanceTitle": {
-    "en": "High Performance",
-    "tr": "Yüksek Performans"
-  },
-  "about.performanceDesc": {
-    "en": "We maximize data processing speed with our in-memory architecture. Analysis and reporting in seconds.",
-    "tr": "In-memory mimarisi ile veri işleme hızını en üst seviyeye çıkarıyoruz. Saniyeler içinde analiz ve raporlama."
-  },
-  "about.securityTitle": {
-    "en": "Secure Infrastructure",
-    "tr": "Güvenli Altyapı"
-  },
-  "about.securityDesc": {
-    "en": "We offer data isolation and end-to-end encryption with our multi-tenant architecture.",
-    "tr": "Çok kiracılı (multi-tenant) yapımız sayesinde veri izolasyonu ve uçtan uca şifreleme sunuyoruz."
-  },
-  "about.integrationTitle": {
-    "en": "Flexible Integration",
-    "tr": "Esnek Entegrasyon"
-  },
-  "about.integrationDesc": {
-    "en": "You can easily integrate with any ERP, CRM, or Industry 4.0 hardware with our modular structure.",
-    "tr": "Modüler yapımız ile dilediğiniz ERP, CRM veya Endüstri 4.0 donanımı ile kolayca entegre olabilirsiniz."
-  },
-  "about.ctaTitle": {
-    "en": "Get Started Now",
-    "tr": "Hemen Başlayın"
-  },
-  "about.ctaDesc": {
-    "en": "Experience our power by registering to our system or contacting an administrator.",
-    "tr": "Sistemimize kayıt olarak veya yönetici ile iletişime geçerek gücümüzü deneyimleyin."
-  },
-  "about.ctaButton": {
-    "en": "Log In to System",
-    "tr": "Sisteme Giriş Yap"
   }
 }

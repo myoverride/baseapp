@@ -1,7 +1,7 @@
 <template>
   <v-container>
     <div class="mb-4">
-      <v-btn prepend-icon="mdi-arrow-left" variant="text" to="/" class="text-none font-weight-medium px-0 text-body-1" color="grey-darken-2">
+      <v-btn prepend-icon="mdi-arrow-left" variant="text" to="/" class="text-none font-weight-medium px-0 text-body-1" color="primary">
         {{ $t('common.home') }}
       </v-btn>
     </div>
@@ -32,8 +32,19 @@
         <span v-if="!Array.isArray(typeof item.hashtags === 'string' ? JSON.parse(item.hashtags || '[]') : (item.hashtags || [])) || (typeof item.hashtags === 'string' ? JSON.parse(item.hashtags || '[]') : (item.hashtags || [])).length === 0" class="text-caption text-grey">-</span>
       </template>
       <template v-slot:item.home_page="{ item }">
-        <span v-if="item.home_page" class="text-caption text-grey-darken-1">{{ item.home_page }}</span>
+        <span v-if="item.home_page" class="text-caption opacity-70">{{ item.home_page }}</span>
         <span v-else class="text-caption text-grey">-</span>
+      </template>
+      <template v-slot:item.info="{ item }">
+        <v-tooltip location="top" max-width="400">
+          <template v-slot:activator="{ props }">
+            <v-btn icon="mdi-information" v-bind="props" color="info" variant="text" size="small"></v-btn>
+          </template>
+          <div class="text-caption">
+            <div class="mb-1"><span class="font-weight-medium opacity-70">{{ $t('table.createdAt') }}:</span> {{ formatAppDate(item.created_at as any) }}</div>
+            <div><span class="font-weight-medium opacity-70">{{ $t('table.updatedAt') }}:</span> {{ formatAppDate(item.updated_at as any) }}</div>
+          </div>
+        </v-tooltip>
       </template>
     
       <template v-slot:rowActions="{ item }">
@@ -186,8 +197,9 @@ const columns = computed(() => [
   { title: t('common.id'), key: 'id', sortable: true, filterable: true, type: 'number', width: '80px' },
   { title: t('common.role'), key: 'name', sortable: true, filterable: true, type: 'string' },
   { title: t('table.homePage'), key: 'home_page', sortable: true, filterable: true, type: 'string', slot: true },
-  { title: t('table.allowedTags'), key: 'allowed_tags', sortable: false, filterable: false, slot: true },
-  { title: t('table.hashtags'), key: 'hashtags', sortable: false, filterable: true, slot: true }
+  { title: t('field.permissionTags'), key: 'allowed_tags', sortable: false, filterable: false, slot: true },
+  { title: t('field.hashtags'), key: 'hashtags', sortable: false, filterable: true, slot: true },
+  { title: t('common.info'), key: 'info', sortable: false, slot: true }
 ]);
 
 const homePageOptions = computed(() => [
@@ -201,26 +213,13 @@ const homePageOptions = computed(() => [
 
 const fetchDependencies = async () => {
   try {
-    const [pData, eData, wData] = await Promise.all([
+    const [pData, tagsData] = await Promise.all([
       $fetch('/api/admin/pages?limit=1000'),
-      $fetch('/api/admin/endpoints?limit=1000'),
-      $fetch('/api/admin/workers?limit=1000')
+      $fetch('/api/admin/app-studio/tags')
     ]);
     
     pages.value = ((pData as any).records || []);
-    const tags = new Set<string>();
-    const parseTags = (arr: any[]) => {
-      arr.forEach(i => {
-        try {
-          const t = typeof i.hashtags === 'string' ? JSON.parse(i.hashtags) : (i.hashtags || []);
-          t.forEach((x: string) => tags.add(x));
-        } catch {}
-      });
-    };
-    parseTags((pData as any).records || []);
-    parseTags((eData as any).records || []);
-    parseTags((wData as any).records || []);
-    availableTags.value = Array.from(tags).sort();
+    availableTags.value = Array.isArray(tagsData) ? tagsData : [];
   
   } catch (err: any) {
     if ($toast) $toast.error(t('message.depsError'));
@@ -283,7 +282,11 @@ const saveItem = async (payload: any) => {
     if ($toast) $toast.success(dialogMode.value === 'edit' ? t('message.updated') : t('message.added'));
     crudTable.value?.loadItems();
   } catch (e: any) {
-    if ($toast) $toast.error(t(e.data?.message || 'errors.operationFailed'));
+        const errPayload = err?.data || e?.data;
+    const isArr = Array.isArray(errPayload?.data);
+    const errData = isArr ? errPayload.data[0] : (errPayload?.data || {});
+    const errMsg = isArr ? errPayload.data[0].message : (errPayload?.message || 'errors.operationFailed');
+    if ($toast) $toast.error(t(errMsg, errData));
   }
 };
 
@@ -296,7 +299,11 @@ const handleDelete = async (item: any) => {
     if ($toast) $toast.warning(t('message.deleted'));
     crudTable.value?.loadItems();
   } catch (e: any) {
-    if ($toast) $toast.error(t(e.data?.message || 'errors.operationFailed'));
+        const errPayload = err?.data || e?.data;
+    const isArr = Array.isArray(errPayload?.data);
+    const errData = isArr ? errPayload.data[0] : (errPayload?.data || {});
+    const errMsg = isArr ? errPayload.data[0].message : (errPayload?.message || 'errors.operationFailed');
+    if ($toast) $toast.error(t(errMsg, errData));
   }
 };
 

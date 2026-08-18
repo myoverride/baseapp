@@ -31,7 +31,7 @@ export default defineEventHandler(async (event) => {
         await validateTemplate(body.template_string, body.script_content, `Page Template: ${body.title || 'Bilinmeyen'}`);
       }
     } catch (err: any) {
-      throw createError({ statusCode: 400, message: err.key || err.message, data: err.params });
+      throw createError({ statusCode: 400, message: err.key || 'errors.databaseError', data: err.key ? err.params : undefined });
     }
 
     try {
@@ -70,7 +70,7 @@ export default defineEventHandler(async (event) => {
       result[0].script_content = result[0].script_content;
       import('../../../utils/history').then(m => m.saveHistory(event.context.tenantSlug, 'page', id as string, result[0])).catch(console.error);
       import('../../../utils/versionManager').then(m => m.bumpGlobalVersion(event.context.tenantSlug));
-    return result[0];
+    return { success: true, message: 'message.success', data: result[0] };
     } catch (e) {
       throw e;
     }
@@ -79,13 +79,13 @@ export default defineEventHandler(async (event) => {
   if (method === 'DELETE') {
     const checkSys = await sql`SELECT protected FROM pages WHERE id = ${id}`;
     if (checkSys.length > 0 && checkSys[0].protected) {
-      throw createError({ statusCode: 403, message: 'error.systemPageCannotBeDeleted' });
+      throw createError({ statusCode: 403, message: 'errors.systemPageCannotBeDeleted' });
     }
 
     const result = await sql`DELETE FROM pages WHERE id = ${id} RETURNING id`;
     if (result.length === 0) throw createError({ statusCode: 404, message: 'errors.notFound' });
 
     import('../../../utils/versionManager').then(m => m.bumpGlobalVersion(event.context.tenantSlug));
-    return { success: true, deletedId: id };
+    return { success: true, message: 'message.success', data: { deletedId: id } };
   }
 });

@@ -1,12 +1,13 @@
 import { useDB } from './db';
 import { type FilterGroup, buildSqlFilter } from './filterEngine';
 import { validateRecordData, checkUniqueConstraints } from './recordValidator';
+import { resolveRecordTitle } from './relationResolver';
 import bcrypt from 'bcryptjs';
 
 export const getRecords = async (tenantSlug: string, slug: string, query: any) => {
   const sql = useDB(tenantSlug || 'master');
   const entityResult = await sql`SELECT id, name, schema, hashtags FROM entities WHERE slug = ${slug}`;
-  if (entityResult.length === 0) throw { statusCode: 404, message: 'error.entityNotFound' };
+  if (entityResult.length === 0) throw { statusCode: 404, message: 'errors.entityNotFound' };
   const entity = entityResult[0] as any;
 
   const page = Math.max(1, parseInt(query.page as string) || 1);
@@ -170,19 +171,41 @@ export const getRecords = async (tenantSlug: string, slug: string, query: any) =
     };
   });
 
+  const finalRecordsWithDisplay = await Promise.all(finalRecords.map(async (r: any) => {
+    // Determine the main record title
+    const recordTitle = await resolveRecordTitle(sql, entity.id, r.id, 0, r);
+
+    // Determine relation display values
+    const displayValues: Record<string, string> = {};
+    for (const [key, fieldDef] of Object.entries(parsedSchema || {}) as any) {
+      if (fieldDef.type === 'relation' && fieldDef.targetEntityId && r[key] !== undefined && r[key] !== null) {
+        displayValues[key] = await resolveRecordTitle(sql, Number(fieldDef.targetEntityId), Number(r[key]), 0);
+      }
+    }
+
+    return {
+      ...r,
+      _record_title: recordTitle,
+      _displayValues: Object.keys(displayValues).length > 0 ? displayValues : undefined
+    };
+  }));
+
   return {
+    success: true,
+    data: finalRecordsWithDisplay,
     entity: entity,
-    records: finalRecords,
-    total: totalCount,
-    page: page,
-    limit: limit
+    pagination: {
+      total: totalCount,
+      page: page,
+      limit: limit
+    }
   };
 };
 
 export const createRecord = async (tenantSlug: string, slug: string, body: any, userId: any) => {
   const sql = useDB(tenantSlug || 'master');
   const entityResult = await sql`SELECT id, name, schema FROM entities WHERE slug = ${slug}`;
-  if (entityResult.length === 0) throw { statusCode: 404, message: 'error.entityNotFound' };
+  if (entityResult.length === 0) throw { statusCode: 404, message: 'errors.entityNotFound' };
   const entity = entityResult[0] as any;
   const parsedSchema = (typeof entity.schema === 'string' && entity.schema.trim()) ? (() => { try { return JSON.parse(entity.schema); } catch { return {}; } })() : (entity.schema || {});
 
@@ -262,7 +285,7 @@ export const createRecord = async (tenantSlug: string, slug: string, body: any, 
 export const getRecord = async (tenantSlug: string, slug: string, id: any) => {
   const sql = useDB(tenantSlug || 'master');
   const entityResult = await sql`SELECT id, name, schema FROM entities WHERE slug = ${slug}`;
-  if (entityResult.length === 0) throw { statusCode: 404, message: 'error.entityNotFound' };
+  if (entityResult.length === 0) throw { statusCode: 404, message: 'errors.entityNotFound' };
   const entity = entityResult[0] as any;
 
   const [recordInfo] = await sql.unsafe(`SELECT created_at, updated_at, hashtags, created_by, updated_by FROM records WHERE id = ? AND entity_id = ?`, [id, entity.id]);
@@ -292,9 +315,19 @@ export const getRecord = async (tenantSlug: string, slug: string, id: any) => {
     parsedHashtags = recordInfo.hashtags;
   }
 
+  const recordTitle = await resolveRecordTitle(sql, entity.id, id, 0, data);
+  const displayValues: Record<string, string> = {};
+  for (const [key, fieldDef] of Object.entries(parsedSchema || {}) as any) {
+    if (fieldDef.type === 'relation' && fieldDef.targetEntityId && data[key] !== undefined && data[key] !== null) {
+      displayValues[key] = await resolveRecordTitle(sql, Number(fieldDef.targetEntityId), Number(data[key]), 0);
+    }
+  }
+
   return {
     ...data,
     id: id,
+    _record_title: recordTitle,
+    _displayValues: Object.keys(displayValues).length > 0 ? displayValues : undefined,
     created_at: recordInfo.created_at,
     updated_at: recordInfo.updated_at,
     created_by: recordInfo.created_by,
@@ -306,7 +339,7 @@ export const getRecord = async (tenantSlug: string, slug: string, id: any) => {
 export const updateRecord = async (tenantSlug: string, slug: string, id: any, body: any, userId: any) => {
   const sql = useDB(tenantSlug || 'master');
   const entityResult = await sql`SELECT id, name, schema FROM entities WHERE slug = ${slug}`;
-  if (entityResult.length === 0) throw { statusCode: 404, message: 'error.entityNotFound' };
+  if (entityResult.length === 0) throw { statusCode: 404, message: 'errors.entityNotFound' };
   const entity = entityResult[0] as any;
 
   const [recordInfo] = await sql.unsafe(`SELECT id FROM records WHERE id = ? AND entity_id = ?`, [id, entity.id]);
@@ -407,7 +440,7 @@ export const updateRecord = async (tenantSlug: string, slug: string, id: any, bo
 export const deleteRecord = async (tenantSlug: string, slug: string, id: any) => {
   const sql = useDB(tenantSlug || 'master');
   const entityResult = await sql`SELECT id FROM entities WHERE slug = ${slug}`;
-  if (entityResult.length === 0) throw { statusCode: 404, message: 'error.entityNotFound' };
+  if (entityResult.length === 0) throw { statusCode: 404, message: 'errors.entityNotFound' };
   const entity = entityResult[0] as any;
 
   const [recordInfo] = await sql.unsafe(`SELECT id FROM records WHERE id = ? AND entity_id = ?`, [id, entity.id]);
@@ -422,7 +455,7 @@ export const bulkDeleteRecords = async (tenantSlug: string, slug: string, ids: s
   if (!Array.isArray(ids) || ids.length === 0) return { success: false, message: 'error.noIdsProvided' };
   const sql = useDB(tenantSlug || 'master');
   const entityResult = await sql`SELECT id FROM entities WHERE slug = ${slug}`;
-  if (entityResult.length === 0) throw { statusCode: 404, message: 'error.entityNotFound' };
+  if (entityResult.length === 0) throw { statusCode: 404, message: 'errors.entityNotFound' };
   const entityId = entityResult[0].id;
 
   const { deleteRecordWithRelationPolicy } = await import('./relationDeletePolicy');
@@ -443,7 +476,7 @@ export const bulkImportRecords = async (tenantSlug: string, slug: string, record
   
   const sql = useDB(tenantSlug || 'master');
   const entityResult = await sql`SELECT id, schema FROM entities WHERE slug = ${slug}`;
-  if (entityResult.length === 0) return { success: false, message: 'error.entityNotFound' };
+  if (entityResult.length === 0) return { success: false, message: 'errors.entityNotFound' };
   
   const entity = entityResult[0] as any;
   const parsedSchema = (typeof entity.schema === 'string' && entity.schema.trim()) ? (() => { try { return JSON.parse(entity.schema); } catch { return {}; } })() : (entity.schema || {});
@@ -536,7 +569,7 @@ export const bulkImportRecords = async (tenantSlug: string, slug: string, record
            if (map && map.has(val)) {
              rec[key] = map.get(val);
            } else {
-             throw new Error(`'${key}' alanı için eşleşen kayıt bulunamadı: ${val}`);
+              throw new Error('error.recordNotFoundForField|' + key + '|' + val);
            }
         }
       }

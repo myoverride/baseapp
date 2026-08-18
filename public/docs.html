@@ -178,7 +178,7 @@
                         <ul class="text-body-2 mb-4">
                             <li><strong>Master Veritabanı (master.db):</strong> Sistemin çekirdeğidir. İçerisinde sadece
                                 <span class="code-inline">tenants</span> (Kiracılar listesi) ve <span
-                                    class="code-inline">user_routes</span> tabloları bulunur. Sistemin gerçek ana
+                                    class="code-inline">global_users</span> tabloları bulunur. Sistemin gerçek ana
                                 yöneticileri (Super Admins) ise <span class="code-inline">master_app.db</span>
                                 içerisindeki <span class="code-inline">users</span> tablosunda tutulur. Bir kullanıcı
                                 sisteme giriş yapmaya çalıştığında sistem (URL, Header veya Cookie üzerinden)
@@ -225,12 +225,12 @@
                             Ayrıca devasa IoT telemetri verileri için kullanılan <strong>DuckDB</strong>, bu kilit kuyruğunun tamamen dışındadır (Bypass). Böylece arkada cihazlar deli gibi veri basarken, siz arayüzde sayfaları milisaniyeler içinde donmadan açabilirsiniz.
                         </p>
                         
-                        <h3 class="text-h6 mt-6 mb-2">1.6 Devasa Dosya Yükleme ve OOM Koruması (Streaming)</h3>
+                        <h3 class="text-h6 mt-6 mb-2">1.6 Devasa Dosya Yükleme ve OOM Koruması (Planlanan Özellik)</h3>
                         <p class="text-body-2 mb-2">
                             Sistem yöneticileri (veya müşteriler) platforma GB'larca büyüklükte yedekleme (Backup) dosyaları yükleyebilmelidir. Ancak geleneksel Node.js uygulamaları, Multipart (form-data) verileri işlerken tüm dosyayı RAM (Hafıza) üzerine almaya çalışır, bu da sunucunun <strong>"Out of Memory (OOM)"</strong> hatasıyla tamamen çökmesine neden olur.
                         </p>
                         <p class="text-body-2 mb-4">
-                            BaseApp, çekirdek API uç noktalarında (<span class="code-inline">/api/admin/backup</span>) bu sorunu önlemek için <strong>Busboy Streaming (Akış) Mimarisi</strong> kullanır. Gelen dosya RAM'e alınmaz, bayt bayt doğrudan diske yazılır. Bu sayede, sisteme aynı anda devasa dosyalar yüklense bile diğer müşterilerin API ve arayüz performansı zerre kadar etkilenmez.
+                            BaseApp mimarisinde bu sorunu önlemek için <strong>Busboy Streaming (Akış) Mimarisi</strong> kullanılması planlanmaktadır. <em>(Not: `/api/admin/backup` modülü şu anda sistemde aktif değildir, gelecekte eklenecektir.)</em>
                         </p>
 
                         <h3 class="text-h6 mt-6 mb-2">1.7 Otomatik SSL Sertifikası (Sıfır Konfigürasyon)</h3>
@@ -482,14 +482,14 @@
                             Yöneticilerin hatalı bir Dinamik Middleware (Özel API) yazarak sistemi yanlışlıkla
                             kilitlenmesini veya erişilemez hale getirmesini önlemek için <span
                                 class="code-inline">02.authorize.ts</span> ve <span
-                                class="code-inline">dynamic.ts</span> içerisinde Hardcoded korumalar bulunur. <span
+                                class="code-inline">03.endpoints.ts</span> içerisinde Hardcoded korumalar bulunur. <span
                                 class="code-inline">/api/auth/</span>, <span class="code-inline">/api/admin/</span> gibi
                             çekirdek (Core) uç noktalar dinamik kod bloklarından asla etkilenmez.
                         </p>
 
-                        <h3 class="text-h6 mt-4 mb-2">3.5 Sistem Değişkenleri (Sysvars) ve Multi-Tenant Hiyerarşisi (Arka Kapı Özelliği)</h3>
+                        <h3 class="text-h6 mt-4 mb-2">3.5 Sistem Değişkenleri (Globals) ve Multi-Tenant Hiyerarşisi</h3>
                         <p class="text-body-2 mb-2">
-                            Sistemin ayarları, port bilgileri ve çeşitli API yapılandırmaları veritabanındaki <code>system_variables</code> tablosunda tutulur. Kod mimarisi, alt kiracıların ayar karmaşasını önlemek için akıllı bir <strong>Miras (Fallback)</strong> sistemi kurgulamıştır:
+                            Sistemin ayarları, port bilgileri ve çeşitli API yapılandırmaları veritabanındaki <code>globals</code> tablosunda tutulur. Kod mimarisi, alt kiracıların ayar karmaşasını önlemek için akıllı bir <strong>Miras (Fallback)</strong> sistemi kurgulamıştır:
                             <br>Eğer bir alt kiracı (Sub-tenant) sistemden herhangi bir değişken talep ederse (Örn: <code>SMTP_PORT</code>) ve bu değer kendi veritabanında boş/tanımsız ise; kod sessizce arka planda <strong>Master Tenant'ın (Ana Kiracı)</strong> veritabanına giderek değeri oradan çeker. Bu sayede genel ayarlar sadece Master tenant'ta yapılarak tüm kiracılara otomatik dağıtılabilir.
                         </p>
 
@@ -535,7 +535,6 @@
                             <li><strong>style_content:</strong> Sadece bu sayfaya özel (Scoped) CSS kodlarıdır. Sisteme
                                 sızmaması için BaseApp arka planda CSS id'lerini sayfa id'si (<span
                                     class="code-inline">#ds-xxx</span>) ile otomatik sarmalar.</li>
-                            <li><strong>style_content:</strong> Sadece bu sayfaya özel (Scoped) CSS kodlarıdır. Sisteme sızmaması için BaseApp arka planda CSS id'lerini sayfa id'si (<span class="code-inline">#ds-xxx</span>) ile otomatik sarmalar.</li>
                             <li><strong>Harici Kütüphaneler (CDN):</strong> Sayfaya Chart.js gibi 3. parti kütüphaneler eklemek için HTML kısmına `&lt;script&gt;` etiketi YAZILAMAZ (sistem siler). Bunun yerine script kısmında <code>useHead({ script: [{ src: 'cdn_linki' }] })</code> composable'ı kullanılmalıdır. (Not: Harici kütüphaneler UMD/Global sürüm olmalıdır).</li>
                         </ul>
 
@@ -610,8 +609,7 @@ return { count, sensorData, increment, MyCustomCard };
                                     <tr>
                                         <td><strong>BaseApp Özel</strong></td>
                                         <td>
-                                            <code>useSysVars()</code>: Sistem değişkenleri tablosuna bağlı reaktif proxy (Örn: <code>sysVars.value.API_KEY</code>).<br>
-                                            <code>useUtils()</code>: Backend utilsServer çağrıları için (Gönderilen argümanlar JSON serialize edilebilir olmalıdır). <code>loadUtilities</code> ile önceden yükleyip cache'leyebilir, <code>refreshUtilities</code> ile tazeleyebilirsiniz.<br>
+                                            <code>useGlobals()</code>: Sistemdeki dinamik değişkenlere tek bir merkezden güvenle erişmenizi sağlayan API'dir. (Örn değişken okuma: <code>useGlobals().globals.value.API_KEY</code>).<br>
                                             <code>useWS('/api/ws/oda-1')</code>: WebSocket odalarına abone olmak için.<br>
                                             <code>useI18n()</code> / <code>t</code>: Çoklu dil kütüphanesi.<br>
                                             <small class="text-success"><strong>Özel Enjeksiyonlar:</strong> Nuxt'un <code>$localize</code>, <code>$toast</code> metodları ve <code>useNuxtApp</code> objesi doğrudan JIT ortamına enjekte edilmiştir. Script içinde hiçbir import yapmadan (Örn: <code>$toast.success()</code>) doğrudan kullanabilirsiniz.</small>
@@ -797,12 +795,11 @@ const title = ref("Siparişler Paneli");
 const loading = ref(false);
 
 // 2. BaseApp'ye Özel Fonksiyonları Çağırma
-const { sysVars } = useSysVars(); // Sistem değişkenleri Proxy'si
-const { utils } = useUtils(); // Utils Proxy'si
+const globals = useGlobals(); // Sistem değişkenleri
 const { t } = useI18n(); // Çeviri motoru
 
-// Değişkenleri Çekme (Direct Proxy üzerinden çağrılır, .value yazılmaz!)
-const adminKey = computed(() => sysVars.API_KEY);
+// Değişkenleri Çekme
+const adminKey = computed(() => globals.globals.value.API_KEY);
 
 const fetchData = async () => {
   loading.value = true;
@@ -810,9 +807,7 @@ const fetchData = async () => {
     // Dinamik API rotanıza istek atma ($fetch otomatik enjekte edilmiştir)
     const response = await $fetch('/api/admin/records/siparisler');
     
-    // Dinamik Util Kullanımı (Örn: Hesaplama Utili)
-    const total = await utils.calculateTotal(response.data);
-    console.log("Toplam:", total);
+    console.log("Veri:", response.data);
   } catch (err) {
     console.error(t('errors.loadFailed'), err);
   } finally {
@@ -892,17 +887,14 @@ return {
                             izole edilmiş bir <strong>Sandbox (Korumalı Alan)</strong> içerisinde çalışır.
                         </p>
 
-                        <h3 class="text-h6 mt-4 mb-2">5.1 Çoklu Dil Sandbox Mimarisi (Timeout Koruması)</h3>
+                        <h3 class="text-h6 mt-4 mb-2">5.1 İzole Sandbox Mimarisi (Timeout Koruması)</h3>
                         <p class="text-body-2 mb-2">
-                            BaseApp Sandbox'ı dünyada eşine az rastlanır bir şekilde sadece JavaScript'i değil, veri
-                            bilimi ve entegrasyonlar için kullanılabilir:
+                            BaseApp Sandbox'ı arka plan görevlerinizi güvenle çalıştırmanız için tasarlanmıştır:
                         </p>
                         <ul class="text-body-2 mb-4">
                             <li><strong>JavaScript (Node.js VM):</strong> Varsayılan dildir. <span
                                     class="code-inline">node:vm</span> modülü ile yalıtılmıştır. <strong>Sıkı Timeout
                                     Koruması vardır.</strong></li>
-                            <li><strong>C# (.NET Core):</strong> Eski kurumsal donanım SDK'ları ile haberleşmek için
-                                kullanılır.</li>
                         </ul>
                         <v-alert type="warning" border="start" border-color="warning" class="mt-2">
                             <strong>GÜVENLİK UYARISI (Sandbox Zaman Aşımı - Timeout):</strong>
@@ -962,7 +954,7 @@ return {
                                     <tr>
                                         <td><strong>Araçlar & Modüller</strong></td>
                                         <td>
-                                            <code>utils</code>: Ortak (utilsServer) modüllerini çağırır.<br>
+                                            <code>globals</code>: Ortak (Globals API) modüllerini çağırır.<br>
                                             <code>sleep(ms)</code>: Event-loop'u kilitlemeden asenkron bekleme.<br>
                                             <code>fetch(url, opts)</code>: Dış sistemlere HTTP istekleri (Zaman aşımında hard-kill olur).<br>
                                             <code>t(key, params)</code> / <code>tAsync(args)</code>: i18n çeviri (Mikroservislerde sadece tAsync vardır).<br>
@@ -980,7 +972,7 @@ return {
 
                         
                         <v-alert type="info" variant="tonal" class="mb-4 mt-4">
-                            <strong>Sistem Değişkenlerine Erişim:</strong> Sandbox içerisinde <code>sysVars</code> objesi kullanılarak sistem değişkenlerine (örn: API_KEY, SMTP_HOST) doğrudan ulaşılabilir. Alternatif olarak veritabanından doğrudan <code>await sql`SELECT value FROM system_variables WHERE key = 'API_KEY'`;</code> şeklinde de okuyabilirsiniz.
+                            <strong>Sistem Değişkenlerine Erişim:</strong> Sandbox içerisinde <code>globals</code> objesi kullanılarak sistem değişkenlerine (örn: API_KEY, SMTP_HOST) doğrudan ulaşılabilir (Örn: <code>globals.API_KEY</code>). Alternatif olarak veritabanından doğrudan <code>await sql`SELECT value FROM globals WHERE type = 'variable' AND key = 'API_KEY'`;</code> şeklinde de okuyabilirsiniz.
                         </v-alert>
 
                         <h4 class="text-subtitle-1 font-weight-bold mb-2">Veritabanı (db / sql) Özel Kullanımları:</h4>
@@ -988,24 +980,7 @@ return {
                             <strong>Transaction:</strong> Bütünsel işlemler için <code>await sql.begin(async (tx) => { ... })</code> kullanılmalıdır. İç içe (nested) <code>tx.begin</code> çağrıları yapılamaz. Yüzlerce sorguyu senkron çalıştırmak için <code>sql.transactionSync([...])</code> kullanılır.
                         </p>
 
-                        <h4 class="text-subtitle-1 font-weight-bold mt-4 mb-2">Dillere Özgü Sandbox Kullanımları:</h4>
-                        <div class="table-responsive mb-4">
-                            <table class="doc-table">
-                                <thead><tr><th>Dil</th><th>Örnek ve Uyarılar</th></tr></thead>
-                                <tbody>
-                                    <tr>
-                                        <td><strong>C# (.NET Edge.js)</strong></td>
-                                        <td>
-                                            <pre class="code-block my-2" v-pre>
-var publish = (Func&lt;object, Task&lt;object&gt;&gt;)js_env.publishMQTT;
-await publish(new object[] { "test/cs", new { status = "ok" } });
-return new { respond = true, body = "OK" };</pre>
-                                            <small class="text-warning"><strong>Önemli:</strong> C# <code>Invoke</code> metodu her zaman <code>Task&lt;object&gt;</code> dönmek zorundadır. Boş çıkış için kod sonuna <code>return null;</code> eklenmeli, çoklu parametre alan JS metotlarına parametreler dizi <code>object[]</code> olarak aktarılmalıdır.</small>
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
+
 
 
                         <h3 class="text-h6 mt-6 mb-2">5.3 API/MIDDLEWARE YANIT VE DAVRANIŞ (RETURN) KONTROLÜ</h3>
@@ -1071,25 +1046,25 @@ const user = await sql`SELECT * FROM users WHERE email = ${payload.body.email}`;
                         </p>
 
 
-                        <h3 class="text-h6 mt-6 mb-2">5.4 Dinamik Yardımcı Sınıflar (Dynamic Utils)</h3>
+                        <h3 class="text-h6 mt-6 mb-2">5.4 Sistem Değişkenleri ve Fonksiyonları (Globals)</h3>
                         <p class="text-body-2 mb-2">
-                            Sistem genelinde birden fazla yerde kullanacağınız kodları (örneğin Vergi Hesaplama
-                            algoritması) <span class="code-inline">utils</span> olarak kaydedersiniz.
-                            Util'ler <span class="code-inline">target</span> alanına göre ayrılır:
-                            <br>- <strong>api:</strong> Sadece backend tarafından çağrılabilir. Güvenli
-                            matematik/algoritma işleri içindir.
+                            Sistem genelinde ihtiyaç duyduğunuz API anahtarları, ayarlar veya ortak algoritmalar (örn: Vergi Hesaplama) <strong>Globals</strong> altında yönetilir. 
+                            Globals ikiye ayrılır: <strong>Variable (Değişken)</strong> ve <strong>Util (Fonksiyon)</strong>.
+                            Her kayıt <span class="code-inline">target</span> alanına göre erişim kısıtına sahiptir:
+                            <br>- <strong>api:</strong> Sadece backend tarafından çağrılabilir ve görülebilir. Gizli servis anahtarları içindir.
                             <br>- <strong>ui:</strong> Arayüz üzerinden çağrılabilir.
-                            <br>- <strong>shared:</strong> Hem arayüzden hem de diğer backend fonksiyonlarından
-                            çağrılabilir.
+                            <br>- <strong>shared:</strong> Hem arayüzden hem de backend fonksiyonlarından erişilebilir.
                         </p>
                         <p class="text-body-2 mb-2">
-                            <strong>1. Kod Yazımı (Backend'de Oluşturma):</strong><br>
+                            <strong>1. Kod Yazımı (Util Oluşturma):</strong><br>
                             Dinamik Util kodu yazarken gelen parametreler doğrudan ortama yayılmaz. Kodunuzu şu şekilde yazmalısınız:
                             <br><code>export default function(context, args) { return args.tutar * 1.2; }</code>
                         </p>
                         <p class="text-body-2 mb-2">
                             <strong>2. Nasıl Çağrılır? (Kullanım Farkları)</strong><br>
-                            Dynamic Util'leri çağırırken Backend (Sunucu) ve Frontend (Arayüz) ortamlarında farklı objeler kullanılır. Bu ayrıma dikkat etmelisiniz:
+                            Arayüzde (UI) kullanım yaparken <code>useGlobals()</code> objesini çağırırsınız:
+                            <br>Değişken okumak için: <code>const kdv = useGlobals().globals.value.KDV_ORANI;</code>
+                            <br><em>Not: Güvenlik sebebiyle globals fonksiyonları doğrudan arayüzden çağrılamaz, sadece backend (Sandbox) ortamında <code>globals.hesapla()</code> şeklinde kullanılabilir.</em>
                         </p>
                         
                         <div class="table-responsive mb-4">
@@ -1118,8 +1093,7 @@ const user = await sql`SELECT * FROM users WHERE email = ${payload.body.email}`;
                                     <tr>
                                         <td><strong>BaseApp Özel</strong></td>
                                         <td>
-                                            <code>useSysVars()</code>: Sistem değişkenleri tablosuna bağlı reaktif proxy (Örn: <code>sysVars.value.API_KEY</code>).<br>
-                                            <code>useUtils()</code>: Backend utilsServer çağrıları için (Gönderilen argümanlar JSON serialize edilebilir olmalıdır). <code>loadUtilities</code> ile önceden yükleyip cache'leyebilir, <code>refreshUtilities</code> ile tazeleyebilirsiniz.<br>
+                                            <code>useGlobals()</code>: Sistemdeki dinamik değişkenlere tek bir merkezden güvenle erişmenizi sağlayan API'dir. (Örn değişken okuma: <code>useGlobals().globals.value.API_KEY</code>).<br>
                                             <code>useWS('/api/ws/oda-1')</code>: WebSocket odalarına abone olmak için.<br>
                                             <code>useI18n()</code> / <code>t</code>: Çoklu dil kütüphanesi.<br>
                                             <small class="text-error"><strong>Kısıtlama:</strong> <code>$localize(data)</code> metodu sadece HTML Template içinde kullanılabilir, script içinde çağrılamaz.</small>
@@ -1137,13 +1111,13 @@ const user = await sql`SELECT * FROM users WHERE email = ${payload.body.email}`;
                             kullanılır.</p>
                         <v-alert type="info" variant="tonal" class="my-3">
                             <strong>Bağımsız Süreç (Child Process Daemon) Mimarisi:</strong> <span
-                                class="code-inline">microserviceManager.ts</span> ve <span
+                                class="code-inline">workerManager.ts</span> ve <span
                                 class="code-inline">worker.js</span> üzerinden ayağa kalkan bu servisler, Ana İş
                             Parçacığını (Main Thread) ASLA bloklamaz. 7/24 çalışabilirler. Sistemin geri kalanıyla ve
                             birbirleriyle <strong>IPC (Inter-Process Communication)</strong> üzerinden mesajlaşarak
                             konuşurlar. Bu sayede uygulamanın geri kalanı çöksede mikroservisler arka planda donanım
                             dinlemeye veya ağır hesaplamalar yapmaya devam eder.
-                            <br><br><strong>Bilgi (RPC ve Proxy Entegrasyonu):</strong> Mikroservisler ayrı bir süreç (Thread) üzerinde çalışmasına rağmen, <code>utils</code>, <code>sendDeviceCommand</code>, <code>t</code>, <code>recordManager</code> gibi fonksiyonlar bu ortama özel <strong>Proxy</strong> objeleri ile enjekte edilmiştir. Bu fonksiyonları çağırdığınızda, istekleriniz IPC üzerinden (RPC - callMainThread) ana sunucuya iletilir ve çalıştırılır. Servisi çökertmeden güvenle kullanabilirsiniz.
+                            <br><br><strong>Bilgi (RPC ve Proxy Entegrasyonu):</strong> Mikroservisler ayrı bir süreç (Thread) üzerinde çalışmasına rağmen, <code>globals</code> ve <code>tAsync</code> fonksiyonları bu ortama özel <strong>Proxy</strong> objeleri ile enjekte edilmiştir. Bu fonksiyonları çağırdığınızda, istekleriniz IPC üzerinden (RPC - callMainThread) ana sunucuya iletilir ve çalıştırılır. Servisi çökertmeden güvenle kullanabilirsiniz.
                         </v-alert>
                         </p>
                         <p class="text-body-2 mb-4">
@@ -1185,7 +1159,7 @@ async function baslat() {
 baslat();
                         </pre>
 
-                        <h3 class="text-h6 mt-6 mb-2">5.6 Sistem Değişkenleri (system_variables)</h3>
+                        <h3 class="text-h6 mt-6 mb-2">5.6 Küresel Nesneler (globals)</h3>
                         <p class="text-body-2 mb-2">
                             Arayüzden eklenen <strong>tüm</strong> değişkenler veritabanında saklanır. Değişkenlerin
                             arayüze (Frontend'e) aktarımı şu kurallara bağlıdır:
@@ -1198,7 +1172,7 @@ baslat();
                             kullanıcılar göremez, sadece Admin yetkisi olanların tarayıcısına aktarılır.
                         </p>
                     <v-alert type="error" variant="tonal" class="mb-4 mt-4">
-                            <strong>RAM ve Veritabanı Limitleri (OOM Koruması):</strong> Her bir mikroservis maksimum <strong>50 MB RAM</strong> limitiyle çalışır (<code>--max-old-space-size=50</code>). JavaScript içinde devasa diziler oluşturmak servisi anında çökertir (OOM). Ayrıca veritabanı kilitlenmelerini önlemek için mikroservislerde <code>sql.begin()</code> veya <code>sql.transactionSync()</code> gibi toplu kilitli işlemler mimari olarak yasaklanmış ve kapatılmıştır. Not: UI odaklı fonksiyonlar (utils, sendDeviceCommand vb.) Proxy/RPC üzerinden güvenle kullanılabilir, kısıtlanmamıştır.
+                            <strong>RAM ve Veritabanı Limitleri (OOM Koruması):</strong> Her bir mikroservis maksimum <strong>50 MB RAM</strong> limitiyle çalışır (<code>--max-old-space-size=50</code>). JavaScript içinde devasa diziler oluşturmak servisi anında çökertir (OOM). Ayrıca veritabanı kilitlenmelerini önlemek için mikroservislerde <code>sql.begin()</code> veya <code>sql.transactionSync()</code> gibi toplu kilitli işlemler mimari olarak yasaklanmış ve kapatılmıştır. Not: UI odaklı fonksiyonlar (globals, sendDeviceCommand vb.) Proxy/RPC üzerinden güvenle kullanılabilir, kısıtlanmamıştır.
                         </v-alert>
 
 </v-card>
@@ -1229,12 +1203,12 @@ baslat();
                         </v-alert>
                         <v-alert type="info" variant="tonal" class="mb-4">
                             <strong class="text-subtitle-1">Süper Yönetici (MQTT Admin) Erişimi (Arka Kapı Özelliği)</strong><br>
-                            Eğer bulunduğunuz tenant'ın <code>system_variables</code> tablosuna <code>MQTT_ADMIN_USER</code> ve <code>MQTT_ADMIN_PASS</code> anahtarları ile bir kimlik eklerseniz, bu bilgilerle MQTT broker'a bağlanan istemci <strong>"admin"</strong> rolü kazanır. Admin rolü; tüm HMAC şifreleme zorunluluklarını ve "Sadece telemetry kanalına yayın yapılabilir" (ACL) kısıtlamalarını tamamen <strong>by-pass</strong> ederek, istediği her kanala doğrudan erişim sağlar.
+                            Eğer bulunduğunuz tenant'ın <code>globals</code> tablosuna <code>MQTT_ADMIN_USER</code> ve <code>MQTT_ADMIN_PASS</code> anahtarları ile bir kimlik eklerseniz, bu bilgilerle MQTT broker'a bağlanan istemci <strong>"admin"</strong> rolü kazanır. Admin rolü; tüm "Sadece telemetry kanalına yayın yapılabilir" (ACL) kısıtlamalarını tamamen <strong>by-pass</strong> ederek, istediği her kanala doğrudan erişim sağlar.
                         </v-alert>
                         <v-alert type="error" border="start" border-color="error" class="mb-4">
-                            <strong class="text-subtitle-1">Zorunlu Telemetri Topic ve Güvenli Payload (HMAC) Yapısı</strong><br>
+                            <strong class="text-subtitle-1">Zorunlu Telemetri Topic ve Payload Yapısı (TLS Zorunluluğu)</strong><br>
                             DuckDB <code>telemetry</code> tablosuna veri yazılabilmesi için cihazın MQTT üzerinden yayın (Publish) yapacağı kanal <strong>kesinlikle</strong> <code>telemetry</code> veya <code>telemetry/{deviceId}</code> olmak zorundadır.<br><br>
-                            <strong>EN KRİTİK KURAL (Sıfır Güven Mimarisi):</strong> Cihazın gönderdiği JSON verisi doğrudan değerleri içeremez. Sistem donanım sahteciliğine karşı <strong>HMAC SHA256 Şifrelemesi</strong> talep eder. Gönderilen veri aşağıdaki gibi katı bir şablona sahip olmalıdır:
+                            <strong>EN KRİTİK KURAL (TLS Şifreleme):</strong> Cihazlar güvenli iletişim için MQTTS (Port 8883) üzerinden sunucuya bağlanmak zorundadır. Gönderilen veri payload'u ise aşağıdaki gibi bir şablona sahip olmalıdır:
                             <pre class="code-block my-2" v-pre>
 {
   "deviceId": "cihaz_id",
@@ -1242,11 +1216,10 @@ baslat();
   "payload": {
     "sicaklik": 25.4,
     "nem": 40
-  },
-  "hmac": "..." // SHA256 Şifresi
+  }
 }
                             </pre>
-                            <strong>HMAC Nasıl Hesaplanır?:</strong> Cihaz; <code>deviceId|timestamp|{"sicaklik":25.4,"nem":40}</code> formatındaki (Aralarında pipe `|` işareti olan ve payload objesinin JSON halini içeren) metni, veritabanındaki <code>secret_key</code> parolasını kullanarak HMAC-SHA256 algoritmasıyla şifrelemeli ve `hmac` parametresi olarak göndermelidir. Eksik veya hatalı imzada mesajlar anında imha edilir.
+                            <strong>Bağlantı Güvenliği (Insecure Mode):</strong> Eğer sunucunun sertifikasını cihaza doğrudan yüklemek istemiyorsanız, C/ESP32 kütüphanelerinde (Örn: WiFiClientSecure) bağlantıyı <code>setInsecure()</code> metodu ile yapabilirsiniz. Bu, bağlantıyı tamamen TLS ile şifrelerken sertifika yetki doğrulaması adımını atlar ve ağ trafiğinin kopyalanıp dinlenmesini (sniffing ve replay attacks) önler.
                         </v-alert>
                         <p class="text-body-2 mb-2">
                             Cihazlar bu kurallara uyarak MQTT üzerinden JSON veri yolladığında sistem veriyi <strong>DuckDB</strong> <span
@@ -1255,7 +1228,7 @@ baslat();
                             yüzbinlerce satırı işleyebilecek kapasitededir.
                         </p>
 
-                        <h4 class="text-subtitle-1 font-weight-bold mt-6 mb-4">Farklı Dillerde HMAC ve MQTT Kod Örnekleri</h4>
+                        <h4 class="text-subtitle-1 font-weight-bold mt-6 mb-4">Farklı Dillerde MQTTS (Port 8883) Kod Örnekleri</h4>
                         <h4 class="text-subtitle-1 font-weight-bold mt-6 mb-2">Ağaç Tipi Yetkilendirme (Wildcard Routing)</h4>
                         <p class="text-body-2 mb-4">
                             Sistem içindeki Aedes MQTT Broker, karmaşık fabrika hiyerarşileri için MQTT standardındaki Wildcard'ları (<span class="code-inline">#</span> ve <span class="code-inline">+</span>) tam olarak destekler. Ancak rol tabanlı güvenlik (RBAC) ile sıkı sıkıya denetlenir. Bir <strong>"admin"</strong> rolündeki bağlantı, <span class="code-inline">fabrika/+/sensorler/#</span> diyerek tek bir Topic üzerinden binlerce cihazdan aynı anda veri dinleyebilir veya komut gönderebilir. "Cihaz" rolündeki istemcilerin (Device) joker karakterleri kullanması engellenerek yetkisiz dinlemelerin (Eavesdropping) önüne geçilir.
@@ -1276,9 +1249,8 @@ baslat();
                                     <p class="text-body-2 mb-2">Bu kodu arayüzden <strong>Admin -> Microservices (Daemon)</strong> bölümüne ekleyerek, donanım olmadan sistem içinde sahte veri üretebilirsiniz. (Not: Sandbox içerisinde güvenlik amacıyla setTimeout ve setInterval yoktur, yerine await sleep() fonksiyonu kullanılır).</p>
                                     <pre class="code-block my-2" v-pre>
 const deviceId = "cihaz_1";
-const secretKey = "super_gizli_anahtar"; // Veritabanındaki şifre
 
-// Sandbox ortamında crypto, publishMQTT ve sleep() globaldir.
+// Sandbox ortamında publishMQTT ve sleep() globaldir.
 // Top-level await desteklenmektedir.
 
 while (true) {
@@ -1288,16 +1260,11 @@ while (true) {
     };
     
     const timestamp = Date.now();
-    const payloadStr = JSON.stringify(payloadObj);
-    
-    const dataToSign = `${deviceId}|${timestamp}|${payloadStr}`;
-    const signature = crypto.createHmac('sha256', secretKey).update(dataToSign).digest('hex');
     
     const finalMessage = {
         deviceId: deviceId,
         timestamp: timestamp,
-        payload: payloadObj,
-        hmac: signature
+        payload: payloadObj
     };
     
     publishMQTT('telemetry', finalMessage);
@@ -1316,23 +1283,25 @@ while (true) {
                                 <v-expansion-panel-text>
                                     <p class="text-body-2 mb-2">Gömülü sistemler (Örn: ESP32) için <code>mbedtls</code> ve <code>PubSubClient</code> kullanan harici MQTT bağlantı şablonu:</p>
                                     <pre class="code-block my-2" v-pre>
-#include &lt;WiFi.h&gt;
+#include &lt;WiFiClientSecure.h&gt;
 #include &lt;PubSubClient.h&gt;
-#include "mbedtls/md.h"
 
 const char* deviceId = "cihaz_1";
 const char* secretKey = "super_gizli_anahtar";
 const char* tenantSlug = "acme_firmasi";
 
-// MQTT ayarları
-WiFiClient espClient;
+// MQTTS (TLS) ayarları
+WiFiClientSecure espClient;
 PubSubClient client(espClient);
 
 void connectMQTT() {
+  espClient.setInsecure(); // Sertifika doğrulamasını atla (TLS tünelini kurar)
+  client.setServer("sunucu_ip", 8883); // MQTTS Portu
+  
   String username = String(tenantSlug) + ":" + String(deviceId);
   while (!client.connected()) {
     if (client.connect(deviceId, username.c_str(), secretKey)) {
-      Serial.println("MQTT Bağlandı!");
+      Serial.println("MQTTS Bağlandı!");
     } else {
       delay(5000);
     }
@@ -1343,32 +1312,11 @@ void sendTelemetry() {
   unsigned long timestamp = millis(); // Gerçek uygulamada NTP saati kullanın
   String payloadStr = "{\"sicaklik\":25.4,\"nem\":40}";
   
-  String dataToSign = String(deviceId) + "|" + String(timestamp) + "|" + payloadStr;
-  
-  // HMAC SHA-256 Hesaplama
-  byte hmacResult[32];
-  mbedtls_md_context_t ctx;
-  mbedtls_md_type_t md_type = MBEDTLS_MD_SHA256;
-  mbedtls_md_init(&amp;ctx);
-  mbedtls_md_setup(&amp;ctx, mbedtls_md_info_from_type(md_type), 1);
-  mbedtls_md_hmac_starts(&amp;ctx, (const unsigned char *)secretKey, strlen(secretKey));
-  mbedtls_md_hmac_update(&amp;ctx, (const unsigned char *)dataToSign.c_str(), dataToSign.length());
-  mbedtls_md_hmac_finish(&amp;ctx, hmacResult);
-  mbedtls_md_free(&amp;ctx);
-  
-  String signature = "";
-  for(int i=0; i&lt;32; i++) {
-    char str[3];
-    sprintf(str, "%02x", (int)hmacResult[i]);
-    signature += str;
-  }
-  
   // Final JSON formatı
   String finalMessage = "{";
   finalMessage += "\"deviceId\":\"" + String(deviceId) + "\",";
   finalMessage += "\"timestamp\":" + String(timestamp) + ",";
-  finalMessage += "\"payload\":" + payloadStr + ",";
-  finalMessage += "\"hmac\":\"" + signature + "\"";
+  finalMessage += "\"payload\":" + payloadStr;
   finalMessage += "}";
   
   client.publish("telemetry", finalMessage.c_str());
@@ -1394,28 +1342,25 @@ $secretKey = "super_gizli_anahtar";
 $tenantSlug = "acme_firmasi";
 
 $server = 'sunucu_ip';
-$port = 1883;
+$port = 8883;
 
 $mqtt = new MqttClient($server, $port, $deviceId);
 
 $settings = (new ConnectionSettings())
     -&gt;setUsername($tenantSlug . ':' . $deviceId)
-    -&gt;setPassword($secretKey);
+    -&gt;setPassword($secretKey)
+    -&gt;setUseTls(true)
+    -&gt;setTlsVerifyPeer(false);
 
 $mqtt-&gt;connect($settings, true);
 
 $payloadObj = ["sicaklik" =&gt; 25.4, "nem" =&gt; 40];
 $timestamp = round(microtime(true) * 1000);
-$payloadStr = json_encode($payloadObj, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
-
-$dataToSign = $deviceId . '|' . $timestamp . '|' . $payloadStr;
-$signature = hash_hmac('sha256', $dataToSign, $secretKey);
 
 $finalMessage = [
     "deviceId" =&gt; $deviceId,
     "timestamp" =&gt; $timestamp,
-    "payload" =&gt; $payloadObj,
-    "hmac" =&gt; $signature
+    "payload" =&gt; $payloadObj
 ];
 
 $mqtt-&gt;publish('telemetry', json_encode($finalMessage), 0);
@@ -1469,14 +1414,14 @@ const sicaklik = await readModbusData('192.168.1.50', 502, 1, 100, 2, 'holding')
 await writeModbusData('192.168.1.50', 502, 1, 100, 1500);
                         </pre>
 
-                        <h3 class="text-h6 mt-6 mb-2">6.3 Asenkron Cihaz Komutları (device_commands)</h3>
+                        <h3 class="text-h6 mt-6 mb-2">6.3 Asenkron Cihaz Komutları (İn-Memory Yönetimi)</h3>
                         <p class="text-body-2 mb-2">
                             Offline veya yavaş cihazlara komut gönderildiğinde komut doğrudan SQL
                             <code>INSERT INTO</code> ile DEĞİL, özel global fonksiyon <code>sendDeviceCommand()</code>
-                            üzerinden atılır. Bu fonksiyon komutu <strong>SQLite üzerindeki</strong>
-                            <code>device_commands</code> tablosuna <code>PENDING</code> olarak yazar ve MQTT kuyruğuna
-                            bindirir. Cihaz dönüş yaptığında aynı satırın durumu <code>SUCCESS</code> veya
-                            <code>ERROR</code> olarak güncellenir.
+                            üzerinden atılır. Bu fonksiyon komutu <strong>doğrudan RAM (In-Memory) üzerinde</strong>
+                            <code>PENDING</code> olarak sıraya alır ve MQTT kuyruğuna
+                            bindirir. Cihaz dönüş yaptığında komutun durumu RAM üzerinde <code>SUCCESS</code> veya
+                            <code>ERROR</code> olarak güncellenir. Bu sayede gereksiz veritabanı (I/O) yükü ortadan kaldırılmıştır.
                         </p>
                         <pre class="code-block mb-4" v-pre>
 // CİHAZA ASENKRON KOMUT GÖNDERME
@@ -1655,7 +1600,7 @@ useWS('/api/ws/dashboard/canli-sicaklik', (data) => {
     sicaklikRef.value = data.derece;
 });
                         </pre>
-                    <h3 class="text-h6 mt-6 mb-2">7.5 İnteraktif Push Bildirimi (Webhook) Yakalayıcısı</h3>
+                    <h3 class="text-h6 mt-6 mb-2">7.4 İnteraktif Push Bildirimi (Webhook) Yakalayıcısı</h3>
                         <p class="text-body-2 mb-2">Platformun ana uygulaması, cihazın Service Worker'ı (Web Push) ile sürekli iletişim halindedir. Kullanıcı arka plandan gelen bir "Push" bildirimindeki aksiyon butonuna tıkladığında, sistem sayfanın yenilenmesine gerek kalmadan arayüze global bir olay fırlatır (<code>window.dispatchEvent</code>). Bu yeteneği Custom Page içerisindeki scriptinizde yakalayabilir ve endüstriyel alarmlar için reaktif arayüzler tasarlayabilirsiniz:</p>
                         <pre class="code-block mb-4" v-pre>
 const handlePushAction = (e) => {
@@ -1705,8 +1650,8 @@ try {
     // 2. İş mantığı
     let count = 0;
     for (const order of activeOrders) {
-        // Dinamik util çağırma
-        await utils.faturaKes(order.id);
+        // İlgili işlem (Örn: HTTP çağrısı veya doğrudan DB güncellemesi)
+        console.log("Fatura kesildi: " + order.id);
         count++;
     }
 
@@ -1723,7 +1668,7 @@ try {
                         <h3 class="text-h6 mt-6 mb-2">8.2 MİKROSERVİSLER VE DAEMON (BAĞIMSIZ WORKER) KOD ŞABLONU</h3>
                         <p class="text-body-2 mb-2">
                             Scheduler'lar kısa ömürlüdür. Fakat 7/24 uyanık kalması, cihaz dinlemesi gereken servisler
-                            <code>microserviceManager.ts</code> ile başlatılır. Ana sunucuyu (Main Thread) <strong>asla
+                            <code>workerManager.ts</code> ile başlatılır. Ana sunucuyu (Main Thread) <strong>asla
                                 bloklamazlar</strong> ve IPC ile haberleşirler. <strong>MQTT mesajları, aynı tenant'taki tüm mikroservislere otomatik olarak iletilir.</strong>
                         </p>
                         <pre class="code-block mb-4" v-pre>
@@ -1766,10 +1711,10 @@ runDaemon();
                     <v-card id="section-9" class="section-card pa-6">
                         <h2 class="text-h4 mb-4"><v-icon color="primary" size="large" class="mr-2">mdi-toolbox</v-icon>
                             9. Kurumsal Bakım ve Yedekleme</h2>
-                        <h3 class="text-h6 mb-2">9.1 Atomik Yedekleme (SQLite ve DuckDB)</h3>
+                        <h3 class="text-h6 mb-2">9.1 Atomik Yedekleme (SQLite ve DuckDB) (Planlanan)</h3>
                         <p class="text-body-2 mb-2">
-                            <span class="code-inline">GET /api/admin/backup</span> kullanılarak <strong>SQLite (Uygulama
-                                Beyni)</strong> veritabanı anlık Stream mimarisi ile (OOM-Safe) yedeklenir. Geri yükleme
+                            <em>Not: Bu özellik şu anda aktif değildir. Gelecekte <span class="code-inline">GET /api/admin/backup</span> kullanılarak <strong>SQLite (Uygulama
+                                Beyni)</strong> veritabanının anlık Stream mimarisi ile (OOM-Safe) yedeklenmesi planlanmaktadır.</em> Geri yükleme
                             işlemi <code>renameSync</code> kullanılarak işletim sistemi bazında Atomik gerçekleştirilir,
                             böylece anlık elektrik kesintilerinde veritabanı bozulması engellenir.
                         </p>
@@ -1891,17 +1836,12 @@ const productName = $localize(product.name);
 
                         <h3 class="text-h6 mt-4 mb-2">11.4 Sistem API'leri ve Katı Erişim İzolasyonu</h3>
                         <p class="text-body-2 mb-2">
-                            Sistem mimarisi gereği standart (Admin olmayan) kullanıcıların sistem API'leri üzerinden (örneğin <code>/api/admin/records/*</code>) kayıtlara erişimi kesinlikle engellenmiştir. Arayüzde veya API katmanında standart kullanıcıların doğrudan veritabanı uç noktalarına ulaşması kapalıdır. Standart kullanıcılara veri açılması veya işlem yaptırılması gerektiğinde, yöneticiler (Admin) <strong>HTTP Endpoints</strong> veya <strong>Dynamic Utils</strong> yazarak sadece istedikleri özel sorguları ve iş mantıklarını dışarıya kontrollü bir API olarak açmalıdırlar.
+                            Sistem mimarisi gereği standart (Admin olmayan) kullanıcıların sistem API'leri üzerinden (örneğin <code>/api/admin/records/*</code>) kayıtlara erişimi kesinlikle engellenmiştir. Arayüzde veya API katmanında standart kullanıcıların doğrudan veritabanı uç noktalarına ulaşması kapalıdır. Standart kullanıcılara veri açılması veya işlem yaptırılması gerektiğinde, yöneticiler (Admin) <strong>HTTP Endpoints</strong> veya <strong>Globals (Util)</strong> yazarak sadece istedikleri özel sorguları ve iş mantıklarını dışarıya kontrollü bir API olarak açmalıdırlar.
                         </p>
 
                         <!-- Çevrimdışı Mod Koruması kaldırıldı -->
 
-                        <h3 class="text-h6 mt-4 mb-2">11.5 Canlı Sistem Sağlığı (Status) İzleme</h3>
-                        <p class="text-body-2 mb-2">
-                            Yöneticiler için arayüzün alt kısmında (Footer) bulunan <code>/api/status</code> REST API göstergesi; Node.js RAM kullanımını, İşletim Sistemi CPU yükünü, Disk doluluk oranını ve Veritabanı/MQTT bağlantı durumlarını sunucudan anlık (HTTP GET ile) okuyarak ekrana yansıtır.
-                        </p>
-
-                        <h3 class="text-h6 mt-4 mb-2">11.6 Sayfa Tiplerini (Layout, Login) Ezme Yeteneği</h3>
+                        <h3 class="text-h6 mt-4 mb-2">11.5 Sayfa Tiplerini (Layout, Login) Ezme Yeteneği</h3>
                         <p class="text-body-2 mb-2">
                             Custom Pages bölümünde sayfa oluştururken <code>page_type</code> parametresini değiştirebilirsiniz:
                             <br>- <code>regular</code>: Sistemin varsayılan (Admin) menü ve Navbar'ına (Layout) sahip standart sayfalardır.
@@ -1910,56 +1850,56 @@ const productName = $localize(product.name);
                             <br>- <code>layout</code>: Nuxt'un standart sol menü ve navbar yapısını tamamen siler, <code>&lt;slot /&gt;</code> ekleyerek tüm sitenin iskelet tasarımını baştan yazmanıza imkan tanır.
                         </p>
 
-                        <h3 class="text-h6 mt-4 mb-2">11.7 Süper Admin İçin "Tenant Switcher"</h3>
+                        <h3 class="text-h6 mt-4 mb-2">11.6 Süper Admin İçin "Tenant Switcher"</h3>
                         <p class="text-body-2 mb-2">
                             <code>is_super_admin: true</code> yetkisine sahip ana yöneticiler, üst menüde (Navbar) beliren "Tenant Workspace" açılır menüsü sayesinde oturum kapatıp açmadan, saniyeler içinde firmaların (Tenant) veritabanları arasında yatay geçiş yapabilirler.
                         </p>
 
-                        <h3 class="text-h6 mt-4 mb-2">11.8 Web Push "Webhook" Tetikleyicileri</h3>
+                        <h3 class="text-h6 mt-4 mb-2">11.7 Web Push "Webhook" Tetikleyicileri</h3>
                         <p class="text-body-2 mb-2">
                             Service Worker altyapısı sayesinde, push bildirimlerine <code>webhookUrl</code> parametresi eklendiğinde; bildirim tıklandığında tarayıcı sekmesi açmak yerine arka planda sessizce bir POST (API) isteği atılabilir (Örn: Alarmı anında sustur butonu).
                         </p>
 
-                        <h3 class="text-h6 mt-4 mb-2">11.9 Mikroservis "Auto-Ban" (Crash Limit) Koruması</h3>
+                        <h3 class="text-h6 mt-4 mb-2">11.8 Mikroservis "Auto-Ban" (Crash Limit) Koruması</h3>
                         <p class="text-body-2 mb-2">
                             Arka plandaki mikroservisler sonsuz döngüden veya dış API hatalarından dolayı çökerse kendini yeniden başlatır. Ancak sistem CPU'yu korumak için bir servisin 60 saniye içinde 5 kereden fazla çökmesi durumunda bu servisi otomatik olarak BAN'lar (Yeniden başlatmayı durdurur).
                         </p>
 
-                        <h3 class="text-h6 mt-4 mb-2">11.10 Asenkron Komutlar İçin Timeout Mekanizması</h3>
+                        <h3 class="text-h6 mt-4 mb-2">11.9 Asenkron Komutlar İçin Timeout Mekanizması</h3>
                         <p class="text-body-2 mb-2">
-                            MQTT üzerinden cihazlara gönderilen asenkron komutlar havada asılı kalmaz. <code>commandTimeout.ts</code> sayesinde, <code>MQTT_COMMAND_TIMEOUT</code> süresi dolduğunda (varsayılan 30 saniye) cihaz yanıt vermediyse komutun durumu veritabanında otomatik olarak TIMEOUT'a çekilir.
+                            MQTT üzerinden cihazlara gönderilen asenkron komutlar havada asılı kalmaz. <code>deviceCommands.ts</code> sayesinde, <code>MQTT_COMMAND_TIMEOUT</code> süresi dolduğunda (varsayılan 30 saniye) cihaz yanıt vermediyse komutun durumu RAM üzerinde otomatik olarak TIMEOUT'a çekilir.
                         </p>
 
-                        <h3 class="text-h6 mt-4 mb-2">11.11 Sistem Değişkenlerinde (SysVars) Zengin Tipler</h3>
+                        <h3 class="text-h6 mt-4 mb-2">11.10 Sistem Değişkenlerinde (Globals) Zengin Tipler</h3>
                         <p class="text-body-2 mb-2">
                             Sistem değişkenleri oluşturulurken metin yerine <code>color, date, time, boolean, json</code> tipleri seçilebilir. Örneğin bir <code>color</code> tipi seçerseniz admin panelinde otomatik Renk Seçici (Color Picker) çıkar ve sistem temanızı dinamik yönetmenizi sağlar.
                         </p>
 
-                        <h3 class="text-h6 mt-4 mb-2">11.12 Özel Fiziksel Dosya Sunucusu (Asset Server)</h3>
+                        <h3 class="text-h6 mt-4 mb-2">11.11 Özel Fiziksel Dosya Sunucusu (Asset Server)</h3>
                         <p class="text-body-2 mb-2">
                             Her kiracının kendine ait, Path Traversal saldırılarına karşı güvenli bir fiziksel dosya erişim rotası bulunur: <code>/api/tenant/:slug/assets/:file</code>. Bu rotayı kullanarak tenantlara özel logolar, PDF dokümanları ve resimleri custom sayfalara sorunsuzca entegre edebilirsiniz.
                         </p>
-                        <h3 class="text-h6 mt-4 mb-2">11.13 Güvenli Mod (Safe Mode & Disaster Recovery)</h3>
+                        <h3 class="text-h6 mt-4 mb-2">11.12 Güvenli Mod (Safe Mode & Disaster Recovery)</h3>
                         <p class="text-body-2 mb-2">
                             Sistemdeki şablonlarda (Layout/DynamicRenderer) veya veritabanında oluşan bir hata sebebiyle ekranın çöküp Admin panele girişin engellenmesi durumunda hayat kurtaran <strong>Güvenli Mod</strong> (Safe Mode) mekanizması mevcuttur. <code>/admin/login</code> adresinden yapılan girişlerde <code>safe_mode=1</code> çerezi oluşturularak veritabanının <code>default.vue</code> şablonu tamamen atlanır (bypass edilir). Böylece sisteme hardcoded (gömülü) kurtarma menüsüyle erişebilir ve hatalı sayfaları/kodları düzeltebilirsiniz.
                         </p>
 
-                        <h3 class="text-h6 mt-4 mb-2">11.14 DuckDB Spill-to-Disk (OOM Koruması)</h3>
+                        <h3 class="text-h6 mt-4 mb-2">11.13 DuckDB Spill-to-Disk (OOM Koruması)</h3>
                         <p class="text-body-2 mb-2">
                             Aşırı yüklemelerde (Thundering Herd) veya 512MB RAM gibi kısıtlı donanımlarda DuckDB'nin belleği tüketip Node.js'i çökertmesini önlemek için <code>PRAGMA temp_directory</code> kuralı devrededir. RAM sınırı aşıldığında veriler güvenle diske kaydırılır (Spill-to-disk). Ayrıca <code>duckdb-appender.ts</code> içindeki asenkron <code>isFlushing</code> Mutex (kilit) yapısı, Producer-Consumer (Üretici-Tüketici) darboğazını aşarak verilerin Event Loop'u kilitlemeden toplu halde yazılmasını sağlar.
                         </p>
 
-                        <h3 class="text-h6 mt-4 mb-2">11.15 MQTT Limitleri ve Cron Fork Bomb Koruması</h3>
+                        <h3 class="text-h6 mt-4 mb-2">11.14 MQTT Limitleri ve Cron Fork Bomb Koruması</h3>
                         <p class="text-body-2 mb-2">
                             Dahili Aedes MQTT Broker için donanımsal koruma limitleri (<code>concurrency: 100</code>, <code>queueLimit: 1000</code>) uygulanmaktadır. Asılı kalan bağlantılar <code>lru-cache</code> sistemiyle temizlenir. Cron motorunda ise sonsuz döngüye giren kullanıcı kodlarının CPU/RAM tüketmemesi (Fork Bomb engellemesi) için 60 saniyelik Hard Timeout sınırı vardır. Süresi dolan işlemler acımasızca (SIGKILL) öldürülür.
                         </p>
 
-                        <h3 class="text-h6 mt-4 mb-2">11.16 Sistem Değişkenleri Hedef Mimarisi ve PRIMARY_COLOR</h3>
+                        <h3 class="text-h6 mt-4 mb-2">11.15 Sistem Değişkenleri Hedef Mimarisi ve PRIMARY_COLOR</h3>
                         <p class="text-body-2 mb-2">
                             Sistem değişkenleri artık katı bir şekilde <code>target</code> (<code>ui</code>, <code>api</code>, <code>shared</code>) ve <code>is_public</code> bayraklarıyla yönetilir. Ayrıca arayüzün ana renk temasını belirleyen <code>PRIMARY_COLOR</code> dinamik değişkeni ile (örn: <code>#ff5733</code> veya <code>success</code>) tüm uygulamanın renk teması anında değiştirilebilir. <code>APP_LOGO</code> değişkeni ise ham <code>&lt;svg&gt;</code> string'lerini veya standart resim URL'lerini doğrudan DOM'da çözümleyebilir.
                         </p>
 
-                        <h3 class="text-h6 mt-4 mb-2">11.17 protected Koruması ve Merkezi Rota Çözümlemesi</h3>
+                        <h3 class="text-h6 mt-4 mb-2">11.16 protected Koruması ve Merkezi Rota Çözümlemesi</h3>
                         <p class="text-body-2 mb-2">
                             Kritik sistem sayfaları (Layout, Login vb.) ve değişkenleri <code>protected=1</code> bayrağı ile korunur ve silinmeleri engellenir. Uygulamanın tüm dinamik sayfa rotaları (Home, Landing, Custom) artık <code>/api/pages/[...slug].ts</code> üzerinde merkezileştirilmiştir. Nuxt şablonları tamamen veritabanından <code>&lt;DynamicRenderer&gt;</code> vasıtasıyla derlenir.
                         </p>
@@ -2046,8 +1986,4 @@ const productName = $localize(product.name);
         }).use(vuetify).mount('#app');
     </script>
 </body>
-
-</html>
-</body>
-
 </html>

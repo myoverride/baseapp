@@ -2,8 +2,11 @@ import { useDB } from '../../../../utils/db';
 
 export default defineEventHandler(async (event) => {
   const user = event.context.user;
-  if (!user || (!user.is_admin && !user.is_super_admin)) {
-    throw createError({ statusCode: 403, message: 'errors.unauthorized' });
+  if (!user) {
+    throw createError({ statusCode: 401, message: 'errors.loginRequired' });
+  }
+  if (!user.is_admin && !user.is_super_admin) {
+    throw createError({ statusCode: 403, message: 'errors.forbiddenAdminOnly' });
   }
 
   const tenantSlug = event.context.tenantSlug || 'master';
@@ -60,7 +63,7 @@ export default defineEventHandler(async (event) => {
     const total = items.length;
     items = items.slice((page - 1) * limit, page * limit);
 
-    return { success: true, data: items, total };
+    return { success: true, data: items, pagination: { total, page, limit } };
   } catch (err: any) {
     throw createError({ statusCode: 500, message: err.message });
   }

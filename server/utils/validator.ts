@@ -60,8 +60,8 @@ function normalizeSchema(schema: any): Record<string, any> {
 }
 
 export async function validateTelemetry(tenantSlug: string, payload: any, schema: any, _timestamp: number, _ignoreTimestampValidation: boolean = false): Promise<ValidationResult> {
-  const { getSysVar } = await import('./sysvars');
-  const sysMode = await getSysVar(tenantSlug, 'TELEMETRY_VALIDATION_MODE', false, 'relaxed');
+  const {} = await import('./globalsManager');
+  const sysMode = await globals.get(tenantSlug, 'TELEMETRY_VALIDATION_MODE', false, 'relaxed');
   const mode = String(sysMode).toLowerCase();
 
   // relaxed veya tanımsız mod: hiçbir tarih/timestamp reddi olmadan esnek kabul
@@ -122,4 +122,18 @@ export async function validateTelemetry(tenantSlug: string, payload: any, schema
     errors: [],
     processedPayload: objectPayload
   };
+}
+
+export const RESERVED_SLUGS = [
+  'api', 'admin', 'auth', 'users', 'tenant', 'system', 'webhook', 'records', 'login', 'logout', 'dashboard'
+];
+
+export function isValidSlug(slug: string): boolean {
+  if (!slug || typeof slug !== 'string') return false;
+  // Sadece küçük harf, rakam ve alt çizgi
+  if (!/^[a-z0-9_]+$/.test(slug)) return false;
+  
+  if (RESERVED_SLUGS.includes(slug)) return false;
+  
+  return true;
 }

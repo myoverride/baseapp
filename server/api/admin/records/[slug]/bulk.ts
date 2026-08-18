@@ -1,32 +1,57 @@
-import { bulkImportRecords } from '../../../../utils/recordManager';
+import { bulkImportRecords, bulkDeleteRecords } from '../../../../utils/recordManager';
 
 export default defineEventHandler(async (event) => {
   const method = event.node.req.method;
   const slug = event.context.params?.slug;
   const tenantSlug = event.context.tenantSlug;
 
-  if (method !== 'POST') {
-    throw createError({ statusCode: 405, message: tEvent(event, 'errors.methodNotAllowed') });
+  if (method !== 'POST' && method !== 'DELETE') {
+    throw createError({ statusCode: 405, message: 'errors.methodNotAllowed' });
   }
 
   if (!slug) {
-    throw createError({ statusCode: 400, message: tEvent(event, 'errors.validationFailed') });
+    throw createError({ statusCode: 400, message: 'errors.validationFailed' });
   }
 
   const user = event.context.user;
-  if (!user || !user.is_admin) {
+  if (!user) {
+    throw createError({ statusCode: 401, message: 'errors.loginRequired' });
+  }
+  if (!user.is_admin) {
     throw createError({ statusCode: 403, message: 'errors.forbiddenAdminOnly' });
   }
 
   const body = await readBody(event);
+
+  if (method === 'DELETE') {
+    const ids = body.ids;
+    if (!Array.isArray(ids) || ids.length === 0) {
+      throw createError({ statusCode: 400, message: 'errors.validationFailed' });
+    }
+    try {
+      const res = await bulkDeleteRecords(tenantSlug, slug, ids);
+      if (!res.success) {
+        throw createError({ statusCode: 400, message: res.message });
+      }
+      return {
+        success: true,
+        message: tEvent(event, 'message.success'),
+        deleted: res.count
+      };
+    } catch (e: any) {
+      throw createError({ statusCode: 500, message: 'errors.internalError' + ': ' + e.message });
+    }
+  }
+
+  // POST (Import)
   const records = body.records;
 
   if (!Array.isArray(records) || records.length === 0) {
-    throw createError({ statusCode: 400, message: tEvent(event, 'error.notFound') });
+    throw createError({ statusCode: 400, message: 'errors.notFound' });
   }
 
   if (records.length > 5000) {
-    throw createError({ statusCode: 400, message: tEvent(event, 'errors.importLimitExceeded') });
+    throw createError({ statusCode: 400, message: 'errors.importLimitExceeded' });
   }
 
   try {
@@ -40,6 +65,6 @@ export default defineEventHandler(async (event) => {
       inserted: res.count
     };
   } catch (e: any) {
-    throw createError({ statusCode: 500, message: tEvent(event, 'errors.internalError') + ': ' + e.message });
+    throw createError({ statusCode: 500, message: 'errors.internalError' + ': ' + e.message });
   }
 });

@@ -2,7 +2,7 @@
   <v-container>
     <div class="mb-4">
       <v-btn prepend-icon="mdi-arrow-left" variant="text" to="/" class="text-none font-weight-medium px-0 text-body-1"
-        color="grey-darken-2">
+        color="primary">
         {{ $t('common.home') }}
       </v-btn>
     </div>
@@ -11,6 +11,8 @@
       :title="$t('page.entities')" default-sort-key="created_at" default-sort-order="desc" @create="openCreateDialog"
       @edit="openEditDialog" @delete="handleDelete" @loaded="onCrudTableLoaded">
       <template #toolbarActions>
+        <v-btn icon="mdi-creation" variant="text" :loading="generateAllLoading" @click="generateAllApiUi" class="mr-2"
+          title="Tümünü Oluştur (API & UI)" color="deep-purple"></v-btn>
         <v-btn icon="mdi-download" variant="text" :loading="jsonExportLoading" @click="exportJSON" class="mr-2"
           :title="$t('action.exportFormat', { format: 'JSON' })"></v-btn>
         <v-btn icon="mdi-upload" variant="text" :loading="jsonImportLoading" @click="triggerJSONImport" class="mr-2"
@@ -52,10 +54,10 @@
             <v-btn icon="mdi-information" v-bind="props" color="info" variant="text" size="small"></v-btn>
           </template>
           <div class="text-caption">
-            <div class="mb-1"><span class="font-weight-medium text-grey-lighten-2">{{ $t('table.createdAt') }}:</span>
+            <div class="mb-1"><span class="font-weight-medium opacity-70">{{ $t('table.createdAt') }}:</span>
               {{
                 formatAppDate(item.created_at as any) }}</div>
-            <div><span class="font-weight-medium text-grey-lighten-2">{{ $t('table.updatedAt') }}:</span> {{
+            <div><span class="font-weight-medium opacity-70">{{ $t('table.updatedAt') }}:</span> {{
               formatAppDate(item.updated_at as any) }}</div>
           </div>
         </v-tooltip>
@@ -77,7 +79,8 @@
 
       </v-toolbar>
       <ErDiagramEditor :entities="entitiesList" @entity-update="handleErEntityUpdate"
-        @entity-create="handleErEntityCreate" @entity-delete="handleErEntityDelete" />
+        @entity-create="handleErEntityCreate" @entity-delete="handleErEntityDelete" 
+        @edit-entity="openEditDialog" @create-entity="openCreateDialog" />
     </v-card>
 
     <!-- ItemDialog Entegrasyonu -->
@@ -93,7 +96,13 @@
           <v-col cols="12" sm="6" class="pb-0">
             <v-text-field v-model="formData.slug" :label="$t('field.slug')" variant="outlined" density="comfortable"
               class="font-weight-bold" :hint="$t('field.slugHint')"
-              :rules="[(v: any) => !!v || $t('validation.required')]"></v-text-field>
+              :disabled="dialogMode === 'edit'"
+              @blur="formData.slug = normalizeSlug(formData.slug)"
+              :rules="[
+                (v: any) => !!v || $t('validation.required'),
+                (v: any) => /^[a-z0-9_]+$/.test(v) || t('validation.alphanumericOnly'),
+                (v: any) => !['api', 'admin', 'auth', 'users', 'tenant', 'system', 'webhook', 'records', 'login', 'logout', 'dashboard'].includes(v) || t('validation.reservedWord')
+              ]"></v-text-field>
           </v-col>
           <v-col cols="12" sm="12" class="pb-0">
             <v-combobox v-model="formData.hashtags" :label="$t('field.hashtags')" variant="outlined" multiple chips
@@ -103,7 +112,7 @@
         </v-row>
 
         <div class="d-flex align-center justify-space-between mb-2 mt-2">
-          <span class="font-weight-bold text-grey-darken-2">{{ $t('field.fields') }}</span>
+          <span class="font-weight-bold opacity-70">{{ $t('field.fields') }}</span>
           <v-btn size="small" :color="color" variant="tonal" prepend-icon="mdi-plus" @click="addField(formData)">
             {{ $t('common.addField') }}
           </v-btn>
@@ -114,15 +123,15 @@
           
           <!-- Field Header & Actions -->
           <div class="d-flex justify-space-between align-center mb-3 pb-2 border-b">
-            <div class="text-subtitle-1 font-weight-bold text-grey-darken-2 d-flex align-center">
-              <v-icon size="small" color="grey-darken-1" class="mr-2">mdi-form-textbox</v-icon>
+            <div class="text-subtitle-1 font-weight-bold opacity-70 d-flex align-center">
+              <v-icon size="small" color="primary" class="mr-2">mdi-form-textbox</v-icon>
               {{ $t('common.fieldName') }} #{{ index + 1 }}
               <v-chip v-if="field.name" size="x-small" class="ml-2 font-weight-bold" color="primary" variant="tonal">{{ field.name }}</v-chip>
             </div>
             <div>
-              <v-btn icon="mdi-arrow-up" color="grey-darken-1" variant="text" size="small" :disabled="index === 0"
+              <v-btn icon="mdi-arrow-up" color="primary" variant="text" size="small" :disabled="index === 0"
                 @click="moveFieldUp(formData, index)" :title="$t('action.moveUp')"></v-btn>
-              <v-btn icon="mdi-arrow-down" color="grey-darken-1" variant="text" size="small"
+              <v-btn icon="mdi-arrow-down" color="primary" variant="text" size="small"
                 :disabled="index === formData.fields.length - 1" @click="moveFieldDown(formData, index)"
                 :title="$t('action.moveDown')"></v-btn>
               <v-btn icon="mdi-delete" color="error" variant="text" size="small" class="ml-1" @click="removeField(formData, index)"
@@ -138,7 +147,14 @@
 
             <v-col cols="12" md="4" class="pb-1">
               <v-text-field v-model="field.name" :label="$t('field.slug')" variant="outlined" density="compact"
-                hide-details bg-color="white" :rules="[(v: any) => !!v || t('validation.enterFieldName')]"></v-text-field>
+                hide-details bg-color="white"
+                :disabled="!field.isNew"
+                @blur="field.name = normalizeSlug(field.name)"
+                :rules="[
+                  (v: any) => !!v || t('validation.enterFieldName'),
+                  (v: any) => /^[a-z0-9_]+$/.test(v) || t('validation.alphanumericOnly'),
+                  (v: any) => !['api', 'admin', 'auth', 'users', 'tenant', 'system', 'webhook', 'records', 'login', 'logout', 'dashboard'].includes(v) || t('validation.reservedWord')
+                ]"></v-text-field>
             </v-col>
             
             <v-col cols="12" md="4" class="pb-1">
@@ -149,27 +165,27 @@
               
               <!-- Relation Extra Fields -->
               <template v-if="field.type === 'relation'">
-                <v-select v-model="field.targetEntityId" :items="localizedEntitiesList"
+                <v-autocomplete v-model="field.targetEntityId" :items="localizedEntitiesList"
                   item-title="displayName" item-value="id" :label="$t('common.target')" variant="outlined"
                   density="compact" bg-color="white" class="mt-3" hide-details
-                  :rules="[(v: any) => !!v || $t('validation.required')]"></v-select>
+                  :rules="[(v: any) => !!v || $t('validation.required')]"></v-autocomplete>
                 <v-select v-model="field.onDelete"
                   :items="getRelationOnDeleteOptions(field)" item-title="title" item-value="value"
-                  :label="$t('field.onDelete') || 'Silinince Davranış'" variant="outlined" density="compact"
+                  :label="$t('field.onDelete')" variant="outlined" density="compact"
                   bg-color="white" class="mt-3" hide-details
-                  :hint="field.required && field.onDelete === 'restrict' ? 'Required alanlarda setnull kullanılamaz.' : ''"
+                  :hint="field.required && field.onDelete === 'restrict' ? t('validation.noSetNullIfRequired') : ''"
                   persistent-hint></v-select>
               </template>
               
               <!-- Enum Extra Fields -->
-              <div v-if="field.type === 'enum'" class="mt-3 border rounded pa-3 bg-grey-lighten-5">
+              <div v-if="field.type === 'enum'" class="mt-3 border rounded pa-3 bg-surface">
                 <div class="d-flex justify-space-between align-center mb-2">
-                  <span class="text-caption font-weight-bold text-grey-darken-1">{{ $t('common.optionsPressEnterToAdd') || 'Seçenekler' }}</span>
-                  <v-btn size="x-small" :color="color" variant="tonal" prepend-icon="mdi-plus" @click="field.options.push('')">Ekle</v-btn>
+                  <span class="text-caption font-weight-bold opacity-70">{{ $t('common.optionsPressEnterToAdd') }}</span>
+                  <v-btn size="x-small" :color="color" variant="tonal" prepend-icon="mdi-plus" @click="field.options.push('')">{{ $t('action.add') }}</v-btn>
                 </div>
                 <div v-for="(opt, optIdx) in field.options" :key="optIdx" class="d-flex align-start mb-2">
                   <div class="flex-grow-1">
-                    <I18nTextField v-model="field.options[optIdx]" :placeholder="'Seçenek ' + String(Number(optIdx) + 1)" />
+                    <I18nTextField v-model="field.options[optIdx]" :placeholder="`${$t('common.option')} ${Number(optIdx) + 1}`" />
                   </div>
                   <v-btn icon="mdi-delete" color="red" variant="text" size="small" class="mt-1 ml-1" @click="field.options.splice(optIdx, 1)"></v-btn>
                 </div>
@@ -207,10 +223,10 @@
 
           <!-- Validation Rules List -->
           <v-expand-transition>
-            <div class="mt-4 px-3 py-3 border border-dashed bg-grey-lighten-5 rounded" v-if="field.rulesList.length > 0">
+            <div class="mt-4 px-3 py-3 border border-dashed bg-surface rounded" v-if="field.rulesList.length > 0">
               <div class="text-caption font-weight-bold text-blue-grey-darken-1 mb-3 d-flex align-center">
                 <v-icon size="small" class="mr-1">mdi-shield-check</v-icon>
-                Geçerlilik Kuralları (Validation Rules)
+                {{ $t('entity.validationRules') }}
               </div>
               <v-row v-for="(rule, rIndex) in field.rulesList" :key="rIndex" align="center" no-gutters class="mb-3">
                 <v-col cols="12" md="3" class="px-1 mb-2 mb-md-0">
@@ -229,7 +245,7 @@
                 </v-col>
                 <v-col cols="2" md="1" class="text-right px-1 mb-2 mb-md-0">
                   <v-btn icon="mdi-close" color="error" variant="text" size="small"
-                    @click="removeRule(field, Number(rIndex))" title="Kuralı Sil"></v-btn>
+                    @click="removeRule(field, Number(rIndex))" :title="$t('action.deleteRule')"></v-btn>
                 </v-col>
               </v-row>
             </div>
@@ -246,14 +262,14 @@
         <v-toolbar color="deep-purple" height="64" class="px-2">
           <v-icon icon="mdi-magic-staff" color="white" class="mr-3" size="32"></v-icon>
           <v-toolbar-title class="text-h6 font-weight-bold text-white">
-            API & UI Jeneratör
+            {{ $t('entity.apiUiGenerator') }}
           </v-toolbar-title>
           <v-spacer></v-spacer>
           <v-btn icon="mdi-close" variant="text" color="white" @click="generatorDialog = false"></v-btn>
         </v-toolbar>
         <v-card-text class="pt-4">
           <div class="mb-4 text-body-1 font-weight-medium">
-            <span class="text-primary">{{ $localize(generatorEntity?.name) }}</span> için oluşturulacak modülleri seçin:
+            <span class="text-primary">{{ $localize(generatorEntity?.name) }}</span> {{ $t('entity.selectModulesToGenerate') }}:
           </div>
 
           <v-row>
@@ -295,8 +311,8 @@
         </v-card-text>
         <v-card-actions class="pa-4 pt-0">
           <v-spacer></v-spacer>
-          <v-btn variant="text" color="grey-darken-1" @click="generatorDialog = false">İptal</v-btn>
-          <v-btn variant="flat" color="deep-purple" @click="generateApiUi" :loading="generatorLoading">Oluştur</v-btn>
+          <v-btn variant="text" color="primary" @click="generatorDialog = false">İptal</v-btn>
+          <v-btn variant="flat" color="deep-purple" @click="generateApiUi" :loading="generatorLoading">{{ $t('action.generate') }}</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -348,12 +364,29 @@ async function generateApiUi() {
         hashtags: generatorHashtags.value
       }
     });
-    if ($toast) $toast.success(`Üretim Tamamlandı! ${res.insertedMiddlewares} API, ${res.insertedPages} Sayfa eklendi.`);
+    if ($toast) $toast.success(t('message.generationComplete', { api: res.insertedMiddlewares, page: res.insertedPages }));
     generatorDialog.value = false;
   } catch (e: any) {
-    if ($toast) $toast.error(e.data?.message || e.message || 'Üretim sırasında hata oluştu.');
+    if ($toast) $toast.error(e.data?.message || e.message || t('error.generationFailed'));
   } finally {
     generatorLoading.value = false;
+  }
+}
+
+const generateAllLoading = ref(false);
+
+async function generateAllApiUi() {
+  if (!confirm('Tüm varlıklar için sayfalar ve API uç noktaları oluşturulacak (mevcut olanların üzerine yazılır). Onaylıyor musunuz?')) return;
+  generateAllLoading.value = true;
+  try {
+    const res: any = await $fetch('/api/admin/entities/generate-all', {
+      method: 'POST'
+    });
+    if ($toast) $toast.success(t('message.generationComplete', { api: res.insertedMiddlewares, page: res.insertedPages }));
+  } catch (e: any) {
+    if ($toast) $toast.error(e.data?.message || e.message || t('error.generationFailed'));
+  } finally {
+    generateAllLoading.value = false;
   }
 }
 
@@ -363,7 +396,7 @@ const { mobile } = useDisplay()
 
 const { jsonExportLoading, jsonImportLoading, jsonInputRef, triggerJSONImport, exportSingleJSON, exportJSON, importJSON } = useJsonExportImport('/api/admin/entities', crudTable);
 
-const { primaryColor: color } = useSysVars();
+const { primaryColor: color } = useGlobals();
 
 // 1. Hangi kurallar kullanıcıdan bir değer girmesini ister?
 const requiresValue = (type: string) => {
@@ -389,11 +422,11 @@ const getValueInputType = (type: string) => {
 const getValuePlaceholder = (type: string) => {
   switch (type) {
     case 'minDate':
-    case 'maxDate': return '2024-01-01 veya today()-2d';
+    case 'maxDate': return t('placeholder.minMaxDate');
     case 'minTime':
-    case 'maxTime': return '08:30';
+    case 'maxTime': return t('placeholder.minMaxTime');
     case 'regex': return '^[a-zA-Z0-9]+$';
-    case 'requiredKeys': return 'isim, yas, tcNo';
+    case 'requiredKeys': return t('placeholder.requiredKeys');
     default: return t('placeholder.enterValue');
   }
 };
@@ -432,7 +465,11 @@ const handleErEntityUpdate = async (entity: any) => {
     if ($toast) $toast.success(t('message.entityUpdated', { name: t('entity.entity') }));
     crudTable.value?.loadItems();
   } catch (e: any) {
-    if ($toast) $toast.error(t(e.data?.message || 'errors.operationFailed'));
+        const errPayload = err?.data || e?.data;
+    const isArr = Array.isArray(errPayload?.data);
+    const errData = isArr ? errPayload.data[0] : (errPayload?.data || {});
+    const errMsg = isArr ? errPayload.data[0].message : (errPayload?.message || 'errors.operationFailed');
+    if ($toast) $toast.error(t(errMsg, errData));
   }
 };
 
@@ -445,7 +482,11 @@ const handleErEntityCreate = async (data: any) => {
     if ($toast) $toast.success(t('message.entityCreated', { name: t('entity.entity') }));
     crudTable.value?.loadItems();
   } catch (e: any) {
-    if ($toast) $toast.error(t(e.data?.message || 'errors.operationFailed'));
+        const errPayload = err?.data || e?.data;
+    const isArr = Array.isArray(errPayload?.data);
+    const errData = isArr ? errPayload.data[0] : (errPayload?.data || {});
+    const errMsg = isArr ? errPayload.data[0].message : (errPayload?.message || 'errors.operationFailed');
+    if ($toast) $toast.error(t(errMsg, errData));
   }
 };
 
@@ -455,15 +496,19 @@ const handleErEntityDelete = async (entity: any) => {
     if ($toast) $toast.success(t('message.entityDeleted', { name: t('entity.entity') }));
     crudTable.value?.loadItems();
   } catch (e: any) {
-    if ($toast) $toast.error(t(e.data?.message || 'errors.operationFailed'));
+        const errPayload = err?.data || e?.data;
+    const isArr = Array.isArray(errPayload?.data);
+    const errData = isArr ? errPayload.data[0] : (errPayload?.data || {});
+    const errMsg = isArr ? errPayload.data[0].message : (errPayload?.message || 'errors.operationFailed');
+    if ($toast) $toast.error(t(errMsg, errData));
   }
 };
 
 const columns = computed(() => [
   { title: t('common.name'), key: 'name', sortable: true, filterable: true, type: 'string', slot: true },
-  { title: t('table.slug'), key: 'slug', sortable: true, filterable: true, type: 'string' },
-  { title: t('table.hashtags'), key: 'hashtags', sortable: false, filterable: true, slot: true },
-  { title: t('common.detail'), key: 'info', sortable: false, filterable: false, slot: true, width: '60px', align: 'center' as const }
+  { title: t('common.slug'), key: 'slug', sortable: true, filterable: true, type: 'string' },
+  { title: t('field.hashtags'), key: 'hashtags', sortable: false, filterable: true, slot: true },
+  { title: t('common.info'), key: 'info', sortable: false, filterable: false, slot: true, width: '60px', align: 'center' as const }
 ]);
 
 const dialog = ref(false);
@@ -479,7 +524,7 @@ const openCreateDialog = () => {
     name: '',
     slug: '',
     hashtags: [],
-    fields: [{ name: '', label: '', type: 'string', required: true, unique: false, isPrimary: true, showInTable: true, rulesList: [], options: [], onDelete: 'restrict' }]
+    fields: [{ name: '', label: '', type: 'string', required: true, unique: false, isPrimary: true, showInTable: true, rulesList: [], options: [], onDelete: 'restrict', isNew: true }]
   };
   dialog.value = true;
 };
@@ -497,6 +542,17 @@ const generateSlug = (name: string) => {
     }
   }
   return nameStr
+    .toLowerCase()
+    .replace(/[ğ]/g, 'g').replace(/[ü]/g, 'u').replace(/[ş]/g, 's')
+    .replace(/[ı]/g, 'i').replace(/[ö]/g, 'o').replace(/[ç]/g, 'c')
+    .replace(/[^a-z0-9_]/g, '_')
+    .replace(/_+/g, '_')
+    .replace(/^_|_$/g, '');
+};
+
+const normalizeSlug = (val: string) => {
+  if (!val || typeof val !== 'string') return '';
+  return val
     .toLowerCase()
     .replace(/[ğ]/g, 'g').replace(/[ü]/g, 'u').replace(/[ş]/g, 's')
     .replace(/[ı]/g, 'i').replace(/[ö]/g, 'o').replace(/[ç]/g, 'c')
@@ -523,14 +579,15 @@ const openEditDialog = (item: any) => {
     isPrimary: item.schema[key].isPrimary || false,
     showInTable: item.schema[key].showInTable !== false,
     hashAlgorithm: item.schema[key].hashAlgorithm || 'plain',
-    _order: item.schema[key]._order || 0
+    _order: item.schema[key]._order || 0,
+    isNew: false
   })).sort((a, b) => a._order - b._order);
 
   initialFormData.value = {
     name: item.name,
     slug: item.slug,
     hashtags: typeof item.hashtags === 'string' ? JSON.parse(item.hashtags || '[]') : (item.hashtags || []),
-    fields: mappedFields.length > 0 ? mappedFields : [{ name: '', label: '', type: 'string', required: true, unique: false, isPrimary: true, showInTable: true, rulesList: [], options: [], hashAlgorithm: 'plain', onDelete: 'restrict' }]
+    fields: mappedFields.length > 0 ? mappedFields : [{ name: '', label: '', type: 'string', required: true, unique: false, isPrimary: true, showInTable: true, rulesList: [], options: [], hashAlgorithm: 'plain', onDelete: 'restrict', isNew: true }]
   };
   dialog.value = true;
 };
@@ -539,7 +596,7 @@ const openEditDialog = (item: any) => {
 const addField = (formData: any) => {
   if (!formData.fields) formData.fields = [];
   const hasPrimary = formData.fields.some((f: any) => f.isPrimary);
-  formData.fields.push({ name: '', label: '', type: 'string', required: false, unique: false, isPrimary: !hasPrimary, showInTable: true, rulesList: [], options: [], hashAlgorithm: 'plain', onDelete: 'restrict' });
+  formData.fields.push({ name: '', label: '', type: 'string', required: false, unique: false, isPrimary: !hasPrimary, showInTable: true, rulesList: [], options: [], hashAlgorithm: 'plain', onDelete: 'restrict', isNew: true });
 };
 
 const getRelationOnDeleteOptions = (field: any) => {
@@ -560,18 +617,12 @@ const enforceRelationPolicy = (field: any) => {
   if (!field.onDelete) field.onDelete = 'restrict';
   if (field.required && field.onDelete === 'setnull') {
     field.onDelete = 'restrict';
-    if ($toast) $toast.warning('Required relation alaninda onDelete setnull olamaz. Restrict uygulandi.');
+    if ($toast) $toast.warning(t('errors.relationDeleteRestrictApplied'));
   }
 };
 
 const handlePrimaryChange = (formData: any, index: number) => {
-  if (formData.fields[index].isPrimary) {
-    formData.fields.forEach((f: any, i: number) => {
-      if (i !== index) f.isPrimary = false;
-    });
-  } else {
-    // If user unchecks the only primary, we don't force it, but they might not have a primary.
-  }
+  // Exclusivity logic removed to allow multi-column display names
 };
 
 const removeField = (formData: any, index: number) => {
@@ -668,6 +719,14 @@ const saveItem = async (payload: any) => {
     return;
   }
 
+  // Check for duplicate field names
+  const fieldNames = payload.fields.map((f: any) => f.name);
+  const duplicateName = fieldNames.find((name: string, index: number) => fieldNames.indexOf(name) !== index);
+  if (duplicateName) {
+    if ($toast) $toast.error(t('error.duplicateFieldName', { name: duplicateName }));
+    return;
+  }
+
   const normalizeI18nValue = (value: any): string => {
     if (typeof value === 'string') return value;
     if (value && typeof value === 'object') {
@@ -696,7 +755,7 @@ const saveItem = async (payload: any) => {
 
     if (f.type === 'relation') {
       if (f.required && f.onDelete === 'setnull') {
-        if ($toast) $toast.error(`"${f.name}" alani required oldugu icin onDelete=setnull kullanilamaz.`);
+        if ($toast) $toast.error(t('error.noSetNullIfRequired', { field: f.name }));
         return;
       }
       if (!f.onDelete) {
@@ -745,7 +804,11 @@ const saveItem = async (payload: any) => {
     crudTable.value?.loadItems(); // Tabloyu yenile
     crudTable.value?.loadItems(); // ER diyagramını güncellemek için listeyi yenile
   } catch (e: any) {
-    if ($toast) $toast.error(t(e.data?.message || 'errors.operationFailed'));
+        const errPayload = err?.data || e?.data;
+    const isArr = Array.isArray(errPayload?.data);
+    const errData = isArr ? errPayload.data[0] : (errPayload?.data || {});
+    const errMsg = isArr ? errPayload.data[0].message : (errPayload?.message || 'errors.operationFailed');
+    if ($toast) $toast.error(t(errMsg, errData));
   }
 };
 
@@ -757,7 +820,11 @@ const handleDelete = async (item: any) => {
     crudTable.value?.loadItems();
     crudTable.value?.loadItems(); // ER diyagramını güncellemek için listeyi yenile
   } catch (e: any) {
-    if ($toast) $toast.error(t(e.data?.message || 'errors.operationFailed'));
+        const errPayload = err?.data || e?.data;
+    const isArr = Array.isArray(errPayload?.data);
+    const errData = isArr ? errPayload.data[0] : (errPayload?.data || {});
+    const errMsg = isArr ? errPayload.data[0].message : (errPayload?.message || 'errors.operationFailed');
+    if ($toast) $toast.error(t(errMsg, errData));
   }
 };
 </script>

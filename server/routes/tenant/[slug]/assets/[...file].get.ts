@@ -27,7 +27,7 @@ export default defineEventHandler(async (event) => {
 
   // Path traversal saldırılarını engelle
   if (filePath.includes('..') || filePath.startsWith('/')) {
-    throw createError({ statusCode: 403, message: 'error.forbidden' });
+    throw createError({ statusCode: 403, message: 'errors.forbidden' });
   }
 
   const baseDir = path.join(getDbDir(), `${slug}_assets`);

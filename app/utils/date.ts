@@ -4,7 +4,7 @@
  * to ensure they are parsed as UTC instead of local time, fixing timezone offsets.
  */
 export function formatAppDate(dateInput: string | number | Date | null | undefined, locale: string = 'tr-TR'): string {
-    if (!dateInput) return '';
+    if (!dateInput) return '-';
     let dateStr = String(dateInput);
     
     // Check if it's a standard SQLite timestamp without timezone info: YYYY-MM-DD HH:MM:SS

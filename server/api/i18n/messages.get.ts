@@ -5,7 +5,7 @@ export default defineEventHandler(async (event) => {
   const locale = query.locale as string;
   
   if (!locale) {
-    throw createError({ statusCode: 400, message: tEvent(event, 'errors.validationFailed') });
+    throw createError({ statusCode: 400, message: 'errors.validationFailed' });
   }
 
   const tenantSlug = event.context.tenantSlug || 'master';
@@ -41,23 +41,31 @@ export default defineEventHandler(async (event) => {
     }
 
     // Construct nested object from flat keys (e.g. 'login.button.submit' -> { login: { button: { submit: '...' } } })
-    const result: any = {};
-    
-    for (const [key, value] of Object.entries(messages)) {
-      const parts = key.split('.');
-      let current = result;
+    const finalMessages: Record<string, any> = {};
+    const processKey = (k: string, v: any) => {
+      const parts = k.split('.');
+      let current = finalMessages;
       for (let i = 0; i < parts.length; i++) {
         const part = parts[i] as string;
         if (i === parts.length - 1) {
-          current[part] = value;
+          if (typeof v === 'object' && v !== null && !Array.isArray(v)) {
+            if (!current[part] || typeof current[part] !== 'object') current[part] = {};
+            for (const [subK, subV] of Object.entries(v)) {
+              processKey(`${k}.${subK}`, subV);
+            }
+          } else {
+            current[part] = v;
+          }
         } else {
-          if (!current[part]) current[part] = {};
+          if (!current[part] || typeof current[part] !== 'object') current[part] = {};
           current = current[part];
         }
       }
+    };
+    for (const [key, value] of Object.entries(messages)) {
+      processKey(key, value);
     }
-
-    return result;
+    return finalMessages;
   } catch (err: any) {
     throw createError({ statusCode: 500, message: err.message });
   }

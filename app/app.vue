@@ -17,6 +17,8 @@ const route = useRoute();
 let tenantSlug = '';
 if (route.path.startsWith('/tenant/')) {
   tenantSlug = route.path.split('/')[2] || '';
+} else if (route.query.tenant) {
+  tenantSlug = route.query.tenant as string;
 }
 
 const headers: Record<string, string> = tenantSlug ? { 'x-tenant-slug': tenantSlug } : {};
@@ -25,16 +27,16 @@ const headers: Record<string, string> = tenantSlug ? { 'x-tenant-slug': tenantSl
 const { syncData } = useSync();
 await syncData(tenantSlug);
 
-// 2. SysVars verisini IndexedDB'den al ve Nuxt'un global state'ine (useNuxtData) yaz
-const sysVarsCache = (await getCachedData('sysVars') || []) as any[];
-const sysVarsMap: Record<string, string> = {};
-sysVarsCache.forEach((sv: any) => {
-  sysVarsMap[sv.key] = sv.value;
+// 2. Globals verisini IndexedDB'den al ve Nuxt'un global state'ine (useNuxtData) yaz
+const globalsCache = (await getCachedData('globals') || []) as any[];
+const globalsMap: Record<string, string> = {};
+globalsCache.forEach((sv: any) => {
+  globalsMap[sv.key] = sv.value;
 });
 
-// useSysVars.ts tarafında bu key bekleniyor
-const globalSysVars = useState('sys-vars-global', () => sysVarsMap);
-globalSysVars.value = sysVarsMap;
+// useGlobals.ts tarafında bu key bekleniyor
+const globalVarsState = useState('app-globals', () => globalsMap);
+globalVarsState.value = globalsMap;
 
 onMounted(() => {
   if (import.meta.client && 'serviceWorker' in navigator) {
@@ -48,7 +50,6 @@ onMounted(() => {
     navigator.serviceWorker.addEventListener('message', (event) => {
       if (event.data && event.data.type === 'NOTIFICATION_CLICK') {
         const { action, data } = event.data;
-        console.log('Push Action Clicked:', action, data);
         
         // Uygulama içinde herhangi bir sayfanın (örneğin metaverse.vue) bunu dinleyebilmesi için CustomEvent fırlatıyoruz
         window.dispatchEvent(new CustomEvent('push-action', { detail: { action, data } }));

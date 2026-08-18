@@ -1,4 +1,4 @@
-import { getActiveEndpoints } from '../utils/endpointManager';
+import { getActiveEndpointsRouter } from '../utils/endpointManager';
 import { runCustomCode } from '../utils/sandbox';
 
 /**
@@ -31,30 +31,61 @@ export default defineEventHandler(async (event) => {
     pathname.startsWith('/api/auth') || 
     pathname.startsWith('/api/admin/endpoints') ||
     pathname.startsWith('/api/admin/workers') ||
-    pathname.startsWith('/api/admin/utils') ||
-    pathname.startsWith('/api/sys-vars') ||
-    pathname === '/api/admin/system-variables' ||
-    pathname.startsWith('/api/admin/system-variables/') ||
+    pathname.startsWith('/api/admin/globals') ||
     pathname.startsWith('/api/admin/pages') ||
     pathname.startsWith('/api/admin/users') ||
     pathname.startsWith('/api/admin/roles') ||
     pathname.startsWith('/api/admin/entities') ||
-    pathname.startsWith('/api/admin/backup') ||
     pathname.startsWith('/api/sync-data')
   ) {
     return;
   }
 
   try {
-    const endpoints = await getActiveEndpoints(event.context.tenantSlug);
+    const router = await getActiveEndpointsRouter(event.context.tenantSlug, 'http');
 
-    if (!endpoints || endpoints.length === 0) return;
+    if (!router) return;
+
+    // Radix3 O(1) Lookup
+    const match = router.lookup(pathname);
+    if (!match || !match.payload) return;
+
+    const endpoints = Array.isArray(match.payload) ? match.payload : [match.payload];
+    const params = match; // Radix3 merges params into the returned object, but since we wrapped payload, the params are siblings of 'payload'
+    
+    let bodyData: any = undefined;
+    if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(event.node.req.method || 'GET')) {
+      try {
+        bodyData = await readBody(event);
+      } catch {
+        // ignore
+      }
+    }
+
+    // Parametreleri temizle (Radix3 payload propertysini dahil etme)
+    const cleanParams: Record<string, string> = {};
+    for (const key of Object.keys(params)) {
+      if (key !== 'payload') cleanParams[key] = params[key];
+    }
+    
+    event.context.params = { ...event.context.params, ...cleanParams };
+
+    // Sandbox'a gönderilecek payload (Lazy getters sayesinde gereksiz işlem ve bellek tüketimi önlenir)
+    const sandboxPayload = {
+      url: pathname,
+      method: event.node.req.method,
+      get headers() {
+        return getRequestHeaders(event);
+      },
+      get query() {
+        return getQuery(event);
+      },
+      params: cleanParams,
+      body: bodyData,
+      user: event.context.user
+    };
 
     for (const ep of endpoints) {
-      // Route pattern eşleştirme
-      const match = pathname.match(ep.regexPattern);
-      if (!match) continue;
-
       // Authorization Check
       if (!ep.is_public) {
         const user = event.context.user;
@@ -71,44 +102,10 @@ export default defineEventHandler(async (event) => {
           
           if (!allowed) {
             setResponseStatus(event, 403);
-            return { error: 'error.forbidden' };
+            return { error: 'errors.forbidden' };
           }
         }
       }
-
-      let bodyData: any = undefined;
-      if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(event.node.req.method || 'GET')) {
-        try {
-          bodyData = await readBody(event);
-        } catch {
-          // ignore
-        }
-      }
-
-      // Özel parametreleri (params) ayıkla
-      const params: Record<string, string> = {};
-      if (ep.paramNames && ep.paramNames.length > 0) {
-        ep.paramNames.forEach((name, index) => {
-          params[name] = match[index + 1] || '';
-        });
-      }
-      
-      event.context.params = { ...event.context.params, ...params };
-
-      // Sandbox'a gönderilecek payload (Lazy getters sayesinde gereksiz işlem ve bellek tüketimi önlenir)
-      const sandboxPayload = {
-        url: pathname,
-        method: event.node.req.method,
-        get headers() {
-          return getRequestHeaders(event);
-        },
-        get query() {
-          return getQuery(event);
-        },
-        params,
-        body: bodyData,
-        user: event.context.user
-      };
 
       const result = await runCustomCode(
         event.context.tenantSlug, 
@@ -125,7 +122,7 @@ export default defineEventHandler(async (event) => {
           return { 
             blocked: true, 
             endpoint: ep.name, 
-            message: result.error || result.message || 'İstek middleware tarafından engellendi.' 
+            message: result.error || result.message || 'error.blockedByMiddleware' 
           };
         }
         
@@ -143,13 +140,14 @@ export default defineEventHandler(async (event) => {
         // Middleware gelen isteği modifiye edip (mutate) devam etmesini istiyorsa
         if (result.mutate === true) {
           if (result.body !== undefined) {
-            if (bodyData && typeof bodyData === 'object' && typeof result.body === 'object') {
+            if (sandboxPayload.body && typeof sandboxPayload.body === 'object' && typeof result.body === 'object') {
               // Obje referansını koruyarak (H3 cache'ini bozmadan) içeriği değiştir
-              for (const key of Object.keys(bodyData)) delete bodyData[key];
-              Object.assign(bodyData, result.body);
+              for (const key of Object.keys(sandboxPayload.body)) delete sandboxPayload.body[key];
+              Object.assign(sandboxPayload.body, result.body);
             } else {
               // Eğer primitive ise veya obje değilse H3'ün dahili requestBody önbelleğini eziyoruz
               (event as any)._requestBody = result.body;
+              sandboxPayload.body = result.body;
             }
           }
           if (result.headers) {
@@ -162,7 +160,7 @@ export default defineEventHandler(async (event) => {
             // Sonraki endpointlerin veya middleware'lerin kullanabilmesi için event.context'e özel veri ekle
             Object.assign(event.context, result.context);
           }
-          continue; // Mutate eden middlewareler isteği kesmez
+          continue; // Mutate eden middlewareler isteği kesmez, sonraki endpointleri kontrol etmeye devam eder
         }
       }
 
@@ -171,10 +169,11 @@ export default defineEventHandler(async (event) => {
       if (result !== undefined) {
         return result;
       }
-
     }
+
   } catch (err: any) {
     console.error(`[Özel Middleware Hatası] ${err.message}`);
     // Middleware hatası ana isteği engellemez, sadece loglanır
   }
 });
+// force restart

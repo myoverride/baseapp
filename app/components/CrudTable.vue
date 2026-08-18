@@ -12,53 +12,42 @@
 
             <slot name="toolbarActions" />
 
-            <v-tooltip v-if="canBulkDelete" :model-value="!isOnline ? undefined : false" text="Çevrimdışı modda işlem yapılamaz" location="bottom" :disabled="isOnline">
+            <v-tooltip v-if="canBulkDelete" :model-value="!isOnline ? undefined : false"
+                :text="$t('common.offlineActionNotAllowed')" location="bottom" :disabled="isOnline">
                 <template v-slot:activator="{ props }">
                     <span v-bind="props" class="d-inline-block mr-2">
-                        <v-btn
-                            color="error"
-                            variant="tonal"
-                            prepend-icon="mdi-delete-sweep"
-                            :disabled="!isOnline"
-                            @click="deleteSelectedRows"
-                        >
+                        <v-btn color="error" variant="tonal" prepend-icon="mdi-delete-sweep" :disabled="!isOnline"
+                            @click="deleteSelectedRows">
                             {{ $t('common.deleteAll') }} ({{ selectedRows.length }})
                         </v-btn>
                     </span>
                 </template>
             </v-tooltip>
 
-            <v-btn v-if="!hideRefresh" icon="mdi-refresh" variant="text" :loading="loading" @click="() => loadItems(false)" class="mr-2"
-                :title="$t('common.refresh')" />
+            <v-btn v-if="!hideRefresh" icon="mdi-refresh" variant="text" :loading="loading"
+                @click="() => loadItems(false)" class="mr-2" :title="$t('common.refresh')" />
 
-            <v-text-field v-if="!hideSearch" variant="outlined" density="compact" v-model="search" :placeholder="$t('common.search')"
-                prepend-inner-icon="mdi-magnify" hide-details single-line style="max-width: 240px" clearable
-                class="mr-2" @update:model-value="debouncedSearch" />
+            <v-text-field v-if="!hideSearch" variant="outlined" density="compact" v-model="search"
+                :placeholder="$t('common.search')" prepend-inner-icon="mdi-magnify" hide-details single-line
+                style="max-width: 240px" clearable class="mr-2" @update:model-value="debouncedSearch" />
 
             <v-dialog v-if="!hideFilter" v-model="showAdvancedFilters" max-width="800">
                 <template v-slot:activator="{ props }">
-                    <v-btn
-                        v-bind="props"
-                        icon="mdi-filter"
-                        variant="text"
-                        :color="advancedFilterGroup ? 'primary' : undefined"
-                        class="mr-2"
-                        :title="$t('common.advancedFilters')"
-                    >
+                    <v-btn v-bind="props" icon="mdi-filter" variant="text"
+                        :color="advancedFilterGroup ? 'primary' : undefined" class="mr-2"
+                        :title="$t('common.advancedFilters')">
                     </v-btn>
                 </template>
-                <AdvancedFilterBuilder
-                    v-model="advancedFilterGroup"
-                    :columns="advancedFilterColumns"
-                    @close="showAdvancedFilters = false"
-                    @apply="applyAdvancedFilters"
-                />
+                <AdvancedFilterBuilder v-model="advancedFilterGroup" :columns="advancedFilterColumns"
+                    @close="showAdvancedFilters = false" @apply="applyAdvancedFilters" />
             </v-dialog>
 
-            <v-tooltip v-if="canCreate" :model-value="!isOnline ? undefined : false" text="Çevrimdışı modda işlem yapılamaz" location="bottom" :disabled="isOnline">
+            <v-tooltip v-if="canCreate" :model-value="!isOnline ? undefined : false"
+                :text="$t('common.offlineActionNotAllowed')" location="bottom" :disabled="isOnline">
                 <template v-slot:activator="{ props }">
                     <span v-bind="props" class="d-inline-block">
-                        <v-btn icon="mdi-plus" variant="text" :disabled="!isOnline" :title="$t('common.add')" @click="$emit('create')"></v-btn>
+                        <v-btn icon="mdi-plus" variant="text" :disabled="!isOnline" :title="$t('common.add')"
+                            @click="$emit('create')"></v-btn>
                     </span>
                 </template>
             </v-tooltip>
@@ -68,26 +57,19 @@
 
         <v-data-table-server v-model:items-per-page="itemsPerPage" v-model:page="page" v-model:sort-by="sortBy"
             :headers="tableHeaders" :items="items" :items-length="totalItems" :loading="loading" class="elevation-0"
-            :items-per-page-options="itemsPerPageOptions" :items-per-page-text="itemsPerPageText" :mobile="mobile"
-            @update:options="loadItems">
+            :items-per-page-options="itemsPerPageOptions" :mobile="mobile" @update:options="loadItems">
 
             <template v-slot:header.selectRow>
                 <div class="d-flex justify-center">
-                    <v-checkbox-btn
-                        :model-value="allVisibleSelected"
-                        :indeterminate="someVisibleSelected"
-                        @update:model-value="toggleSelectAllVisible"
-                    />
+                    <v-checkbox-btn :model-value="allVisibleSelected" :indeterminate="someVisibleSelected"
+                        @update:model-value="toggleSelectAllVisible" />
                 </div>
             </template>
 
             <template v-slot:item.selectRow="{ item }">
                 <div class="d-flex justify-center">
-                    <v-checkbox-btn
-                        :model-value="isRowSelected(item)"
-                        @click.stop
-                        @update:model-value="(checked) => toggleRowSelection(item, !!checked)"
-                    />
+                    <v-checkbox-btn :model-value="isRowSelected(item)" @click.stop
+                        @update:model-value="(checked) => toggleRowSelection(item, !!checked)" />
                 </div>
             </template>
 
@@ -98,12 +80,12 @@
                     <slot name="rowActions" :item="item" />
                     <template v-if="extraActions">
                         <v-btn v-for="(action, idx) in extraActions" :key="idx" :icon="action.icon"
-                            :color="action.color" size="small" variant="text"
-                            :title="action.title"
+                            :color="action.color" size="small" variant="text" :title="action.title"
                             :to="typeof action.to === 'function' ? action.to(item) : action.to"
                             @click="action.click ? action.click(item) : null" />
                     </template>
-                    <v-tooltip v-if="canEdit" :model-value="!isOnline ? undefined : false" text="Çevrimdışı modda işlem yapılamaz" location="top" :disabled="isOnline">
+                    <v-tooltip v-if="canEdit" :model-value="!isOnline ? undefined : false"
+                        :text="$t('common.offlineActionNotAllowed')" location="top" :disabled="isOnline">
                         <template v-slot:activator="{ props }">
                             <span v-bind="props" class="d-inline-block">
                                 <v-btn icon="mdi-pencil" size="small" variant="text" :disabled="!isOnline"
@@ -111,7 +93,8 @@
                             </span>
                         </template>
                     </v-tooltip>
-                    <v-tooltip v-if="canDelete" :model-value="!isOnline ? undefined : false" text="Çevrimdışı modda işlem yapılamaz" location="top" :disabled="isOnline">
+                    <v-tooltip v-if="canDelete" :model-value="!isOnline ? undefined : false"
+                        :text="$t('common.offlineActionNotAllowed')" location="top" :disabled="isOnline">
                         <template v-slot:activator="{ props }">
                             <span v-bind="props" class="d-inline-block">
                                 <v-btn icon="mdi-delete" size="small" variant="text" color="error" :disabled="!isOnline"
@@ -136,7 +119,8 @@
             <template v-for="col in dataColumns" :key="col.key" v-slot:[`item.${col.key}`]="{ item }">
                 <slot :name="`item.${col.key}`" :item="item">
                     <span v-if="Array.isArray(item[col.key])">
-                        <v-chip size="small" class="mr-1 mb-1" v-for="(v, i) in item[col.key]" :key="i">{{ $localize(v) }}</v-chip>
+                        <v-chip size="small" class="mr-1 mb-1" v-for="(v, i) in item[col.key]" :key="i">{{ $localize(v)
+                        }}</v-chip>
                     </span>
                     <span v-else>{{ $localize(item[col.key]) }}</span>
                 </slot>
@@ -144,11 +128,8 @@
 
             <!-- Loading State Enhancement -->
             <template v-slot:loading>
-                <v-skeleton-loader
-                    v-if="items.length === 0"
-                    type="table-row-divider@5"
-                    class="ma-4"
-                ></v-skeleton-loader>
+                <v-skeleton-loader v-if="items.length === 0" type="table-row-divider@5"
+                    class="ma-4"></v-skeleton-loader>
                 <div v-else class="text-center py-4">
                     <v-progress-linear indeterminate :color="color"></v-progress-linear>
                     <span class="text-caption text-grey mt-2 d-block">{{ $t('common.loading') }}</span>
@@ -158,15 +139,10 @@
             <!-- No Data State Enhancement -->
             <template v-slot:no-data>
                 <div class="text-center py-10">
-                    <v-icon size="48" color="grey-lighten-1">mdi-database-off</v-icon>
+                    <v-icon size="48" color="secondary">mdi-database-off</v-icon>
                     <div class="text-grey mt-2">{{ $t('common.noData') }}</div>
-                    <v-btn
-                        variant="text"
-                        :color="color"
-                        class="mt-4"
-                        prepend-icon="mdi-refresh"
-                        @click="() => loadItems(false)"
-                    >
+                    <v-btn variant="text" :color="color" class="mt-4" prepend-icon="mdi-refresh"
+                        @click="() => loadItems(false)">
                         {{ $t('common.tryAgain') }}
                     </v-btn>
                 </div>
@@ -235,8 +211,8 @@ const { t, locale } = useI18n();
 const { $localize, $toast } = useNuxtApp();
 const route = useRoute()
 
-// Fetch system variables properly via Nuxt composable
-const { sysVars, primaryColor: color } = useSysVars();
+// Fetch globals properly via Nuxt composable
+const { globals, primaryColor: color } = useGlobals();
 
 // Advanced Filter State
 const showAdvancedFilters = ref(false)
@@ -361,12 +337,7 @@ const storageKeySortBy = computed(() => `crudTable_sortBy_${route.path}`)
 // Items per page options
 const itemsPerPageOptions = [10, 25, 50, 100, 200]
 
-const itemsPerPageText = computed(() => {
-    const code = String(locale.value || 'en').toLowerCase().split(/[-_]/)[0]
-    if (code === 'ar') return 'عدد العناصر لكل صفحة:'
-    if (code === 'tr') return 'Sayfa başına öğe:'
-    return 'Items per page:'
-})
+
 
 // Load initial itemsPerPage from localStorage or default to 10
 const getInitialItemsPerPage = (): number => {
@@ -496,7 +467,7 @@ async function loadItems(silent = false) {
         loadItemsTimeout = setTimeout(async () => {
             loadItemsTimeout = null
             const requestId = ++latestLoadRequestId
-            
+
             try {
                 const sortKey = sortBy.value[0]?.key || props.defaultSortKey || 'createdAt'
                 const sortOrder = sortBy.value[0]?.order || props.defaultSortOrder || 'desc'
@@ -518,8 +489,8 @@ async function loadItems(silent = false) {
                     return
                 }
 
-                items.value = Array.isArray(response) ? response : (response.records || response.data || [])
-                totalItems.value = Array.isArray(response) ? response.length : (response.total ?? response.pagination?.total ?? response.meta?.total ?? 0)
+                items.value = Array.isArray(response) ? response : (response.data || [])
+                totalItems.value = Array.isArray(response) ? response.length : (response.pagination?.total ?? 0)
                 emit('loaded', items.value)
                 selectedRows.value = selectedRows.value.filter((selected: any) => {
                     const selectedKey = getRowKey(selected)

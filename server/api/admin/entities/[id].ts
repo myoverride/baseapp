@@ -1,6 +1,8 @@
 import { useDB } from '../../../utils/db';
 import { migrateRecordsToNewSchema } from '../../../utils/schemaMigration';
 import { validateRelationSchemaPolicies, deleteEntityWithRelationPolicy } from '../../../utils/relationDeletePolicy';
+import { checkRequiredFieldsOnSchemaUpdate, checkUniqueFieldsOnSchemaUpdate } from '../../../utils/schemaValidator';
+import { isValidSlug } from '../../../utils/validator';
 
 export default defineEventHandler(async (event) => {
   const method = getMethod(event);
@@ -20,10 +22,10 @@ export default defineEventHandler(async (event) => {
       if (result.length === 0) {
         throw createError({ statusCode: 404, message: 'errors.notFound' });
       }
-      return result[0];
+      return { success: true, message: 'message.success', data: result[0] };
     } catch (e: any) {
       if (e.statusCode) throw e;
-      throw createError({ statusCode: 500, message: e.message });
+      throw createError({ statusCode: 500, message: 'errors.internalError' });
     }
   }
 
@@ -33,8 +35,24 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 400, message: 'errors.validationFailed' });
     }
 
+    const existingEntity = await sql`SELECT slug FROM entities WHERE id = ${id}`;
+    if (existingEntity.length === 0) {
+      throw createError({ statusCode: 404, message: 'errors.notFound' });
+    }
+    if (existingEntity[0].slug !== body.slug) {
+      throw createError({ statusCode: 400, message: 'error.entitySlugImmutable' });
+    }
+
+    for (const key of Object.keys(body.schema)) {
+      if (!isValidSlug(key)) {
+        throw createError({ statusCode: 400, message: 'error.invalidFieldSlug|' + key });
+      }
+    }
+
     try {
       validateRelationSchemaPolicies(body.schema);
+      await checkRequiredFieldsOnSchemaUpdate(sql, Number(id), body.schema);
+      await checkUniqueFieldsOnSchemaUpdate(sql, Number(id), body.schema);
     } catch (e: any) {
       throw createError({ statusCode: e?.statusCode || 400, message: e?.message || 'errors.validationFailed' });
     }
@@ -58,10 +76,10 @@ export default defineEventHandler(async (event) => {
 
       return entityData;
     } catch (e: any) {
-      if (e.code === '23505') { // unique violation
+      if (e.code === '23505' || (e.message && e.message.includes('UNIQUE constraint failed'))) {
         throw createError({ statusCode: 409, message: 'errors.duplicateSlug' });
       }
-      throw createError({ statusCode: 500, message: e.message });
+      throw createError({ statusCode: 500, message: 'errors.internalError' });
     }
   }
 
@@ -76,12 +94,12 @@ export default defineEventHandler(async (event) => {
         await deleteEntityWithRelationPolicy(tx, Number(id));
       });
 
-      return { success: true, deletedId: id };
+      return { success: true, message: 'message.success', data: { deletedId: id } };
     } catch (e: any) {
       if (e?.statusCode) {
         throw createError({ statusCode: e.statusCode, message: e.message });
       }
-      throw createError({ statusCode: 500, message: e.message });
+      throw createError({ statusCode: 500, message: 'errors.internalError' });
     }
   }
 });

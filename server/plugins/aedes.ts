@@ -1,5 +1,7 @@
 import aedesFactory from 'aedes';
-import net from 'node:net';
+import tls from 'node:tls';
+import fs from 'node:fs';
+import path from 'node:path';
 import { useDB, getMasterDb } from '../utils/db';
 import { handleMqttMessage } from '../utils/mqtt';
 import { checkRateLimit } from '../utils/rateLimit';
@@ -75,8 +77,8 @@ export default defineNitroPlugin((_nitroApp) => {
 
             // 2. Check tenant admin auth
             try {
-              const adminUser = await sql`SELECT value FROM system_variables WHERE key = 'MQTT_ADMIN_USER'`;
-              const adminPass = await sql`SELECT value FROM system_variables WHERE key = 'MQTT_ADMIN_PASS'`;
+              const adminUser = await sql`SELECT value FROM globals WHERE type = 'variable' AND key = 'MQTT_ADMIN_USER'`;
+              const adminPass = await sql`SELECT value FROM globals WHERE type = 'variable' AND key = 'MQTT_ADMIN_PASS'`;
               const aUser = adminUser.length > 0 ? adminUser[0].value : null;
               const aPass = adminPass.length > 0 ? adminPass[0].value : null;
 
@@ -239,11 +241,35 @@ export default defineNitroPlugin((_nitroApp) => {
       }
     });
 
-    const mqttServer = net.createServer(aedes.handle);
-    const port = Number(process.env.MQTT_PORT || 1883);
+    let mqttsPort = 8883;
+    try {
+      const configPath = path.join(process.cwd(), 'config.json');
+      if (fs.existsSync(configPath)) {
+        const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+        if (config.mqttsPort) mqttsPort = Number(config.mqttsPort);
+      }
+    } catch (err) {
+      // ignore
+    }
     
-    mqttServer.listen(port, function () {
-      console.log(`[Aedes] Dahili Aedes MQTT Broker TCP port ${port} üzerinde çalışıyor (Nitro Plugin)`);
+    // Aedes TLS Sertifikalarını (HTTPS sunucusunun node-forge ile oluşturduğu cert'leri) kullan
+    const sslDir = path.join(process.cwd(), '.ssl');
+    const keyPath = path.join(sslDir, 'server.key');
+    const certPath = path.join(sslDir, 'server.cert');
+    
+    let tlsOptions: any = {};
+    if (fs.existsSync(keyPath) && fs.existsSync(certPath)) {
+      tlsOptions.key = fs.readFileSync(keyPath);
+      tlsOptions.cert = fs.readFileSync(certPath);
+    } else {
+      console.warn(`[Aedes] Uyarı: MQTTS broker başlatılamıyor çünkü TLS sertifikaları eksik! '${keyPath}' bulunamadı. (Önce server.js başlatılmalı)`);
+      return;
+    }
+
+    const mqttServer = tls.createServer(tlsOptions, aedes.handle);
+    
+    mqttServer.listen(mqttsPort, function () {
+      console.log(`[Aedes] Dahili Aedes MQTTS Broker TLS ile port ${mqttsPort} üzerinde çalışıyor (Nitro Plugin)`);
     });
     
     (globalThis as any).__aedesBroker = mqttServer;

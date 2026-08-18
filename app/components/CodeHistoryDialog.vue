@@ -50,7 +50,7 @@
           </div>
           <div v-else class="flex-grow-1 d-flex flex-column">
             <!-- Araç Çubuğu -->
-            <div class="pa-2 bg-grey-lighten-4 border-bottom d-flex align-center justify-space-between">
+            <div class="pa-2 bg-background border-bottom d-flex align-center justify-space-between">
               <div>
                 <span class="font-weight-bold ml-2">{{ $t('history.compare') }}</span>
                 <span class="text-caption text-grey ml-2"><span v-html="$t('history.compareDesc')"></span></span>
@@ -98,7 +98,7 @@ const props = defineProps<{
 
 const emit = defineEmits(['update:modelValue', 'select']);
 
-const { primaryColor: color } = useSysVars();
+const { primaryColor: color } = useGlobals();
 const { t } = useI18n();
 
 const isOpen = computed({

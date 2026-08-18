@@ -11,6 +11,9 @@ const restartCounters = new Map<
   { count: number; firstCrash: number }
 >();
 
+const runningCronJobs = new Set<string>();
+const fatallyCrashedWorkers = new Set<string>();
+
 export let isShuttingDownDaemons = false;
 
 let workerPath = "";
@@ -32,6 +35,23 @@ if (!fs.existsSync(workerPath)) {
   const fallback = join(process.cwd(), "server", "utils", "worker.js");
   if (fs.existsSync(fallback)) workerPath = fallback;
 }
+
+import { TenantEventManager } from "./db";
+
+TenantEventManager.on("globals:updated", async (tenantSlug: string) => {
+  const { globals } = await import("./globalsManager");
+  const allVars = await globals.getAll(tenantSlug, true);
+  const globalsObj: Record<string, any> = {};
+  for (const v of allVars) {
+    globalsObj[v.key] = v.value;
+  }
+  
+  activeWorkers.forEach((worker, workerId) => {
+    if (workerId.startsWith(`${tenantSlug}_`)) {
+      worker.send({ type: "update_globals", globalsObj });
+    }
+  });
+});
 
 const logRateLimits = new Map<string, { count: number; lastReset: number }>();
 
@@ -64,10 +84,19 @@ async function handleRpc(
       const telemetrySql = useTelemetryDB(tenantSlug);
       const { query, params } = message.args;
       result = await telemetrySql.unsafe(query, params || []);
+    } else if (message.method === "telemetryDb.query") {
+      const { useTelemetryDB } = await import("./db");
+      const telemetrySql = useTelemetryDB(tenantSlug);
+      const { strings, values } = message.args;
+      result = await telemetrySql(strings, ...values);
     } else if (message.method === "db.query") {
       const sql = useDB(tenantSlug);
       const { strings, values } = message.args;
       result = await sql(strings, ...values);
+    } else if (message.method === "globals.get") {
+      const { key } = message.args;
+      const { globals } = await import("./globalsManager");
+      result = await globals.get(tenantSlug, key, true);
     } else if (message.method === "publishMQTT") {
       const { topic, message: mqttMessage } = message.args;
       const { publishMQTT } = await import("./mqtt");
@@ -121,13 +150,66 @@ async function handleRpc(
       // using a default locale since microservice has no context
       const locale = "en";
       result = await getServerTranslation(tenantSlug, locale, key, params);
-    } else if (message.method === "useUtil") {
+    } else if (message.method === "runGlobal") {
       const { utilName, args } = message.args;
-      const { executeServerUtil } = await import("./utilsServer");
-      result = await executeServerUtil(
+      const { globals } = await import("./globalsManager");
+      
+      const { useDB } = await import("./db");
+      const { publishWS } = await import("./wsManager");
+      const { publishMQTT } = await import("./mqtt");
+      const { getServerTranslation } = await import("./i18n-server");
+      const recordManager = await import("./recordManager");
+
+      let telemetryDbProxy: any = null;
+      try {
+        const { createEphemeralTelemetryDB } = await import("./db");
+        const tDb = await createEphemeralTelemetryDB(tenantSlug);
+        telemetryDbProxy = new Proxy(function(){}, {
+           get: (_, prop: string) => async (...innerArgs: any[]) => {
+              if(typeof tDb[prop] === 'function') return await tDb[prop].bind(tDb)(...innerArgs);
+              return tDb[prop];
+           },
+           apply: async (_, __, argsList: any[]) => await tDb(...argsList)
+        });
+      } catch(e) {}
+
+      const workerContext = {
+        payload: null,
+        tenantSlug,
+        db: useDB(tenantSlug),
+        telemetryDb: telemetryDbProxy,
+        publishWS: (path: string, p: any) => publishWS(tenantSlug, path, p),
+        publishMQTT: async (topic: string, msg: any) => {
+            const finalMsg = typeof msg === 'object' ? JSON.stringify(msg) : String(msg);
+            return publishMQTT(`${tenantSlug}/${topic}`, finalMsg);
+        },
+        t: (key: string, params?: any) => getServerTranslation(tenantSlug, 'en', key, params),
+        tAsync: async (targs: any) => {
+            const k = typeof targs === 'string' ? targs : targs.key;
+            const p = targs.params;
+            return getServerTranslation(tenantSlug, 'en', k, p);
+        },
+        recordManager: (() => {
+          const wrapper: any = {};
+          for (const prop in recordManager) {
+            const val = (recordManager as any)[prop];
+            if (typeof val === 'function') {
+              wrapper[prop] = async (...args2: any[]) => {
+                if (tenantSlug === 'master') return val(...args2);
+                return val(tenantSlug, ...args2);
+              };
+            } else {
+              wrapper[prop] = val;
+            }
+          }
+          return wrapper;
+        })()
+      };
+
+      result = await globals.run(
         tenantSlug,
         utilName,
-        { payload: null },
+        workerContext,
         ...(args || []),
       );
     } else {
@@ -180,9 +262,14 @@ export async function startDaemonWorker(
   }
 
   const workerRow = await useDB(tenantSlug).unsafe(
-    `SELECT code FROM workers WHERE id = ?`,
+    `SELECT code, active FROM workers WHERE id = ?`,
     [id],
   );
+  
+  if (!workerRow[0] || (workerRow[0].active !== 1 && workerRow[0].active !== true)) {
+    return { success: false, message: "Worker is disabled or deleted." };
+  }
+  
   const code = codeOverride || workerRow[0].code;
 
   // Sözdizimi doğrulaması — geçersiz kod fork edilmeden yakalanır (S8 Fix)
@@ -192,9 +279,16 @@ export async function startDaemonWorker(
   } catch (err: any) {
     const errMsg = err.key
       ? `Syntax Error: ${JSON.stringify(err.params)}`
-      : (err.message || "Geçersiz JavaScript");
+      : (err.message || "error.invalidJavaScript");
     await updateStatus(tenantSlug, id, "error", errMsg);
     return { success: false, message: errMsg };
+  }
+
+  const { globals } = await import("./globalsManager");
+  const allVars = await globals.getAll(tenantSlug, true);
+  const globalsObj: Record<string, any> = {};
+  for (const v of allVars) {
+    globalsObj[v.key] = v.value;
   }
 
   return new Promise((resolve, reject) => {
@@ -236,9 +330,8 @@ export async function startDaemonWorker(
 
       worker.send({
         type: "init",
-        workerData: { code, id, tenantSlug, language: "javascript" },
+        workerData: { code, id, tenantSlug, language: "javascript", globalsObj },
       });
-
       activeWorkers.set(workerId, worker);
       updateStatus(tenantSlug, id, "running", null);
 
@@ -259,6 +352,7 @@ export async function startDaemonWorker(
             tenantSlug,
           });
 
+          fatallyCrashedWorkers.add(workerId);
           activeWorkers.delete(workerId);
           logRateLimits.delete(workerId);
           try {
@@ -314,6 +408,11 @@ export async function startDaemonWorker(
         console.log(`[Worker ${workerId}] exited with code ${code}`);
 
         if (isShuttingDownDaemons) return;
+        
+        if (fatallyCrashedWorkers.has(workerId)) {
+            fatallyCrashedWorkers.delete(workerId);
+            return; // Do not auto-restart, it was manually shut down due to fatal error
+        }
 
         logEvents.emit("log", {
           sourceId: String(id),
@@ -328,14 +427,16 @@ export async function startDaemonWorker(
         if (code !== 0 && code !== null) {
           const now = Date.now();
           let counter = restartCounters.get(workerId);
-          if (!counter || now - counter.firstCrash > 60000) {
-            counter = { count: 1, firstCrash: now };
-          } else {
-            counter.count++;
-          }
-          restartCounters.set(workerId, counter);
+          import("./globalsManager").then(async ({ globals }) => {
+            const crashWindowMs = parseInt(await globals.get('master', 'WORKER_CRASH_WINDOW_MS', false, '60000')) || 60000;
+            if (!counter || now - counter.firstCrash > crashWindowMs) {
+              counter = { count: 1, firstCrash: now };
+            } else {
+              counter.count++;
+            }
+            restartCounters.set(workerId, counter);
 
-          if (counter.count > 5) {
+            if (counter.count > 5) {
             console.error(
               `ğŸš¨ [Worker ${workerId}] BANNED from auto-restarting due to >5 crashes in 60s.`,
             );
@@ -368,6 +469,7 @@ export async function startDaemonWorker(
               );
             }, 5000);
           }
+          }); // Close import().then
         } else {
           updateStatus(tenantSlug, id, "stopped", null);
           restartCounters.delete(workerId);
@@ -392,7 +494,7 @@ export async function stopDaemonWorker(tenantSlug: string, id: number) {
     if (!isShuttingDownDaemons) {
       await updateStatus(tenantSlug, id, "stopped", null);
     }
-    return { success: true, message: "message.workerStopped" };
+    return { success: true, message: "status.stopped" };
   }
   return { success: true, message: "message.workerNotRunning" };
 }
@@ -794,67 +896,94 @@ export function initCronWorkers() {
   );
 
   let isRunning = false;
-  const intervalId = setInterval(async () => {
-    if (isRunning) return;
-
-    const now = new Date();
-    const currentSecondKey = Math.floor(now.getTime() / 1000);
-
-    if (lastRunSecond === currentSecondKey) {
-      return;
-    }
-    lastRunSecond = currentSecondKey;
-    isRunning = true;
-
+  const scheduleCronTick = async () => {
     try {
-      for (const job of cronJobsCache) {
-        if (matchesCron(job.cron_expression, now)) {
-          try {
-            const { useDB } = await import("./db");
-            const db = useDB(job.tenantSlug);
+      const { globals } = await import("./globalsManager");
+      const tickMs = parseInt(await globals.get('master', 'CRON_TICK_MS', false, '1000')) || 1000;
+      
+      if (isRunning) {
+        (globalThis as any).__cronWorkerInterval = setTimeout(scheduleCronTick, tickMs);
+        return;
+      }
+      
+      const now = new Date();
+      const currentSecondKey = Math.floor(now.getTime() / 1000);
 
-            const lockResult = await db`
-              UPDATE workers 
-              SET last_run_second = ${currentSecondKey} 
-              WHERE id = ${job.id} AND (last_run_second IS NULL OR last_run_second < ${currentSecondKey})
-              RETURNING id
-            `;
+      if (lastRunSecond === currentSecondKey) {
+        (globalThis as any).__cronWorkerInterval = setTimeout(scheduleCronTick, tickMs);
+        return;
+      }
+      
+      lastRunSecond = currentSecondKey;
+      isRunning = true;
 
-            if (lockResult.length === 0) continue;
+      try {
+            for (const job of cronJobsCache) {
+              if (matchesCron(job.cron_expression, now)) {
+                try {
+                  const { useDB } = await import("./db");
+                  const db = useDB(job.tenantSlug);
+                  const cronJobKey = `${job.tenantSlug}_${job.id}`;
+                  
+                  if (runningCronJobs.has(cronJobKey)) {
+                      continue; // Skip this tick if the previous fork is still running
+                  }
 
-            const payload = {
-              jobId: job.id,
-              jobName: job.name,
-              runAt: now.toISOString(),
-              db,
-            };
+                  const lockResult = await db`
+                    UPDATE workers 
+                    SET last_run_second = ${currentSecondKey} 
+                    WHERE id = ${job.id} AND (last_run_second IS NULL OR last_run_second < ${currentSecondKey})
+                    RETURNING id
+                  `;
 
-            const startTime = Date.now();
-            const workerPath = resolve(
-              process.cwd(),
-              "server",
-              "utils",
-              "worker.js",
-            );
-            const worker = fork(workerPath, [], {
-              env: process.env,
-              silent: true,
-              execArgv: ["--max-old-space-size=256"], // 256MB hard limit (OOM prevention)
-            });
+                  if (lockResult.length === 0) continue;
+                  
+                  runningCronJobs.add(cronJobKey);
 
-            // Hard timeout for Cron worker (60 seconds) to prevent Fork Bombs
-            const cronTimeout = setTimeout(() => {
-              try {
-                console.error(
-                  `[ALERT] Cron Worker [${job.id}] TIMEOUT (60s). Zorla öldürülüyor! (Fork Bomb Koruması)`,
-                );
-                worker.kill("SIGKILL");
-              } catch (e) {}
-            }, 60000);
+                  const payload = {
+                    jobId: job.id,
+                    jobName: job.name,
+                    runAt: now.toISOString(),
+                    db,
+                  };
 
-            worker.on("exit", () => {
-              clearTimeout(cronTimeout);
-            });
+                  const startTime = Date.now();
+                  const workerPath = resolve(
+                    process.cwd(),
+                    "server",
+                    "utils",
+                    "worker.js",
+                  );
+                  
+                  const workerMemoryLimit = parseInt(await globals.get(job.tenantSlug, 'WORKER_MEMORY_LIMIT_MB', false, '256')) || 256;
+                  const workerTimeoutMs = parseInt(await globals.get(job.tenantSlug, 'CRON_WORKER_TIMEOUT_MS', false, '60000')) || 60000;
+
+                  const worker = fork(workerPath, [], {
+                    env: process.env,
+                    silent: true,
+                    execArgv: [`--max-old-space-size=${workerMemoryLimit}`], // Parametric OOM limit
+                  });
+
+                  // Hard timeout for Cron worker to prevent Fork Bombs
+                  const cronTimeout = setTimeout(() => {
+                    try {
+                      console.error(
+                        `[ALERT] Cron Worker [${job.id}] TIMEOUT (${workerTimeoutMs}ms). Force killed! (Fork Bomb Protection)`,
+                      );
+                      worker.kill("SIGKILL");
+                    } catch (e) {}
+                  }, workerTimeoutMs);
+
+                  worker.on("exit", () => {
+                    clearTimeout(cronTimeout);
+                    runningCronJobs.delete(cronJobKey);
+                  });
+
+            const allVars = await globals.getAll(job.tenantSlug, true);
+            const globalsObj: Record<string, any> = {};
+            for (const v of allVars) {
+              globalsObj[v.key] = v.value;
+            }
 
             worker.send({
               type: "init",
@@ -863,6 +992,7 @@ export function initCronWorkers() {
                 tenantSlug: job.tenantSlug,
                 isCronWorker: true,
                 payload: payload,
+                globalsObj,
               },
             });
 
@@ -889,22 +1019,24 @@ export function initCronWorkers() {
             });
 
             worker.on("error", (err) => {
+              runningCronJobs.delete(cronJobKey);
               const execTime = Date.now() - startTime;
-              const errMsg = err.message || "Bilinmeyen Hata";
+              const errMsg = err.message || "Unknown Error";
               console.error(
-                `[CRON ERROR] Cron Çalıştırma Hatası [${job.name}] (Süre: ${execTime}ms):`,
+                `[CRON ERROR] Cron Execution Error [${job.name}] (Duration: ${execTime}ms):`,
                 err,
               );
 
               logEvents.emit("log", {
                 sourceId: `cron_worker_${job.id}`,
                 level: "error",
-                args: [`Cron Çalıştırma Hatası: ${errMsg}`],
+                args: [`Cron Execution Error: ${errMsg}`],
                 timestamp: new Date().toISOString(),
                 metadata: {},
               });
             });
           } catch (jobErr) {
+            runningCronJobs.delete(`${job.tenantSlug}_${job.id}`);
             console.error(
               `[ERROR] Job Error [${job.tenantSlug}/${job.name}]:`,
               jobErr,
@@ -917,9 +1049,15 @@ export function initCronWorkers() {
     } finally {
       isRunning = false;
     }
-  }, 1000);
+    
+    (globalThis as any).__cronWorkerInterval = setTimeout(scheduleCronTick, tickMs);
+  } catch (e) {
+    console.error("Cron tick outer error:", e);
+    (globalThis as any).__cronWorkerInterval = setTimeout(scheduleCronTick, 1000);
+  }
+  };
 
-  (globalThis as any).__cronWorkerInterval = intervalId;
+  scheduleCronTick();
 }
 
 // --- SANDBOX TEST DAEMON ---
@@ -1000,4 +1138,19 @@ export async function stopTestDaemon(tenantSlug: string) {
     return { success: true };
   }
   return { success: false };
+}
+
+export async function shutdownDaemonWorkers() {
+  console.log('🛑 [WorkerManager] Shutting down all daemon workers...');
+  isShuttingDownDaemons = true;
+  for (const [workerId, worker] of activeWorkers.entries()) {
+    try {
+      worker.kill('SIGTERM');
+      console.log(`  ✓ Killed worker ${workerId}`);
+    } catch (e) {
+      console.error(`  ✗ Failed to kill worker ${workerId}:`, e);
+    }
+  }
+  activeWorkers.clear();
+  runningCronJobs.clear();
 }

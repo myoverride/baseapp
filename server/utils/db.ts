@@ -38,7 +38,8 @@ interface TenantDbRefs {
   activeOperations: number;
   mutex: Promise<void>;
 }
-const POOL_LIMIT = 200;
+let POOL_LIMIT_CACHE = 200;
+let lastPoolLimitFetch = 0;
 const tenantPool: Map<string, TenantDbRefs> = (globalThis as any).__tenantPool || new Map<string, TenantDbRefs>();
 (globalThis as any).__tenantPool = tenantPool;
 const tenantInitPromises = new Map<string, Promise<TenantDbRefs>>();
@@ -127,7 +128,13 @@ export const getTenantRefs = async (tenantSlug: string): Promise<TenantDbRefs> =
 
   (async () => {
     try {
-      if (tenantPool.size >= POOL_LIMIT) {
+      if (Date.now() - lastPoolLimitFetch > 60000) {
+        // Dinamik limit okuması (globalsManager) deadlock yarattığı için, limit tenant havuzu
+        // evict işlemi sırasında kullanılmak üzere sqlite üzerinden veya static olarak bırakılmalı.
+        // Şimdilik POOL_LIMIT_CACHE varsayılan 200 olarak devam eder..catch(()=>{});
+        lastPoolLimitFetch = Date.now();
+      }
+      if (tenantPool.size >= POOL_LIMIT_CACHE) {
         let oldestSlug: string | null = null;
         let oldestTime = Infinity;
         for (const [slug, refs] of tenantPool.entries()) {
@@ -174,30 +181,33 @@ export const getTenantRefs = async (tenantSlug: string): Promise<TenantDbRefs> =
 
       let runAsync!: (query: string) => Promise<unknown>;
 
-      const initDuckDbWithRetry = async (retries = 10) => {
+      const initDuckDbWithRetry = async (retries = 50) => {
         try {
+          if (duckDbConn) { try { duckDbConn.close(); } catch {} duckDbConn = null; }
+          if (duckDbInst) { try { await new Promise(r => duckDbInst!.close(r)); } catch {} duckDbInst = null; }
+          
           duckDbInst = new duckdb.Database(duckPath);
           duckDbConn = duckDbInst.connect();
           runAsync = (query: string) => new Promise((resolve, reject) => {
             duckDbConn!.run(query, (err: any) => err ? reject(err) : resolve(null));
           });
+          
+          let duckDbMem = 256;
           try {
-            // This will throw if the connection failed due to file lock
-            await runAsync(`PRAGMA memory_limit='128MB';`);
-            await runAsync(`PRAGMA preserve_insertion_order=false;`);
-          } catch (e: any) {
-            if (retries > 0 && e.message && e.message.includes('Connection Error')) {
-              console.warn(`[DuckDB] Lock detected for ${tenantSlug}, retrying in 200ms... (${retries} retries left)`);
-              await new Promise(res => setTimeout(res, 200));
-              await initDuckDbWithRetry(retries - 1);
-            } else {
-              throw e;
+            const row = sqlite.prepare("SELECT value FROM globals WHERE key = 'DUCKDB_MEMORY_LIMIT'").get() as any;
+            if (row && row.value) {
+              const parsed = parseInt(row.value);
+              if (!isNaN(parsed)) duckDbMem = parsed;
             }
+          } catch (e) {
+            // Table might not exist yet if isNewDb is true
           }
+          await runAsync(`PRAGMA memory_limit='${duckDbMem}MB';`);
+          await runAsync(`PRAGMA preserve_insertion_order=false;`);
         } catch (e: any) {
-          if (retries > 0 && e.message && e.message.includes('Connection Error')) {
-            console.warn(`[DuckDB] Lock detected for ${tenantSlug}, retrying in 200ms... (${retries} retries left)`);
-            await new Promise(res => setTimeout(res, 200));
+          if (retries > 0 && e.message && (e.message.includes('Connection Error') || e.message.includes('IO Error'))) {
+            console.warn(`[DuckDB] Lock detected for ${tenantSlug}, retrying in ${200 + (50 - retries) * 50}ms... (${retries} retries left)`);
+            await new Promise(res => setTimeout(res, 200 + (50 - retries) * 50));
             await initDuckDbWithRetry(retries - 1);
           } else {
             throw e;
@@ -309,7 +319,9 @@ import { transpileQueryAndParams } from './sqlTranspiler';
 export const executeWithLock = async <T>(tenantSlug: string, fn: (refs: TenantDbRefs) => Promise<T> | T): Promise<T> => {
   const refs = await getTenantRefs(tenantSlug);
 
-  if (refs.activeOperations > 1000) {
+  const { globals } = await import('./globalsManager');
+  const maxActiveOps = parseInt(await globals.get(tenantSlug, 'DB_MAX_ACTIVE_OPERATIONS', false, '1000')) || 1000;
+  if (refs.activeOperations > maxActiveOps) {
     const err: any = new Error(`Database write queue is full for tenant ${tenantSlug}`);
     err.statusCode = 429;
     throw err;
@@ -664,6 +676,8 @@ export async function setupTenantDatabase(tenantSlug: string, refs: TenantDbRefs
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )
     `);
+    try { await mainSql.unsafe(`ALTER TABLE translation_keys ADD COLUMN created_at DATETIME DEFAULT CURRENT_TIMESTAMP`); } catch(e) {}
+    try { await mainSql.unsafe(`ALTER TABLE translation_keys ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP`); } catch(e) {}
     await mainSql.unsafe(`
       CREATE TABLE IF NOT EXISTS records (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -691,6 +705,8 @@ export async function setupTenantDatabase(tenantSlug: string, refs: TenantDbRefs
     await mainSql.unsafe(`CREATE INDEX IF NOT EXISTS idx_rf_record ON record_fields(record_id)`);
     await mainSql.unsafe(`CREATE INDEX IF NOT EXISTS idx_rf_key_num ON record_fields(key, val_num)`);
     await mainSql.unsafe(`CREATE INDEX IF NOT EXISTS idx_rf_key_str ON record_fields(key, val_str)`);
+    await mainSql.unsafe(`CREATE INDEX IF NOT EXISTS idx_rf_val_str ON record_fields(val_str)`);
+    await mainSql.unsafe(`CREATE INDEX IF NOT EXISTS idx_rf_val_num ON record_fields(val_num)`);
     await mainSql.unsafe(`
       CREATE TABLE IF NOT EXISTS user_records (
         user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
@@ -698,15 +714,25 @@ export async function setupTenantDatabase(tenantSlug: string, refs: TenantDbRefs
         PRIMARY KEY (user_id, record_id)
       )
     `);
+    // KÖKTEN MİMARİ DEĞİŞİM (Refactor): Eski tabloları yok et
+    await mainSql.unsafe(`DROP TABLE IF EXISTS utils`);
+    await mainSql.unsafe(`DROP TABLE IF EXISTS system_variables`);
+
     await mainSql.unsafe(`
-      CREATE TABLE IF NOT EXISTS utils (
+      CREATE TABLE IF NOT EXISTS globals (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name VARCHAR(255) UNIQUE NOT NULL DEFAULT '',
+        type VARCHAR(20) NOT NULL CHECK(type IN ('variable', 'util')),
         key VARCHAR(255) UNIQUE NOT NULL,
-        target VARCHAR(50) NOT NULL CHECK(target IN ('ui', 'api', 'shared')),
-        code TEXT NOT NULL,
-        scope TEXT DEFAULT '[]',
+        value TEXT,
+        code TEXT,
+        data_type VARCHAR(50) DEFAULT 'string',
+        target VARCHAR(50) NOT NULL DEFAULT 'shared' CHECK(target IN ('ui', 'api', 'shared')),
+        is_public BOOLEAN DEFAULT 0,
+        is_secret BOOLEAN DEFAULT 0,
+        protected BOOLEAN DEFAULT 0,
         active BOOLEAN DEFAULT 1,
+        scope TEXT DEFAULT '[]',
+        description TEXT,
         hashtags TEXT DEFAULT '[]',
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -773,30 +799,11 @@ export async function setupTenantDatabase(tenantSlug: string, refs: TenantDbRefs
         updated_by INTEGER
       )
     `);
-    await mainSql.unsafe(`
-      CREATE TABLE IF NOT EXISTS system_variables (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        key VARCHAR(255) UNIQUE NOT NULL,
-        value TEXT,
-        target VARCHAR(50) NOT NULL DEFAULT 'shared' CHECK(target IN ('ui', 'api', 'shared')),
-        is_public BOOLEAN DEFAULT 0,
-        is_secret BOOLEAN DEFAULT 0,
-        protected BOOLEAN DEFAULT 0,
-        type VARCHAR(50) DEFAULT 'string',
-        description TEXT,
-        hashtags TEXT DEFAULT '[]',
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        created_by INTEGER,
-        updated_by INTEGER
-      )
-    `);
 
     // Create unique indexes to apply UNIQUE constraint retroactively on existing tables
     await mainSql.unsafe(`CREATE UNIQUE INDEX IF NOT EXISTS idx_endpoints_name ON endpoints(name)`);
     await mainSql.unsafe(`CREATE UNIQUE INDEX IF NOT EXISTS idx_workers_name ON workers(name)`);
     await mainSql.unsafe(`CREATE UNIQUE INDEX IF NOT EXISTS idx_pages_title ON pages(title)`);
-    await mainSql.unsafe(`CREATE UNIQUE INDEX IF NOT EXISTS idx_utils_name ON utils(name)`);
     // =========================================================================
     // --- NEW ISOLATED SEED LOGIC ---
     if (isNewDb) {

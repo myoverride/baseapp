@@ -136,7 +136,7 @@ export default {
 import { ref, watch, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { FilterGroup, FilterCondition } from '../utils/filterTypes'
-const { primaryColor: color } = useSysVars();
+const { primaryColor: color } = useGlobals();
 
 interface Column {
   key: string

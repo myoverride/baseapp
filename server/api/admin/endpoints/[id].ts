@@ -3,8 +3,11 @@ import { clearSandboxCache } from '../../../utils/sandbox';
 
 export default defineEventHandler(async (event) => {
   const user = event.context.user;
-  if (!user || (!user.is_admin && !user.is_super_admin)) {
-    throw createError({ statusCode: 403, message: 'errors.unauthorized' });
+  if (!user) {
+    throw createError({ statusCode: 401, message: 'errors.loginRequired' });
+  }
+  if (!user.is_admin && !user.is_super_admin) {
+    throw createError({ statusCode: 403, message: 'errors.forbiddenAdminOnly' });
   }
   const method = getMethod(event);
   const sql = useDB(event.context.tenantSlug);
@@ -27,7 +30,7 @@ export default defineEventHandler(async (event) => {
         const { validateJS } = await import('../../../utils/codeValidator');
         await validateJS(body.code, `Endpoint: ${body.name || 'Bilinmeyen'}`);
       } catch (err: any) {
-        throw createError({ statusCode: 400, message: err.key || err.message, data: err.params });
+        throw createError({ statusCode: 400, message: err.key || 'errors.databaseError', data: err.key ? err.params : undefined });
       }
     }
 
@@ -47,15 +50,21 @@ export default defineEventHandler(async (event) => {
       body.name, body.type, body.route_pattern, body.code, body.priority || 0,
       body.active ? 1 : 0, body.is_public ? 1 : 0, hashtagsStr, user.id, id
     ]);
-    import('../../../utils/history').then(m => m.saveHistory(event.context.tenantSlug, 'endpoints', 'update', { id, name: body.name })).catch(console.error);
+    const updatedRec = await sql.unsafe('SELECT * FROM endpoints WHERE id = ?', [id]);
+    if (updatedRec.length > 0) {
+      import('../../../utils/history').then(m => m.saveHistory(event.context.tenantSlug, 'endpoints', id, updatedRec[0])).catch(console.error);
+    }
     import('../../../utils/endpointManager').then(m => m.invalidateEndpointCache(event.context.tenantSlug)).catch(console.error);
     clearSandboxCache(); // S4 Fix: Eski derlenmiş script cache'ini temizle
     return { success: true };
   }
 
   if (method === 'DELETE') {
+    const recToDelete = await sql.unsafe('SELECT * FROM endpoints WHERE id = ?', [id]);
     await sql.unsafe('DELETE FROM endpoints WHERE id = ?', [id]);
-    import('../../../utils/history').then(m => m.saveHistory(event.context.tenantSlug, 'endpoints', 'delete', { id })).catch(console.error);
+    if (recToDelete.length > 0) {
+      import('../../../utils/history').then(m => m.saveHistory(event.context.tenantSlug, 'endpoints', id, recToDelete[0])).catch(console.error);
+    }
     import('../../../utils/endpointManager').then(m => m.invalidateEndpointCache(event.context.tenantSlug)).catch(console.error);
     clearSandboxCache(); // S4 Fix: Silinen endpoint'in cache'ini temizle
     return { success: true };

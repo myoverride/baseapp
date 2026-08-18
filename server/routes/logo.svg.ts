@@ -7,7 +7,7 @@ export default defineEventHandler(async (event) => {
   let appLogoCode = '';
 
   try {
-    const vars = await sql`SELECT value, target, is_public FROM system_variables WHERE key = 'APP_LOGO'`;
+    const vars = await sql`SELECT value, target, is_public FROM globals WHERE type = 'variable' AND key = 'APP_LOGO'`;
     if (vars.length > 0) {
       const v = vars[0];
       const isPublic = v.is_public === 1 || v.is_public === true;

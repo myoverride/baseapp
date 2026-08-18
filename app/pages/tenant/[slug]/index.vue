@@ -10,8 +10,8 @@
   <v-container v-else-if="user?.is_admin || user?.is_super_admin" class="py-8">
       <div class="text-center mb-8">
         <v-icon size="64" :color="color" class="mb-2">mdi-domain</v-icon>
-        <h1 class="text-h4 font-weight-bold text-grey-darken-3">{{ route.params.slug }} {{ $t('page.workspace') }}</h1>
-        <p class="text-subtitle-1 text-grey-darken-1 mt-1">
+        <h1 class="text-h4 font-weight-bold text-medium-emphasis">{{ route.params.slug }} {{ $t('page.workspace') }}</h1>
+        <p class="text-subtitle-1 text-medium-emphasis mt-1">
           {{ $t('page.noLandingPage') }}
         </p>
       </div>
@@ -20,8 +20,8 @@
   <v-container v-else-if="user" class="py-8">
     <div class="text-center" style="max-width: 500px; margin: 0 auto;">
       <v-icon size="64" :color="color" class="mb-4">mdi-hand-wave</v-icon>
-      <h1 class="text-h5 font-weight-bold text-grey-darken-3 mb-2">{{ $t('page.welcome') }}, {{ user.username }}</h1>
-      <p class="text-body-1 text-grey-darken-1">
+      <h1 class="text-h5 font-weight-bold text-medium-emphasis mb-2">{{ $t('page.welcome') }}, {{ user.username }}</h1>
+      <p class="text-body-1 text-medium-emphasis">
         {{ $t('common.useTheLinksInTheMenuToAccessYourPages') }}
       </p>
     </div>
@@ -35,7 +35,7 @@ import { useState, useFetch } from '#app';
 import { useI18n } from 'vue-i18n';
 
 const { t } = useI18n();
-const { primaryColor: color } = useSysVars();
+const { primaryColor: color } = useGlobals();
 const route = useRoute();
 const tenantSlug = route.params.slug as string;
 

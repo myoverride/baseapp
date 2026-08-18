@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import crypto from 'node:crypto';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import util from 'node:util';
 import cluster from 'node:cluster';
 
@@ -17,6 +17,8 @@ import cluster from 'node:cluster';
 import forge from 'node-forge';
 
 const appRoot = process.env.APP_HOME || process.cwd();
+const esmFilename = fileURLToPath(import.meta.url);
+const esmDirname = path.dirname(esmFilename);
 
 // --- GLOBAL KALKAN VE DOSYA TABANLI LOGLAMA ---
 const logErrorToFile = (type, error) => {
@@ -54,7 +56,7 @@ let config = {
   mode: 'local', // 'local' veya 'letsencrypt'
   httpPort: 80,
   httpsPort: 443,
-  mqttPort: 1883
+  mqttsPort: 8883
 };
 
 // Konfigürasyon oku veya oluştur
@@ -102,7 +104,7 @@ async function startServer() {
       chunksNitroPath = path.join(__dirname, '.output', 'server', 'chunks', '_', 'nitro.mjs');
     }
 
-    const nitroApp = await import(`file://${nitroPath}`);
+    const nitroApp = await import(pathToFileURL(nitroPath).href);
     const originalHandle = nitroApp.handler || nitroApp.handle || nitroApp.default;
 
     try {
@@ -113,7 +115,7 @@ async function startServer() {
       if (nitroApp.websocket) {
         wsConfig = nitroApp.websocket;
       } else {
-        const chunksNitro = await import(`file://${chunksNitroPath}`);
+        const chunksNitro = await import(pathToFileURL(chunksNitroPath).href);
         if (chunksNitro.ws) {
           wsConfig = chunksNitro.ws;
         } else if (chunksNitro.useNitroApp) {
@@ -132,7 +134,7 @@ async function startServer() {
       } else {
         console.warn('⚠️ WebSocket konfigürasyonu bulunamadı. WebSocket istekleri 426 dönecektir.');
         // Fallback denemesi: Belki h3App'in kendisi crossws için uyumludur
-        const chunksNitro = await import(`file://${chunksNitroPath}`);
+        const chunksNitro = await import(pathToFileURL(chunksNitroPath).href);
         if (chunksNitro.useNitroApp) {
            const app = chunksNitro.useNitroApp().h3App;
            if (app) {
@@ -178,7 +180,8 @@ async function startServer() {
       });
     };
   } catch (err) {
-    console.warn("⚠️ '.output/server/index.mjs' bulunamadı. Lütfen önce 'npm run build' çalıştırın.");
+    console.error("🔥 Error importing index.mjs:", err);
+    console.warn("⚠️ '.output/server/index.mjs' bulunamadı veya başlatılamadı. Lütfen önce 'npm run build' çalıştırın.");
     handle = (req, res) => {
       res.writeHead(200, { 'Content-Type': 'text/plain' });
       res.end('Nuxt build henuz alinmadi. Lutfen npm run build komutunu calistirin.');
@@ -192,7 +195,7 @@ async function startServer() {
     const glx = glxModule.default || glxModule;
     
     glx.init({
-      packageRoot: __dirname,
+      packageRoot: esmDirname,
       configDir: path.join(appRoot, 'greenlock.d'),
       maintainerEmail: config.maintainerEmail || "admin@example.com",
       cluster: false
@@ -301,18 +304,35 @@ async function startServer() {
       httpsServer.close();
       console.log('  ✓ HTTP/HTTPS sunucuları kapatıldı');
 
-      // 2. DuckDB telemetry buffer'ını flush et
+      // 2. Worker'ları (Zombileri) ve DuckDB telemetry buffer'ını flush et
       try {
-        const { flushAppender } = await import('./chunks/_/nitro.mjs').then(m => {
-          // Nitro içindeki modülü bulmaya çalış
-          return m;
-        }).catch(() => ({}));
-        if (typeof flushAppender === 'function') {
-          await flushAppender();
-          console.log('  ✓ Telemetry buffer flush edildi');
+        const nitroModule = await import('./chunks/_/nitro.mjs').catch(() => null);
+        if (nitroModule) {
+          if (typeof nitroModule.flushAppender === 'function') {
+            await nitroModule.flushAppender();
+            console.log('  ✓ Telemetry buffer flush edildi (Prod)');
+          }
+          if (typeof nitroModule.shutdownDaemonWorkers === 'function') {
+            await nitroModule.shutdownDaemonWorkers();
+            console.log('  ✓ Daemon Worker zombileri temizlendi (Prod)');
+          }
+        } else {
+          // Dev Mode Fallback (via tsx or direct if compiled)
+          try {
+            const duckAppender = await import('./server/utils/duckdb-appender.ts').catch(() => null);
+            if (duckAppender && typeof duckAppender.flushAppender === 'function') {
+               await duckAppender.flushAppender();
+               console.log('  ✓ Telemetry buffer flush edildi (Dev)');
+            }
+            const workerManager = await import('./server/utils/workerManager.ts').catch(() => null);
+            if (workerManager && typeof workerManager.shutdownDaemonWorkers === 'function') {
+               await workerManager.shutdownDaemonWorkers();
+               console.log('  ✓ Daemon Worker zombileri temizlendi (Dev)');
+            }
+          } catch(e) {}
         }
       } catch (e) {
-        // Flush fonksiyonu bulunamazsa sessizce devam et
+        // Sessizce devam et
       }
 
       // 3. MQTT broker ve client bağlantılarını kapat

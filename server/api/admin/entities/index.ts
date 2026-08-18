@@ -1,5 +1,6 @@
 import { useDB } from '../../../utils/db';
 import { validateRelationSchemaPolicies } from '../../../utils/relationDeletePolicy';
+import { checkRequiredFieldsOnSchemaUpdate } from '../../../utils/schemaValidator';
 import { type FilterGroup } from '../../../utils/filterEngine';
 import { buildGenericFilter } from '../../../utils/queryBuilder';
 
@@ -46,19 +47,19 @@ export default defineEventHandler(async (event) => {
 
       const selectCols = 'id, name, slug, schema, hashtags, created_at, updated_at';
 
+      const sortKey = (query.sortBy as string) || 'created_at';
+      const sortOrder = (query.sortOrder as string)?.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
+      const validSortKeys = ['id', 'name', 'slug', 'created_at', 'updated_at'];
+      const safeSortKey = validSortKeys.includes(sortKey) ? sortKey : 'created_at';
+
       const pagedRes = await sql.unsafe(`
         SELECT ${selectCols} 
         ${baseQuery} 
-        ORDER BY created_at DESC 
+        ORDER BY ${safeSortKey} ${sortOrder} 
         LIMIT $${queryParams.length + 1} OFFSET $${queryParams.length + 2}
       `, [...queryParams, limit, offset]);
 
-      return {
-        records: pagedRes,
-        total: totalCount,
-        page: page,
-        limit: limit
-      };
+      return { success: true, data: pagedRes, pagination: { total: totalCount, page, limit } };
     } catch (e: any) {
       throw createError({ statusCode: 500, message: e.message });
     }
@@ -84,12 +85,12 @@ export default defineEventHandler(async (event) => {
       for (let i = 0; i < records.length; i++) {
         const rec = records[i];
         if (!rec.name || !rec.slug || !rec.schema) {
-          errors.push(`Satır ${i + 1}: Varlık name, slug ve schema alanlarına sahip olmalıdır.`);
+          errors.push('error.missingSchemaFields|' + (i + 1));
         } else {
           try {
             validateRelationSchemaPolicies(rec.schema);
           } catch (e: any) {
-            errors.push(`Satır ${i + 1}: ${e?.message || 'Geçersiz relation onDelete kuralı.'}`);
+            errors.push('error.invalidRelationDeleteRule|' + (i + 1) + '|' + (e?.message || ''));
           }
           validRecords.push(rec);
         }
@@ -111,6 +112,12 @@ export default defineEventHandler(async (event) => {
           const existing = await sql`SELECT id FROM entities WHERE slug = ${rec.slug}`;
           if (existing.length > 0) {
             // Update
+            try {
+              await checkRequiredFieldsOnSchemaUpdate(sql, Number(existing[0].id), rec.schema);
+            } catch (e: any) {
+               throw createError({ statusCode: 400, message: 'error.entityUpdateFailed|' + rec.name + '|' + e.message });
+            }
+            
             await sql`
                 UPDATE entities 
                 SET name = ${rec.name}, schema = ${sql.json(rec.schema)}, hashtags = ${sql.json(rec.hashtags || [])}, updated_at = CURRENT_TIMESTAMP 

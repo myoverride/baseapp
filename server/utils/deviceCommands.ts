@@ -1,4 +1,4 @@
-import { getSysVar } from './sysvars';
+import {} from './globalsManager';
 
 export interface DeviceCommand {
   id: string;
@@ -54,7 +54,7 @@ export function updateCommandStatus(tenantSlug: string, correlationId: string, s
 export async function scheduleCommandTimeout(tenantSlug: string, correlationId: string, createdAtMs: number = Date.now()) {
   let timeoutSec = 30;
   try {
-    const sysVal = await getSysVar(tenantSlug, 'MQTT_COMMAND_TIMEOUT', false, '30');
+    const sysVal = await globals.get(tenantSlug, 'MQTT_COMMAND_TIMEOUT', false, '30');
     timeoutSec = parseInt(sysVal, 10) || 30;
   } catch (e) {
     // ignore

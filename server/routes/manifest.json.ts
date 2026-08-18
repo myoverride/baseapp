@@ -9,7 +9,7 @@ export default defineEventHandler(async (event) => {
   let appLogoSvg = '/logo.svg';
 
   try {
-    const vars = await sql`SELECT key, value, target, is_public FROM system_variables WHERE key = 'APP_NAME'`;
+    const vars = await sql`SELECT key, value, target, is_public FROM globals WHERE type = 'variable' AND key = 'APP_NAME'`;
     for (const v of vars) {
       const isPublic = v.is_public === 1 || v.is_public === true;
       if (v.key === 'APP_NAME' && v.value) {

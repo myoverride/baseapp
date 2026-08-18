@@ -61,14 +61,14 @@ export default defineEventHandler(async (event) => {
         updateCommandStatus(tenantSlug, correlationId, 'SENT');
         
         // RAM tabanlÄ± timeout sayacÄ±nÄ± baÅŸlat
+        // RAM tabanlı timeout sayacını başlat
         const { scheduleCommandTimeout } = await import('../../../utils/deviceCommands');
         scheduleCommandTimeout(tenantSlug, correlationId);
         
         return { success: true, correlationId, status: 'SENT' };
       } else {
-        // Broker baÄŸlantÄ±sÄ± yoksa FAILED yap
-        updateCommandStatus(tenantSlug, correlationId, 'FAILED', { error: 'MQTT Broker baÄŸlantÄ±sÄ± yok veya komut gÃ¶nderilemedi.' });
-        return { success: false, correlationId, status: 'FAILED', error: 'MQTT Broker baÄŸlantÄ±sÄ± yok.' };
+        updateCommandStatus(tenantSlug, correlationId, 'FAILED', { error: 'MQTT Broker Unavailable' });
+        throw createError({ statusCode: 503, message: 'errors.mqttBrokerUnavailable', data: { correlationId } });
       }
 
     } catch (error: any) {

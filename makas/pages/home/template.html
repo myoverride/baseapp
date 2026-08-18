@@ -1,0 +1,131 @@
+<div class="makas-home-container">
+  
+  <!-- LOADING -->
+  <div v-if="state.loading" class="makas-loading">
+    <div class="spinner"></div>
+    <p>Bilgileriniz Yükleniyor...</p>
+  </div>
+
+  <!-- GUEST VIEW (Landing Page) -->
+  <div v-else-if="!state.isLoggedIn" class="makas-landing">
+    <div class="landing-content">
+      <h1 class="glow-text">Güzelliğin Yeni Adresi</h1>
+      <p class="subtitle">Makas ile randevularınızı yönetin, yeni müşterilere ulaşın veya en iyi salonları keşfedin.</p>
+      
+      <div class="action-cards">
+        <div class="action-card client-card">
+          <div class="card-icon">✂️</div>
+          <h3>Müşteri Ol</h3>
+          <p>En iyi salonlardan saniyeler içinde randevu alın.</p>
+          <button @click="navigateToRegisterCustomer" class="makas-btn btn-outline">Kayıt Ol</button>
+        </div>
+        
+        <div class="action-card shop-card">
+          <div class="card-icon">🏪</div>
+          <h3>İşletme Ol</h3>
+          <p>Salonunuzu dijitale taşıyın, randevularınızı kolayca yönetin.</p>
+          <!-- BaseApp route navigation (assuming standard vue router or link) -->
+          <button @click="navigateToRegister" class="makas-btn btn-primary">İşletme Kaydı Yap</button>
+        </div>
+
+        <div class="action-card app-card" v-if="!state.isPWA">
+          <div class="card-icon">📱</div>
+          <h3>Uygulamayı İndir</h3>
+          <p>Tüm özellikler cebinizde. Hemen indirin.</p>
+          <div class="store-buttons">
+            <button class="makas-btn btn-store" style="width: 100%;">Ana Ekrana Ekle (PWA)</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="landing-bg-elements">
+      <div class="blob blob-1"></div>
+      <div class="blob blob-2"></div>
+    </div>
+  </div>
+
+  <!-- LOGGED IN: WAITING FOR APPROVAL -->
+  <div v-else-if="state.company && !state.company.approved" class="makas-dashboard waiting">
+    <div class="status-panel glass-panel">
+      <div class="icon-pulse">⏳</div>
+      <h2>İşletmeniz Onay Bekliyor</h2>
+      <p>Merhaba <strong>{{ state.personnel.full_name }}</strong>, işletmeniz ({{ state.company.title }}) sistem yöneticilerimiz tarafından incelenmektedir.</p>
+      <p class="text-muted">Onay sürecimiz tamamlandığında bilgilendirileceksiniz. Anlayışınız için teşekkür ederiz.</p>
+      <button @click="logout" class="makas-btn btn-outline" style="margin-top: 2rem;">Çıkış Yap</button>
+    </div>
+  </div>
+
+  <!-- LOGGED IN: APPROVED & DASHBOARD -->
+  <div v-else-if="state.company && state.company.approved" class="makas-dashboard approved">
+    <div class="dashboard-header">
+      <h2>İşletme Yönetimi</h2>
+      <div class="header-actions">
+        <span class="welcome-text">Hoş geldin, {{ state.personnel.full_name }}</span>
+        <button @click="logout" class="makas-btn btn-text">Çıkış Yap</button>
+      </div>
+    </div>
+
+    <div class="glass-panel form-panel">
+      <h3>İşletme Bilgileri</h3>
+      <form @submit.prevent="updateCompany" class="makas-form">
+        <div class="form-group">
+          <label>Ünvan</label>
+          <input type="text" v-model="state.editForm.title" class="makas-input" required />
+        </div>
+        
+        <div class="form-group">
+          <label>İletişim</label>
+          <input type="text" v-model="state.editForm.contact" class="makas-input" required />
+        </div>
+        
+        <div class="form-group">
+          <label>Adres</label>
+          <textarea v-model="state.editForm.address" class="makas-input" rows="3" required></textarea>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Hedef Kitle</label>
+            <select v-model="state.editForm.target" class="makas-input">
+              <option value="Erkek">Erkek</option>
+              <option value="Kadın">Kadın</option>
+              <option value="Karma">Karma</option>
+            </select>
+          </div>
+          
+          <div class="form-group">
+            <label>Tatil Günü</label>
+            <select v-model="state.editForm.dayoff" class="makas-input">
+              <option value="Yok">Yok</option>
+              <option value="Pazartesi">Pazartesi</option>
+              <option value="Salı">Salı</option>
+              <option value="Çarşamba">Çarşamba</option>
+              <option value="Perşembe">Perşembe</option>
+              <option value="Cuma">Cuma</option>
+              <option value="Cumartesi">Cumartesi</option>
+              <option value="Pazar">Pazar</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" class="makas-btn btn-primary" :disabled="state.saving">
+            {{ state.saving ? 'Kaydediliyor...' : 'Bilgileri Güncelle' }}
+          </button>
+          <span v-if="state.saveMessage" class="save-msg">{{ state.saveMessage }}</span>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- NOT PERSONNEL BUT LOGGED IN (Failsafe) -->
+  <div v-else class="makas-dashboard waiting">
+    <div class="status-panel glass-panel">
+      <h2>Hoş Geldiniz</h2>
+      <p>Şu an sisteme Müşteri olarak giriş yaptınız veya henüz bir işletme kaydınız bulunmuyor.</p>
+      <button @click="navigateToRegister" class="makas-btn btn-primary" style="margin-top: 2rem; margin-right: 1rem;">İşletme Hesabı Aç</button>
+      <button @click="logout" class="makas-btn btn-outline" style="margin-top: 2rem;">Çıkış Yap</button>
+    </div>
+  </div>
+</div>

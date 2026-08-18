@@ -1,7 +1,7 @@
 <template>
   <v-container>
     <div class="mb-4" v-if="!hideHeader">
-      <v-btn prepend-icon="mdi-arrow-left" variant="text" to="/" class="text-none font-weight-medium px-0 text-body-1" color="grey-darken-2">
+      <v-btn prepend-icon="mdi-arrow-left" variant="text" to="/" class="text-none font-weight-medium px-0 text-body-1" color="primary">
         {{ $t('common.home') }}
       </v-btn>
     </div>
@@ -60,8 +60,8 @@
             <v-btn icon="mdi-information" v-bind="props" color="info" variant="text" size="small"></v-btn>
           </template>
           <div class="text-caption">
-            <div class="mb-1"><span class="font-weight-medium text-grey-lighten-2">{{ $t('table.createdAt') }}:</span> {{ formatAppDate(item.created_at as any) }}</div>
-            <div><span class="font-weight-medium text-grey-lighten-2">{{ $t('table.updatedAt') }}:</span> {{ formatAppDate(item.updated_at as any) }}</div>
+            <div class="mb-1"><span class="font-weight-medium opacity-70">{{ $t('table.createdAt') }}:</span> {{ formatAppDate(item.created_at as any) }}</div>
+            <div><span class="font-weight-medium opacity-70">{{ $t('table.updatedAt') }}:</span> {{ formatAppDate(item.updated_at as any) }}</div>
             <div v-if="item.error_msg" class="mt-1 text-error"><span class="font-weight-medium">Error:</span> {{ item.error_msg }}</div>
           </div>
         </v-tooltip>
@@ -145,7 +145,7 @@
               <v-combobox
                 v-model="formData.hashtags"
                 :items="availableTags"
-                :label="$t('common.tags')"
+                :label="$t('field.hashtags')"
                 multiple
                 chips
                 closable-chips
@@ -213,13 +213,13 @@
                   <!-- Payload Editor -->
                   <v-col cols="12" md="6" class="pa-1 d-flex flex-column fill-height">
                     <div class="d-flex align-center justify-space-between mb-1">
-                      <div class="text-caption font-weight-bold text-grey-darken-1">Test Payload (JSON)</div>
+                      <div class="text-caption font-weight-bold opacity-70">{{ $t('ide.testPayloadJson') }}</div>
                       <div>
                         <v-btn v-if="formData.type === 'daemon'" size="x-small" color="error" @click="stopTestDaemon" class="mr-2" prepend-icon="mdi-stop">
-                          Durdur
+                          {{ $t('action.stop') }}
                         </v-btn>
                         <v-btn size="x-small" :color="color" @click="runTest('worker')" :loading="isTesting" prepend-icon="mdi-play">
-                          Çalıştır
+                          {{ $t('action.run') }}
                         </v-btn>
                       </div>
                     </div>
@@ -238,10 +238,10 @@
                   <!-- Result Viewer -->
                   <v-col cols="12" md="6" class="pa-1 d-flex flex-column fill-height">
                     <div class="d-flex align-center justify-space-between mb-1">
-                      <div class="text-caption font-weight-bold text-grey-darken-1">Test Sonucu</div>
+                      <div class="text-caption font-weight-bold opacity-70">{{ $t('ide.testResult') }}</div>
                       <v-btn size="x-small" variant="text" icon="mdi-content-copy" @click="copyTestResult"></v-btn>
                     </div>
-                    <div class="border rounded flex-grow-1 bg-black pa-2" style="overflow-y: auto; font-family: monospace; font-size: 13px; white-space: pre-wrap; min-height: 250px;">
+                    <div class="border rounded flex-grow-1 bg-surface-variant pa-2" style="overflow-y: auto; font-family: monospace; font-size: 13px; white-space: pre-wrap; min-height: 250px;">
 {{ testResult }}
                     </div>
                   </v-col>
@@ -268,11 +268,11 @@
 </template>
 
 <script setup lang="ts">
-const { primaryColor: color } = useSysVars();
-import { ref, computed, onMounted } from 'vue';
+const { primaryColor: color } = useGlobals();
+import { ref, computed, watch, defineAsyncComponent } from 'vue';
 import { useI18n } from 'vue-i18n';
 import CrudTable from '~/components/CrudTable.vue';
-import MonacoEditor from '~/components/MonacoEditor.vue';
+const MonacoEditor = defineAsyncComponent(() => import('~/components/MonacoEditor.vue'));
 import VirtualConsole from '~/components/VirtualConsole.vue';
 import ItemDialog from '~/components/ItemDialog.vue';
 import CodeHistoryDialog from '~/components/CodeHistoryDialog.vue';
@@ -314,14 +314,14 @@ const onTypeChange = (newType: string, slotData: any) => {
 
 const runTest = async (type: string) => {
   isTesting.value = true;
-  testResult.value = 'Çalıştırılıyor...';
+  testResult.value = t('message.running');
   try {
     let payloadObj = {};
     if (testPayload.value.trim()) {
       try {
         payloadObj = JSON.parse(testPayload.value);
       } catch (e) {
-        testResult.value = 'HATA: Payload geçerli bir JSON formatında değil.';
+        testResult.value = t('error.invalidJsonPayload');
         isTesting.value = false;
         return;
       }
@@ -335,9 +335,9 @@ const runTest = async (type: string) => {
         payload: payloadObj
       }
     });
-    testResult.value = res.result !== undefined ? JSON.stringify(res.result, null, 2) : 'Çalıştırma tamamlandı.\n(Worker kodları geriye veri döndürmez. Çıktıları görmek için Sanal Konsol sekmesini kontrol ediniz.)';
+    testResult.value = res.result !== undefined ? JSON.stringify(res.result, null, 2) : t('message.workerExecutionComplete');
   } catch (err: any) {
-    testResult.value = 'HATA:\n' + (err.data?.message || err.message || 'Bilinmeyen hata');
+    testResult.value = t('error.prefix') + ':\n' + (err.data?.message || err.message || t('error.unknown'));
   } finally {
     isTesting.value = false;
   }
@@ -346,15 +346,15 @@ const runTest = async (type: string) => {
 const stopTestDaemon = async () => {
   try {
     await $fetch('/api/admin/sandbox/stop-test-daemon', { method: 'POST' });
-    if ($toast) $toast.info('Arkaplan Daemon testi durduruldu.');
+    if ($toast) $toast.info(t('message.daemonTestStopped'));
   } catch (e) {
-    if ($toast) $toast.error('Test durdurulurken hata oluştu.');
+    if ($toast) $toast.error(t('error.daemonTestStopFailed'));
   }
 };
 
 const copyTestResult = () => {
   navigator.clipboard.writeText(testResult.value);
-  $toast.success('Sonuç kopyalandı');
+  $toast.success(t('message.copied'));
 };
 
 const historyDialogOpen = ref(false);
@@ -389,9 +389,13 @@ const saveCodeOnly = async () => {
   try {
     await $fetch(`/api/admin/workers/${targetId}`, { method: 'PUT', body: payload });
     crudTable.value?.loadItems();
-    if ($toast) $toast.success(t('message.saved'));
+    if ($toast) $toast.success(t('message.success'));
   } catch (e: any) {
-    if ($toast) $toast.error(t(e.data?.message || 'errors.operationFailed', e.data?.data || {}));
+        const errPayload = err?.data || e?.data;
+    const isArr = Array.isArray(errPayload?.data);
+    const errData = isArr ? errPayload.data[0] : (errPayload?.data || {});
+    const errMsg = isArr ? errPayload.data[0].message : (errPayload?.message || 'errors.operationFailed');
+    if ($toast) $toast.error(t(errMsg, errData));
   }
 };
 
@@ -419,7 +423,7 @@ const cronTemplate = `/*
  * 7. sendEmail   : E-posta göndermek için (Örn: await sendEmail({ to: "a@b.com", subject: "S", text: "B" }))
  * 8. require     : Node.js modüllerini içe aktarmak için (Örn: const axios = require("axios"))
  * 9. sleep       : Beklemek için (Örn: await sleep(2000))
- * 10. utils      : Özel utillerinizi (Custom Utils) çağırmak için (Örn: await utils.hesapla(10, 5))
+ * 10. globals      : Özel utillerinizi (Custom Utils) çağırmak için (Örn: await globals.hesapla(10, 5))
  * 
  * Diğerleri: crypto, Buffer, env, process, bcrypt, readModbusData, writeModbusData
  */
@@ -452,7 +456,7 @@ const daemonTemplate = `/*
  * 6. sendEmail   : E-posta göndermek için (Örn: await sendEmail({ to: "a@b.com", subject: "S", text: "B" }))
  * 7. require     : Node.js modüllerini içe aktarmak için (Örn: const _ = require("lodash"))
  * 8. sleep       : Beklemek için (Örn: await sleep(2000))
- * 9. utils       : Özel utillerinizi (Custom Utils) çağırmak için (Örn: await utils.hesapla(10, 5))
+ * 9. globals       : Özel utillerinizi (Custom Utils) çağırmak için (Örn: await globals.hesapla(10, 5))
  * 
  * Diğerleri: crypto, Buffer, env, process, bcrypt, readModbusData, writeModbusData
  * -------------------------------------------------------------
@@ -486,7 +490,7 @@ const columns = computed(() => [
   { title: t('table.cronAutostart'), key: 'custom_config', sortable: false },
   { title: t('common.active'), key: 'active', sortable: true, align: 'center' as const },
   { title: t('common.status'), key: 'status', sortable: true, align: 'center' as const },
-  { title: t('common.tags'), key: 'hashtags', sortable: false },
+  { title: t('field.hashtags'), key: 'hashtags', sortable: false },
   { title: t('common.info'), key: 'info', sortable: false, align: 'center' as const }
 ]);
 
@@ -548,7 +552,11 @@ const openEditDialog = async (item: any) => {
     }
   } catch (e: any) {
     
-    if ($toast) $toast.error(t(e.data?.message || 'errors.operationFailed', e.data?.data || {}));
+        const errPayload = err?.data || e?.data;
+    const isArr = Array.isArray(errPayload?.data);
+    const errData = isArr ? errPayload.data[0] : (errPayload?.data || {});
+    const errMsg = isArr ? errPayload.data[0].message : (errPayload?.message || 'errors.operationFailed');
+    if ($toast) $toast.error(t(errMsg, errData));
   }
 
   // Open dialog AFTER data is loaded, so ItemDialog syncs the complete data

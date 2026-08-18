@@ -4,7 +4,7 @@ export default defineEventHandler(async (event) => {
   // Güvenlik: Sadece admin kullanıcılar utility listesini görebilir
   const user = event.context.user;
   if (!user?.is_admin) {
-    throw createError({ statusCode: 403, message: tEvent(event, 'errors.unauthorized') });
+    throw createError({ statusCode: 403, message: 'errors.unauthorized' });
   }
 
   const sql = useDB(event.context.tenantSlug);
@@ -13,7 +13,7 @@ export default defineEventHandler(async (event) => {
   const target = query.target as string | undefined;
 
   if (target && !['ui', 'shared'].includes(target)) {
-    throw createError({ statusCode: 400, message: tEvent(event, 'errors.invalidTarget') });
+    throw createError({ statusCode: 400, message: 'errors.invalidTarget' });
   }
 
   let whereClause = 'WHERE active = true';
@@ -39,7 +39,7 @@ export default defineEventHandler(async (event) => {
   } catch (err) {
     throw createError({
       statusCode: 500,
-      message: tEvent(event, 'errors.internalError') + ': ' + ((err as any)?.message || '')
+      message: 'errors.internalError' + ': ' + ((err as any)?.message || '')
     });
   }
 });

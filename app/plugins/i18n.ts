@@ -61,7 +61,32 @@ export default defineNuxtPlugin(async (nuxtApp) => {
         const found = locales.find(l => l.code === code);
         if (found && found.translation_json) {
           try {
-            return typeof found.translation_json === 'string' ? JSON.parse(found.translation_json) : found.translation_json;
+            const rawObj = typeof found.translation_json === 'string' ? JSON.parse(found.translation_json) : found.translation_json;
+            const result: any = {};
+            const processKey = (k: string, v: any) => {
+              const parts = k.split('.');
+              let current = result;
+              for (let i = 0; i < parts.length; i++) {
+                const part = parts[i] as string;
+                if (i === parts.length - 1) {
+                  if (typeof v === 'object' && v !== null && !Array.isArray(v)) {
+                    if (!current[part] || typeof current[part] !== 'object') current[part] = {};
+                    for (const [subK, subV] of Object.entries(v)) {
+                      processKey(`${k}.${subK}`, subV);
+                    }
+                  } else {
+                    current[part] = v;
+                  }
+                } else {
+                  if (!current[part] || typeof current[part] !== 'object') current[part] = {};
+                  current = current[part];
+                }
+              }
+            };
+            for (const [key, value] of Object.entries(rawObj)) {
+              processKey(key, value);
+            }
+            return result;
           } catch(e) {}
         }
       }
@@ -150,6 +175,9 @@ export default defineNuxtPlugin(async (nuxtApp) => {
           ...(vuetify.locale.rtl.value || {}),
           [vLocCode]: isRtl
         };
+      } else if (vuetify.locale) {
+         // Create the ref if it doesn't exist
+         vuetify.locale.rtl = { value: { [vLocCode]: isRtl } };
       }
       
       vuetify.locale.current.value = vLocCode;

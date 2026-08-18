@@ -1,5 +1,4 @@
-import { getActiveEndpoints, compileRoutePattern } from '../utils/endpointManager';
-
+// Custom authorization logic
 const normalizePath = (value: string) => {
   if (!value) return '/';
   const clean = value.split('?')[0] || '/';
@@ -49,16 +48,18 @@ export default defineEventHandler(async (event) => {
   }
 
 
-  // /api/pages/* ve /api/sys-vars endpoint'leri kendi iç yetkilendirmelerini yapar
-  if (pathname.startsWith('/api/pages') || pathname === '/api/sys-vars') {
+  // /api/pages/* ve /api/globals endpoint'leri kendi iç yetkilendirmelerini yapar
+  if (pathname.startsWith('/api/pages') || pathname === '/api/globals') {
     return;
   }
 
   // Özel (Custom) Endpoint'ler için "public" kontrolü
   try {
-    const endpoints = await getActiveEndpoints(event.context.tenantSlug);
-    for (const ep of endpoints) {
-      if (ep.is_public && ep.regexPattern.test(pathname)) {
+    const { getActiveEndpointsRouter } = await import('../utils/endpointManager');
+    const router = await getActiveEndpointsRouter(event.context.tenantSlug, 'http');
+    if (router) {
+      const match = router.lookup(pathname);
+      if (match && match.payload && match.payload.is_public) {
         return; // Herkese açık özel API
       }
     }
@@ -76,8 +77,8 @@ export default defineEventHandler(async (event) => {
     });
   }
 
-  // Sadece yetkili (giriş yapmış) kullanıcılar dynamic utils çalıştırabilir (RCE Koruması)
-  if (pathname === '/api/admin/utils' || pathname.startsWith('/api/admin/utils/')) {
+  // Sadece yetkili (giriş yapmış) kullanıcılar dynamic globals (utils/variables) çalıştırabilir/okuyabilir
+  if (pathname === '/api/admin/globals' || pathname.startsWith('/api/admin/globals/')) {
     return;
   }
 
@@ -96,7 +97,7 @@ export default defineEventHandler(async (event) => {
     throw createError({
       statusCode: 403,
       statusMessage: 'Forbidden',
-      message: 'error.forbidden'
+      message: 'errors.forbidden'
     });
   }
 });

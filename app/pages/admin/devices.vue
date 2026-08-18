@@ -1,7 +1,7 @@
 <template>
   <v-container>
     <div class="mb-4">
-      <v-btn prepend-icon="mdi-arrow-left" variant="text" to="/" class="text-none font-weight-medium px-0 text-body-1" color="grey-darken-2">
+      <v-btn prepend-icon="mdi-arrow-left" variant="text" to="/" class="text-none font-weight-medium px-0 text-body-1" color="primary">
         {{ $t('common.home') }}
       </v-btn>
     </div>
@@ -11,7 +11,7 @@
       :enable-multi-select="true"
       api-endpoint="/api/admin/devices"
       :columns="columns"
-      :title="$t('page.devices')"
+      :title="$t('menu.devices')"
       default-sort-key="created_at"
       default-sort-order="desc"
       @create="openCreateDialog"
@@ -42,7 +42,7 @@
       </template>
 
       <template v-slot:item.secret_key="{ item }">
-        <code class="bg-grey-lighten-4 px-2 py-1 rounded text-body-2 font-weight-medium text-grey-darken-2">
+        <code class="bg-background px-2 py-1 rounded text-body-2 font-weight-medium opacity-70">
           *********
         </code>
         <v-btn 
@@ -74,8 +74,8 @@
             <v-btn icon="mdi-information" v-bind="props" color="info" variant="text" size="small"></v-btn>
           </template>
           <div class="text-caption">
-            <div class="mb-1"><span class="font-weight-medium text-grey-lighten-2">{{ $t('table.createdAt') }}:</span> {{ formatAppDate(item.created_at as any) }}</div>
-            <div><span class="font-weight-medium text-grey-lighten-2">{{ $t('table.updatedAt') }}:</span> {{ formatAppDate(item.updated_at as any) }}</div>
+            <div class="mb-1"><span class="font-weight-medium opacity-70">{{ $t('table.createdAt') }}:</span> {{ formatAppDate(item.created_at as any) }}</div>
+            <div><span class="font-weight-medium opacity-70">{{ $t('table.updatedAt') }}:</span> {{ formatAppDate(item.updated_at as any) }}</div>
           </div>
         </v-tooltip>
       </template>
@@ -197,7 +197,7 @@
                         {{ cmd.status }}
                       </v-chip>
                     </div>
-                    <div class="text-caption text-grey-darken-1 mt-1 bg-grey-lighten-4 pa-1 rounded" style="font-family: monospace; white-space: pre-wrap; font-size: 10px;">
+                    <div class="text-caption opacity-70 mt-1 bg-background pa-1 rounded" style="font-family: monospace; white-space: pre-wrap; font-size: 10px;">
                       <div>Payload: {{ JSON.stringify(cmd.payload) }}</div>
                       <div v-if="cmd.response">Response: {{ JSON.stringify(cmd.response) }}</div>
                     </div>
@@ -223,12 +223,12 @@ import { useJsonExportImport } from '~/composables/useJsonExportImport';
 const { t } = useI18n();
 const { $toast, $localize } = useNuxtApp() as any;
 
-useHead({ title: () => t('page.devices') })
+useHead({ title: () => t('menu.devices') })
 
 const crudTable = ref();
 const availableRecords = ref<any[]>([]);
 
-const { primaryColor: color } = useSysVars();
+const { primaryColor: color } = useGlobals();
 
 const fetchDependencies = async () => {
   try {
@@ -374,7 +374,11 @@ const sendDeviceCommand = async () => {
       if ($toast) $toast.error(res.error || t('message.commandFailed'));
     }
     } catch (e: any) {
-      if ($toast) $toast.error(t(e.data?.message || 'errors.operationFailed'));
+          const errPayload = err?.data || e?.data;
+    const isArr = Array.isArray(errPayload?.data);
+    const errData = isArr ? errPayload.data[0] : (errPayload?.data || {});
+    const errMsg = isArr ? errPayload.data[0].message : (errPayload?.message || 'errors.operationFailed');
+    if ($toast) $toast.error(t(errMsg, errData));
     } finally {
       sendingCommand.value = false;
     }
@@ -400,12 +404,12 @@ const formatTime = (dateStr: string) => {
 const { jsonExportLoading, jsonImportLoading, jsonInputRef, triggerJSONImport, exportSingleJSON, exportJSON, importJSON } = useJsonExportImport('/api/admin/devices', crudTable);
 
 const columns = computed(() => [
-  { title: t('table.id'), key: 'id', sortable: true, filterable: true, type: 'number', width: '80px' },
+  { title: t('common.id'), key: 'id', sortable: true, filterable: true, type: 'number', width: '80px' },
   { title: t('field.deviceId'), key: 'device_id', sortable: true, filterable: true, type: 'string', slot: true },
   { title: t('table.targetRecordId'), key: 'schema.target_record_id', sortable: false, filterable: false, slot: true },
   { title: t('common.secretKey'), key: 'secret_key', sortable: false, filterable: false, slot: true },
-  { title: t('table.hashtags'), key: 'hashtags', sortable: false, filterable: true, slot: true },
-  { title: t('common.detail'), key: 'info', sortable: false, filterable: false, slot: true, width: '60px', align: 'center' as const }
+  { title: t('field.hashtags'), key: 'hashtags', sortable: false, filterable: true, slot: true },
+  { title: t('common.info'), key: 'info', sortable: false, filterable: false, slot: true, width: '60px', align: 'center' as const }
 ]);
 
 const dialog = ref(false);
@@ -471,7 +475,11 @@ const saveItem = async (payload: any) => {
     if ($toast) $toast.success(dialogMode.value === 'edit' ? t('message.success') : t('message.success'));
     crudTable.value?.loadItems();
   } catch (e: any) {
-    if ($toast) $toast.error(t(e.data?.message || 'errors.operationFailed'));
+        const errPayload = err?.data || e?.data;
+    const isArr = Array.isArray(errPayload?.data);
+    const errData = isArr ? errPayload.data[0] : (errPayload?.data || {});
+    const errMsg = isArr ? errPayload.data[0].message : (errPayload?.message || 'errors.operationFailed');
+    if ($toast) $toast.error(t(errMsg, errData));
   }
 };
 
@@ -482,7 +490,11 @@ const handleDelete = async (item: any) => {
     if ($toast) $toast.warning(t('message.entityDeleted', { name: t('entity.device') }));
     crudTable.value?.loadItems();
   } catch (e: any) {
-    if ($toast) $toast.error(t(e.data?.message || 'errors.operationFailed'));
+        const errPayload = err?.data || e?.data;
+    const isArr = Array.isArray(errPayload?.data);
+    const errData = isArr ? errPayload.data[0] : (errPayload?.data || {});
+    const errMsg = isArr ? errPayload.data[0].message : (errPayload?.message || 'errors.operationFailed');
+    if ($toast) $toast.error(t(errMsg, errData));
   }
 };
 
@@ -504,7 +516,7 @@ const copy = async (txt: string, message = t('message.keyCopied')) => {
       if ($toast) $toast.success(message);
     }
   } catch (err) {
-    if ($toast) $toast.error('Failed to copy text');
+    if ($toast) $toast.error(t('errors.operationFailed'));
   }
 };
 </script>

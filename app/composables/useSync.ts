@@ -20,9 +20,10 @@ export const useSync = () => {
       if (!response.upToDate && response.data) {
         // We have new data, save it to IndexedDB
         await setCachedData('app_version', response.version);
-        await setCachedData('sysVars', response.data.sysVars);
+        await setCachedData('globals', response.data.globals);
         await setCachedData('locales', response.data.locales);
         await setCachedData('pages', response.data.pages);
+        await setCachedData('uiUtils', response.data.uiUtils || []);
       }
       
       return true;

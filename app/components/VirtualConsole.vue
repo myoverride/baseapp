@@ -1,6 +1,6 @@
 <template>
   <div class="virtual-console d-flex flex-column border rounded" :style="{ height: height || '200px' }">
-    <div class="console-header d-flex align-center justify-space-between px-2 py-1 bg-grey-darken-4 text-white text-caption">
+    <div class="console-header d-flex align-center justify-space-between px-2 py-1 bg-background text-white text-caption">
       <div class="d-flex align-center">
         <v-icon size="small" class="mr-1" :color="connected ? 'success' : 'error'">
           {{ connected ? 'mdi-wifi' : 'mdi-wifi-off' }}
@@ -8,14 +8,14 @@
         <span class="font-weight-bold">{{ $t('common.virtualConsole') }} ({{ sourceId || $t('console.notReady') }})</span>
       </div>
       <div>
-        <v-btn icon size="x-small" variant="text" @click="logs = []" :title="$t('common.clear')" color="grey-lighten-1">
+        <v-btn icon size="x-small" variant="text" @click="logs = []" :title="$t('common.clear')" color="secondary">
           <v-icon>mdi-delete-sweep</v-icon>
         </v-btn>
       </div>
     </div>
     
-    <div ref="logContainer" class="console-body flex-grow-1 bg-black pa-2 overflow-y-auto">
-      <div v-if="logs.length === 0" class="text-grey-darken-2 text-caption font-italic">
+    <div ref="logContainer" class="console-body flex-grow-1 bg-surface-variant pa-2 overflow-y-auto">
+      <div v-if="logs.length === 0" class="text-medium-emphasis text-caption font-italic">
         {{ connected ? $t('console.connected') : $t('console.connecting') }}
       </div>
       
@@ -26,7 +26,7 @@
         :class="getLogColorClass(log.level)"
         style="word-break: break-all;"
       >
-        <span class="log-time text-grey-darken-1 mr-2">[{{ formatTime(log.timestamp) }}]</span>
+        <span class="log-time text-medium-emphasis mr-2">[{{ formatTime(log.timestamp) }}]</span>
         <span class="log-message">
           <template v-for="(arg, aIdx) in log.args" :key="aIdx">
             {{ formatArg(arg) }}<span v-if="Number(aIdx) < log.args.length - 1"> </span>

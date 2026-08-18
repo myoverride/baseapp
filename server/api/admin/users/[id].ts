@@ -1,10 +1,14 @@
 import { useDB, getMasterDb } from '../../../utils/db';
+import { checkUsernameUniqueness } from '../../../utils/tenantSecurity';
 import bcrypt from 'bcryptjs';
 
 export default defineEventHandler(async (event) => {
   const user = event.context.user;
-  if (!user || !user.is_admin) {
-    throw createError({ statusCode: 403, message: 'errors.unauthorized' });
+  if (!user) {
+    throw createError({ statusCode: 401, message: 'errors.loginRequired' });
+  }
+  if (!user.is_admin) {
+    throw createError({ statusCode: 403, message: 'errors.forbiddenAdminOnly' });
   }
 
   const sql = useDB(event.context.tenantSlug);
@@ -40,21 +44,7 @@ export default defineEventHandler(async (event) => {
     const oldUsername = oldUserCheck[0].username;
 
     if (body.username !== oldUsername) {
-      const globalDb = getMasterDb();
-      const masterAppDb = useDB('master');
-      
-      if (event.context.tenantSlug !== 'master') {
-        const masterCheck = await masterAppDb`SELECT id FROM users WHERE username = ${body.username}`;
-        if (masterCheck.length > 0) throw createError({ statusCode: 400, message: 'errors.usernameAlreadyTaken' });
-        
-        const globalCheck = await globalDb`SELECT tenant_slug FROM global_users WHERE username = ${body.username}`;
-        if (globalCheck.length > 0 && globalCheck[0].tenant_slug !== event.context.tenantSlug) {
-           throw createError({ statusCode: 400, message: 'errors.usernameAlreadyTaken' });
-        }
-      } else {
-        const globalCheck = await globalDb`SELECT tenant_slug FROM global_users WHERE username = ${body.username}`;
-        if (globalCheck.length > 0) throw createError({ statusCode: 400, message: 'errors.usernameAlreadyTaken' });
-      }
+      await checkUsernameUniqueness(event.context.tenantSlug, body.username);
     }
 
     let res;
@@ -109,7 +99,7 @@ export default defineEventHandler(async (event) => {
       await masterSql`INSERT INTO global_users (username, tenant_slug) VALUES (${body.username}, ${event.context.tenantSlug}) ON CONFLICT(username) DO NOTHING`;
     }
 
-    return res?.[0];
+    return { success: true, message: 'message.success', data: res?.[0] };
   }
 
   if (method === 'DELETE') {
@@ -129,6 +119,6 @@ export default defineEventHandler(async (event) => {
     }
 
     await sql`DELETE FROM users WHERE id = ${id}`;
-    return { success: true };
+    return { success: true, message: 'message.success', data: { deletedId: id } };
   }
 });

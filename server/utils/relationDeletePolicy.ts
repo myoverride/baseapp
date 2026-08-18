@@ -38,7 +38,7 @@ export const validateRelationSchemaPolicies = (schema: any) => {
     const onDelete = String(def?.onDelete || 'restrict').toLowerCase();
 
     if (required && onDelete === 'setnull') {
-      const err: any = new Error(`${fieldName} alanında required=true iken onDelete=setnull kullanılamaz.`);
+      const err: any = new Error('error.setNullOnRequiredField|' + fieldName);
       err.statusCode = 400;
       throw err;
     }
@@ -132,9 +132,7 @@ export const deleteRecordWithRelationPolicy = async (
       if (refRecordIds.length === 0) continue;
       
       if (rule.onDelete === 'restrict') {
-        const err: any = new Error(
-          `Silme engellendi: ${rule.sourceEntityId} varlığındaki ${rule.fieldName} ilişkisi bu kaydı kullanıyor.`
-        );
+        const err: any = new Error('errors.restrictDelete');
         err.statusCode = 409;
         throw err;
       }

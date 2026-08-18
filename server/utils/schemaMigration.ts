@@ -62,15 +62,7 @@ export async function migrateRecordsToNewSchema(tenantSlug: string, entityId: nu
              migratedData[fieldName] = oldVal;
           }
         } else {
-          if (config.rules?.required) {
-             if (config.type === 'string') migratedData[fieldName] = '';
-             else if (config.type === 'number') migratedData[fieldName] = 0;
-             else if (config.type === 'boolean') migratedData[fieldName] = false;
-             else if (config.type === 'array') migratedData[fieldName] = [];
-             else migratedData[fieldName] = null;
-          } else {
-             migratedData[fieldName] = null;
-          }
+          migratedData[fieldName] = null;
         }
       }
       

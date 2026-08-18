@@ -53,8 +53,7 @@ export default defineEventHandler(async (event) => {
       ...rec,
       script_content: rec.script_content
     }));
-
-    return { records: unwrappedRecords, total: totalCount, page, limit };
+    return { success: true, data: unwrappedRecords, pagination: { total: totalCount, page, limit } };
   }
 
   if (method === 'POST') {
@@ -63,7 +62,8 @@ export default defineEventHandler(async (event) => {
       const records = body.records;
       const user = event.context.user;
 
-      if (!user || !user.is_admin) throw createError({ statusCode: 403, message: 'errors.unauthorized' });
+      if (!user) throw createError({ statusCode: 401, message: 'errors.loginRequired' });
+  if (!user.is_admin) throw createError({ statusCode: 403, message: 'errors.forbiddenAdminOnly' });
 
       // PRE-SAVE VALIDATION (SHIELD)
       try {
@@ -77,7 +77,7 @@ export default defineEventHandler(async (event) => {
           }
         }
       } catch (err: any) {
-        throw createError({ statusCode: 400, message: err.key || err.message, data: err.params });
+        throw createError({ statusCode: 400, message: err.key || 'errors.databaseError', data: err.key ? err.params : undefined });
       }
 
       const isDelete = body.isDelete === true;
@@ -139,7 +139,7 @@ export default defineEventHandler(async (event) => {
         }
       }
 
-      return { success: true, updatedCount, insertedCount };
+      return { success: true, message: 'message.success', data: { updatedCount, insertedCount } };
 
     }
 
@@ -158,7 +158,7 @@ export default defineEventHandler(async (event) => {
         await validateTemplate(body.template_string, body.script_content, `Page Template: ${body.title || 'Yeni'}`);
       }
     } catch (err: any) {
-      throw createError({ statusCode: 400, message: err.key || err.message, data: err.params });
+      throw createError({ statusCode: 400, message: err.key || 'errors.databaseError', data: err.key ? err.params : undefined });
     }
 
     try {
@@ -189,8 +189,8 @@ export default defineEventHandler(async (event) => {
       import('../../../utils/versionManager').then(m => m.bumpGlobalVersion(event.context.tenantSlug));
       return result[0];
     } catch (e: any) {
-      if (e.code === '23505') throw createError({ statusCode: 409, message: 'errors.duplicateSlug' });
-      throw createError({ statusCode: 500, message: e.message });
+      if (e.code === '23505' || (e.message && e.message.includes('UNIQUE constraint failed'))) throw createError({ statusCode: 409, message: 'errors.duplicateSlug' });
+      throw createError({ statusCode: 500, message: 'errors.internalError' });
     }
   }
 });

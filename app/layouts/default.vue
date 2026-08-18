@@ -7,14 +7,18 @@
           <v-icon size="small" class="mr-1">mdi-shield-alert</v-icon> ISOLATED SAFE MODE
         </v-app-bar-title>
         <v-spacer></v-spacer>
-        <v-btn variant="text" size="small" to="/admin/pages">Pages</v-btn>
-        <v-btn variant="text" size="small" to="/admin/system-settings">Settings</v-btn>
-        <v-btn variant="text" size="small" to="/admin/users">Users</v-btn>
-        <v-btn variant="outlined" size="small" @click="exitSafeMode" class="ml-2 bg-white text-error">Exit Safe Mode</v-btn>
+        <v-btn icon @click="toggleTheme" class="mr-2">
+          <v-icon>{{ isDark ? 'mdi-weather-sunny' : 'mdi-weather-night' }}</v-icon>
+        </v-btn>
+        <v-btn variant="text" size="small" to="/admin/pages">{{ $t('menu.pages') }}</v-btn>
+        <v-btn variant="text" size="small" to="/admin/system-settings">{{ $t('menu.settings') }}</v-btn>
+        <v-btn variant="text" size="small" to="/admin/users">{{ $t('menu.users') }}</v-btn>
+        <v-btn variant="outlined" size="small" @click="exitSafeMode" class="ml-2 bg-white text-error">{{
+          $t('menu.exitSafeMode') }}</v-btn>
       </v-app-bar>
-      <v-main class="bg-grey-lighten-4">
+      <v-main class="bg-background">
         <v-container fluid class="bg-error text-white pa-2 text-center text-caption font-weight-bold">
-          DİKKAT: Veritabanından izole edilmiş Güvenli Mod'dasınız. Sayfa şablonları şu an çalıştırılmıyor. Lütfen "Pages" menüsünden bozulan kodları onarın ve Güvenli Mod'dan çıkın.
+          {{ $t('message.safeModeWarning') }}
         </v-container>
         <slot />
       </v-main>
@@ -22,18 +26,17 @@
 
     <!-- NORMAL MODE -->
     <template v-else>
-      <DynamicRenderer 
-        v-if="finalLayout && !layoutError"
-        :template-string="finalLayout.template_string"
-        :script-content="finalLayout.script_content"
-        :style-content="finalLayout.style_content"
-        :route-params="finalLayout.routeParams"
-        :locale="$i18n.locale"
-      >
+      <DynamicRenderer v-if="finalLayout && !layoutError" :template-string="finalLayout.template_string"
+        :script-content="finalLayout.script_content" :style-content="finalLayout.style_content"
+        :route-params="finalLayout.routeParams" :locale="$i18n.locale">
         <slot />
       </DynamicRenderer>
       <v-app v-else>
-        <v-main class="bg-grey-lighten-4">
+        <v-btn icon elevation="4" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999" @click="toggleTheme"
+          :color="isDark ? 'grey-darken-3' : 'white'">
+          <v-icon>{{ isDark ? 'mdi-weather-sunny' : 'mdi-weather-night' }}</v-icon>
+        </v-btn>
+        <v-main class="bg-background">
           <slot />
         </v-main>
       </v-app>
@@ -44,12 +47,24 @@
 <script setup lang="ts">
 import { useFetch, useNuxtApp, useCookie } from '#app';
 import { useRoute } from 'vue-router';
-import { watchEffect, watch } from 'vue';
+import { watchEffect, watch, computed } from 'vue';
+import { useTheme } from 'vuetify';
 
-const { $i18n, $vuetify } = useNuxtApp() as any;
+const { $i18n, $vuetify, $toggleTheme } = useNuxtApp() as any;
 
 const safeModeCookie = useCookie('safe_mode');
 const isSafeMode = safeModeCookie.value === '1';
+
+const theme = useTheme();
+const isDark = computed(() => theme.global.current.value.dark);
+const toggleTheme = () => {
+  if (typeof $toggleTheme === 'function') {
+    $toggleTheme();
+  } else {
+    //theme.global.name.value = theme.global.current.value.dark ? 'light' : 'dark';
+    theme.change(theme.global.current.value.dark ? 'light' : 'dark');
+  }
+};
 
 const exitSafeMode = () => {
   safeModeCookie.value = null;
@@ -97,7 +112,7 @@ import { getCachedData } from '../utils/offlineStore';
 import { isOffline } from '../composables/useSync';
 
 // Fetch layout data ONLY if we are in normal mode, otherwise bypass entirely
-let { data: systemLayout, error: systemLayoutError } = !isSafeMode 
+let { data: systemLayout, error: systemLayoutError } = !isSafeMode
   ? await useFetch(() => `/api/pages/resolve-layout?path=${encodeURIComponent(route.path)}`, { headers })
   : { data: ref(null), error: ref(null) };
 
@@ -115,11 +130,11 @@ watch(systemLayout, (newVal) => {
 if ((systemLayoutError.value || isOffline.value) && import.meta.client) {
   try {
     const cachedPages = (await getCachedData('pages', tenantSlug) || []) as any[];
-    
+
     // 1. Önce sayfayı bul ve özel layout'u var mı kontrol et
     const reqPath = route.path || '/';
     let matchedPage = null;
-    
+
     for (const p of cachedPages) {
       if (p.page_type === 'layout' || p.page_type === 'component') continue;
       const pattern = p.route_pattern || '';
@@ -141,11 +156,11 @@ if ((systemLayoutError.value || isOffline.value) && import.meta.client) {
     if (!layoutPage) {
       layoutPage = layoutPages.find((l: any) => l.is_default_layout === 1 || l.is_default_layout === true);
     }
-    
+
     if (!layoutPage) {
       layoutPage = layoutPages.find((l: any) => l.route_pattern === 'system/layout' || l.route_pattern === '/system/layout');
     }
-    
+
     if (layoutPage) {
       finalLayout.value = layoutPage;
       layoutError.value = null; // Hatayı sıfırla ki normal düzende çizilsin

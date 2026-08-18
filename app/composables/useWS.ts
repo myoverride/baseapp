@@ -9,7 +9,6 @@ export function useWS(path: string, onMessage: (data: any) => void) {
   const connect = () => {
     if (isUnmounted) return;
     
-    // Protokol özel belirlenir (SSL destekli)
     const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
     
     // Doğrudan full path veriliyor, örn: /api/ws/kazan
@@ -21,6 +20,14 @@ export function useWS(path: string, onMessage: (data: any) => void) {
     };
     
     ws.value.onmessage = (event) => {
+      // Heartbeat intercept
+      if (event.data === '__PING__') {
+        if (ws.value && ws.value.readyState === WebSocket.OPEN) {
+          ws.value.send('__PONG__');
+        }
+        return;
+      }
+      
       try {
         const data = JSON.parse(event.data);
         onMessage(data);

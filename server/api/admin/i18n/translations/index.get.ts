@@ -2,8 +2,11 @@ import { useDB } from '../../../../utils/db';
 
 export default defineEventHandler(async (event) => {
   const user = event.context.user;
-  if (!user || (!user.is_admin && !user.is_super_admin)) {
-    throw createError({ statusCode: 403, message: 'errors.unauthorized' });
+  if (!user) {
+    throw createError({ statusCode: 401, message: 'errors.loginRequired' });
+  }
+  if (!user.is_admin && !user.is_super_admin) {
+    throw createError({ statusCode: 403, message: 'errors.forbiddenAdminOnly' });
   }
 
   const query = getQuery(event);
@@ -59,30 +62,37 @@ export default defineEventHandler(async (event) => {
       processLanguages(tenantLangs, false);
     }
 
-    // 3. Fetch translation_keys (hashtags)
+    // 3. Fetch translation_keys (hashtags, created_at, updated_at)
     const tenantSql = useDB(tenantSlug);
     let transKeys: any[] = [];
     try {
-      transKeys = await tenantSql.unsafe('SELECT key, hashtags FROM translation_keys');
+      transKeys = await tenantSql.unsafe('SELECT * FROM translation_keys');
     } catch (e) {
       // Table might not exist yet if migration failed or fresh DB
     }
-    const hashtagMap = new Map<string, string[]>();
+    const metaMap = new Map<string, any>();
     for (const tk of transKeys) {
+      let tags = [];
       try {
-        hashtagMap.set(tk.key, typeof tk.hashtags === 'string' ? JSON.parse(tk.hashtags) : (tk.hashtags || []));
+        tags = typeof tk.hashtags === 'string' ? JSON.parse(tk.hashtags) : (tk.hashtags || []);
       } catch (e) {
-        hashtagMap.set(tk.key, []);
+        tags = [];
       }
+      metaMap.set(tk.key, { hashtags: tags, created_at: tk.created_at, updated_at: tk.updated_at });
     }
 
-    let items = Array.from(keysMap.values()).map(entry => ({
-      ...entry,
-      hashtags: hashtagMap.get(entry.key) || [],
-      is_inherited: entry.inherited_locales.size > 0 && entry.inherited_locales.size === Object.keys(entry.values).length,
-      inherited_locales: Array.from(entry.inherited_locales)
-    }));
-
+    let items = Array.from(keysMap.values()).map(entry => {
+      const meta = metaMap.get(entry.key) || { hashtags: [], created_at: null, updated_at: null };
+      return {
+        ...entry,
+        hashtags: meta.hashtags,
+        created_at: meta.created_at,
+        updated_at: meta.updated_at,
+        is_inherited: entry.inherited_locales.size > 0 && entry.inherited_locales.size === Object.keys(entry.values).length,
+        inherited_locales: Array.from(entry.inherited_locales)
+      };
+    });
+    
     if (search) {
       const s = search.toLowerCase();
       items = items.filter((i: any) => {
@@ -112,7 +122,7 @@ export default defineEventHandler(async (event) => {
     const total = items.length;
     items = items.slice((page - 1) * limit, page * limit);
 
-    return { success: true, data: items, total };
+    return { success: true, data: items, pagination: { total, page, limit } };
   } catch (err: any) {
     throw createError({ statusCode: 500, message: err.message });
   }

@@ -3,8 +3,11 @@ import { clearSandboxCache } from '../../../utils/sandbox';
 
 export default defineEventHandler(async (event) => {
   const user = event.context.user;
-  if (!user || (!user.is_admin && !user.is_super_admin)) {
-    throw createError({ statusCode: 403, message: 'errors.unauthorized' });
+  if (!user) {
+    throw createError({ statusCode: 401, message: 'errors.loginRequired' });
+  }
+  if (!user.is_admin && !user.is_super_admin) {
+    throw createError({ statusCode: 403, message: 'errors.forbiddenAdminOnly' });
   }
   const method = getMethod(event);
   const sql = useDB(event.context.tenantSlug);
@@ -27,7 +30,7 @@ export default defineEventHandler(async (event) => {
         const { validateJS } = await import('../../../utils/codeValidator');
         await validateJS(body.code, `Worker: ${body.name || 'Bilinmeyen'}`);
       } catch (err: any) {
-        throw createError({ statusCode: 400, message: err.key || err.message, data: err.params });
+        throw createError({ statusCode: 400, message: err.key || 'errors.databaseError', data: err.key ? err.params : undefined });
       }
     }
 
@@ -47,18 +50,24 @@ export default defineEventHandler(async (event) => {
       body.name, body.type, body.code, body.cron_expression || null, body.autostart ? 1 : 0,
       body.active ? 1 : 0, hashtagsStr, user.id, id
     ]);
-    import('../../../utils/history').then(m => m.saveHistory(event.context.tenantSlug, 'workers', 'update', { id, name: body.name })).catch(console.error);
+    const updatedRec = await sql.unsafe('SELECT * FROM workers WHERE id = ?', [id]);
+    if (updatedRec.length > 0) {
+      import('../../../utils/history').then(m => m.saveHistory(event.context.tenantSlug, 'workers', id, updatedRec[0])).catch(console.error);
+    }
     import('../../../utils/workerManager').then(m => m.refreshCronCache()).catch(console.error);
     clearSandboxCache(); // S4 Fix: Eski derlenmiş script cache'ini temizle
-    return { success: true };
+    return { success: true, message: 'message.success' };
   }
 
   if (method === 'DELETE') {
+    const recToDelete = await sql.unsafe('SELECT * FROM workers WHERE id = ?', [id]);
     await sql.unsafe('DELETE FROM workers WHERE id = ?', [id]);
-    import('../../../utils/history').then(m => m.saveHistory(event.context.tenantSlug, 'workers', 'delete', { id })).catch(console.error);
+    if (recToDelete.length > 0) {
+      import('../../../utils/history').then(m => m.saveHistory(event.context.tenantSlug, 'workers', id, recToDelete[0])).catch(console.error);
+    }
     import('../../../utils/workerManager').then(m => m.refreshCronCache()).catch(console.error);
     clearSandboxCache(); // S4 Fix: Silinen worker'ın cache'ini temizle
-    return { success: true };
+    return { success: true, message: 'message.success' };
   }
   
   if (method === 'POST') {
@@ -68,6 +77,6 @@ export default defineEventHandler(async (event) => {
     } else if (body.action === 'stop') {
       import('../../../utils/workerManager').then(m => m.stopDaemonWorker(event.context.tenantSlug, parseInt(id)));
     }
-    return { success: true };
+    return { success: true, message: 'message.success' };
   }
 });

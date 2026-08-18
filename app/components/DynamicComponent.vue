@@ -15,7 +15,7 @@
 </template>
 
 <script setup lang="ts">
-const { primaryColor: color } = useSysVars();
+const { primaryColor: color } = useGlobals();
 import { ref, onMounted, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import DynamicRenderer from './DynamicRenderer.vue';

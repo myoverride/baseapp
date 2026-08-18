@@ -3,5 +3,6 @@
 </template>
 
 <script setup lang="ts">
-import RecordsManager from '~/components/RecordsManager.vue';
+import { ref, defineAsyncComponent } from 'vue';
+const RecordsManager = defineAsyncComponent(() => import('~/components/RecordsManager.vue'));
 </script>

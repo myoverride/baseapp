@@ -1,0 +1,70 @@
+<div class="makas-home-container">
+  <div class="makas-landing" style="min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 2rem;">
+    
+    <div class="glass-panel form-panel" style="width: 100%; max-width: 500px; z-index: 10;">
+      <div style="text-align: center; margin-bottom: 2rem;">
+        <div style="font-size: 3rem; margin-bottom: 1rem;">✂️</div>
+        <h2 class="glow-text" style="font-size: 2rem; margin-bottom: 0.5rem;">Müşteri Ol</h2>
+        <p class="text-muted">Makas dünyasına katılıp en iyi salonlardan anında randevu alın.</p>
+      </div>
+
+      <div v-if="state.successMessage" class="status-panel glass-panel" style="text-align: center;">
+        <div class="icon-pulse" style="font-size: 3rem; margin-bottom: 1rem;">✅</div>
+        <h3>Tebrikler!</h3>
+        <p>{{ state.successMessage }}</p>
+        <button @click="navigateToLogin" class="makas-btn btn-primary" style="margin-top: 1.5rem; width: 100%;">Giriş Yap</button>
+      </div>
+
+      <form v-else @submit.prevent="registerCustomer" class="makas-form">
+        <!-- Kullanıcı Bilgileri -->
+        <h4 style="margin-bottom: 1rem; color: #aaa; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.5rem;">Giriş Bilgileri</h4>
+        <div class="form-group">
+          <label>Kullanıcı Adı</label>
+          <input type="text" v-model="state.form.username" class="makas-input" required placeholder="Giriş yaparken kullanacağınız ad" />
+        </div>
+        
+        <div class="form-group">
+          <label>Şifre</label>
+          <input type="password" v-model="state.form.password" class="makas-input" required placeholder="Güçlü bir şifre belirleyin" />
+        </div>
+
+        <h4 style="margin-bottom: 1rem; margin-top: 2rem; color: #aaa; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.5rem;">Kişisel Bilgiler</h4>
+        <div class="form-group">
+          <label>Ad Soyad</label>
+          <input type="text" v-model="state.form.full_name" class="makas-input" required placeholder="Tam adınız" />
+        </div>
+        
+        <div class="form-group">
+          <label>İletişim (Telefon veya E-posta)</label>
+          <input type="text" v-model="state.form.contact" class="makas-input" required placeholder="5XX XXX XX XX" />
+        </div>
+
+        <div class="form-group">
+          <label>Cinsiyet</label>
+          <select v-model="state.form.gender" class="makas-input" required>
+            <option :value="true">Kadın</option>
+            <option :value="false">Erkek</option>
+          </select>
+        </div>
+
+        <div class="form-actions" style="margin-top: 2.5rem; flex-direction: column; gap: 1rem;">
+          <button type="submit" class="makas-btn btn-primary" :disabled="state.loading" style="width: 100%;">
+            {{ state.loading ? 'Kayıt Olunuyor...' : 'Hemen Kayıt Ol' }}
+          </button>
+          <button type="button" @click="goBack" class="makas-btn btn-text" style="width: 100%; color: #888;">
+            Vazgeç ve Anasayfaya Dön
+          </button>
+          
+          <div v-if="state.errorMessage" class="save-msg" style="color: #ff6b6b; text-align: center; margin-top: 1rem;">
+            {{ state.errorMessage }}
+          </div>
+        </div>
+      </form>
+    </div>
+
+    <div class="landing-bg-elements">
+      <div class="blob blob-1"></div>
+      <div class="blob blob-2" style="right: 10%; top: 20%;"></div>
+    </div>
+  </div>
+</div>

@@ -170,7 +170,7 @@ export default defineWebSocketHandler({
     peer.send(JSON.stringify({
       level: 'info',
       sourceId: 'SYSTEM',
-      args: ['Sanal Konsol bağlantısı başarılı'],
+      args: ['Virtual Console connection successful'],
       timestamp: new Date().toISOString()
     }));
   },

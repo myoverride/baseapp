@@ -1,1 +1,0 @@
-import { getTenantRefs } from '../../utils/db'; export default defineEventHandler(async () => { try { const refs = await getTenantRefs('master'); const conn = refs!.duckDbInst!.connect(); return new Promise((res, rej) => { conn.all('SELECT 1 as is_duck', (err: any, rows: any) => { if (err) rej(err); else res(rows); }); }); } catch(e: any) { return { error: e.message }; } });

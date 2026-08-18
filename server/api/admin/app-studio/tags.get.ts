@@ -5,12 +5,11 @@ export default defineEventHandler(async (event) => {
   const tags = new Set<string>();
 
   const tables = [
-    'system_variables',
+    'globals',
     'roles',
     'users',
     'languages',
     'translations',
-    'utils',
     'entities',
     'records',
     'endpoints',

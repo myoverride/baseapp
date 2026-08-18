@@ -1,6 +1,6 @@
-import { useDB } from '../utils/db';
+import { useDB } from '../utils/db'; // Trigger HMR
 import { getGlobalVersion } from '../utils/versionManager';
-import { getAllSysVars } from '../utils/sysvars';
+import {} from '../utils/globalsManager';
 
 export default defineEventHandler(async (event) => {
   const tenantSlug = event.context.tenantSlug || 'master';
@@ -12,9 +12,11 @@ export default defineEventHandler(async (event) => {
   if (clientVersion && parseInt(clientVersion as string) === version) {
     return { upToDate: true, version };
   }
-
-  // Fetch all sys_vars
-  const sysVars = await getAllSysVars(tenantSlug, false);
+  const globalsData = await globals.getAll(tenantSlug, false);
+  const allUtils = await globals.getAllUtils(tenantSlug);
+  const uiUtils = allUtils
+    .filter(u => u.target === 'ui' || u.target === 'shared')
+    .map(u => ({ key: u.key, code: u.code, target: u.target }));
 
   // Fetch locales
   const locales = await sql`SELECT code, name, is_default, dir, translations as translation_json FROM languages WHERE is_active = 1`;
@@ -52,7 +54,8 @@ export default defineEventHandler(async (event) => {
     upToDate: false,
     version,
     data: {
-      sysVars,
+      globals: globalsData,
+      uiUtils,
       locales,
       pages: allowedPages
     }

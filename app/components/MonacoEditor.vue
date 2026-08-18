@@ -15,8 +15,8 @@
       size="small" 
       class="theme-btn" 
       @click="toggleInternalTheme" 
-      :title="internalTheme === 'vs-dark' ? 'Light Mode' : 'Dark Mode'"
-      color="grey-darken-3"
+      :title="internalTheme === 'vs-dark' ? $t('monaco.lightMode') : $t('monaco.darkMode')"
+      color="primary"
       variant="flat"
     >
       <v-icon color="white">{{ internalTheme === 'vs-dark' ? 'mdi-weather-sunny' : 'mdi-weather-night' }}</v-icon>
@@ -27,8 +27,8 @@
       size="small" 
       class="fullscreen-btn" 
       @click="toggleFullscreen" 
-      :title="isFullscreen ? 'Normale Dön' : 'Tam Ekran'"
-      color="grey-darken-3"
+      :title="isFullscreen ? $t('monaco.exitFullscreen') : $t('monaco.fullscreen')"
+      color="primary"
       variant="flat"
     >
       <v-icon color="white">{{ isFullscreen ? 'mdi-fullscreen-exit' : 'mdi-fullscreen' }}</v-icon>
@@ -37,7 +37,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount, watch } from 'vue';
+import { toRaw,  ref, onMounted, onBeforeUnmount, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 
 const props = defineProps<{
   modelValue: string;
@@ -51,7 +52,8 @@ const props = defineProps<{
   contextType?: 'frontend' | 'backend';
 }>();
 
-const { sysVars } = useSysVars();
+const { globals } = useGlobals();
+const { t } = useI18n();
 const dynamicHeight = ref(props.height || '400px');
 
 watch(() => props.height, (newVal) => {
@@ -92,26 +94,22 @@ const getGlobalWindow = () => (typeof window !== 'undefined' ? (window as any) :
 
 async function fetchGlobalSuggestions() {
   const win = getGlobalWindow();
-  if (!win) return { sysVars: [], utils: [] };
+  if (!win) return { globalsData: [] };
   
   if (win.__monaco_intellisense_cache__ && Date.now() - win.__monaco_intellisense_cache_time__ < 10000) {
     return win.__monaco_intellisense_cache__;
   }
   
   try {
-    const [sysVarsRes, utilsRes] = await Promise.all([
-      $fetch('/api/admin/system-variables?limit=1000').catch(() => ({ data: [] })),
-      $fetch('/api/admin/utils?limit=1000').catch(() => ({ data: [] }))
-    ]);
+    const globalsRes = await $fetch('/api/admin/globals?limit=1000').catch(() => ({ data: [] }));
     const parseRes = (res: any) => Array.isArray(res) ? res : (res?.data || []);
     win.__monaco_intellisense_cache__ = {
-      sysVars: parseRes(sysVarsRes),
-      utils: parseRes(utilsRes)
+      globalsData: parseRes(globalsRes)
     };
     win.__monaco_intellisense_cache_time__ = Date.now();
   } catch (e) {
     console.error('Monaco IntelliSense fetch error:', e);
-    return { sysVars: [], utils: [] };
+    return { globalsData: [] };
   }
   return win.__monaco_intellisense_cache__;
 }
@@ -122,53 +120,36 @@ async function injectDynamicExtraLib(isBackend: boolean, win: any) {
     let dynamicLib = '';
 
     if (isBackend) {
-      const apiSysVars = dynamicData.sysVars.filter((v: any) => v.target === 'api' || v.target === 'shared');
-      const apiUtils = dynamicData.utils.filter((v: any) => v.target === 'api' || v.target === 'shared');
+      const apiGlobals = dynamicData.globalsData.filter((v: any) => v.target === 'api' || v.target === 'shared');
       
-      const sysVarsProps = apiSysVars.map((v: any) => `        ${v.key}: any;`).join('\n');
-      const utilsProps = apiUtils.map((v: any) => `        ${v.key}(...args: any[]): Promise<any>;`).join('\n');
+      const varsProps = apiGlobals.filter((v: any) => v.type !== 'util').map((v: any) => `        ${v.key}: any;`).join('\n');
+      const methodsProps = apiGlobals.filter((v: any) => v.type === 'util').map((v: any) => `        ${v.key}(...args: any[]): Promise<any>;`).join('\n');
       
       dynamicLib = `
-        /** Sistem Değişkenleri Objesi (Senkron okuma) */
-        declare const sysVars: {
-${sysVarsProps}
-        };
-
-        /** (Backend) Dinamik Utility Fonksiyonları (utils) */
-        declare const utils: {
-${utilsProps}
+        /** (Backend) Global Değişkenler ve Fonksiyonlar */
+        declare const globals: {
+${varsProps}
+${methodsProps}
         };
       `;
     } else {
-      const uiSysVars = dynamicData.sysVars.filter((v: any) => v.target === 'ui' || v.target === 'shared');
-      const uiUtils = dynamicData.utils.filter((v: any) => v.target === 'ui' || v.target === 'shared');
+      const uiGlobals = dynamicData.globalsData.filter((v: any) => v.target === 'ui' || v.target === 'shared');
       
-      const sysVarsProps = uiSysVars.map((v: any) => `        ${v.key}: any;`).join('\n');
-      const utilsProps = uiUtils.map((v: any) => `        ${v.key}(...args: any[]): Promise<any>;`).join('\n');
+      const varsProps = uiGlobals.filter((v: any) => v.type !== 'util').map((v: any) => `        ${v.key}: any;`).join('\n');
+      const uiMethodsProps = uiGlobals.filter((v: any) => v.type === 'util').map((v: any) => `        ${v.key}(...args: any[]): Promise<any>;`).join('\n');
       
       dynamicLib = `
-        /** Sistem Değişkenleri Objesi (Senkron okuma) */
-        declare const sysVars: {
-${sysVarsProps}
+        /** (Frontend) Global Degiskenler ve Fonksiyonlar */
+        declare const globals: {
+${varsProps}
+${uiMethodsProps}
         };
 
-        /** (Frontend) Dinamik Utility Fonksiyonları (utils) */
-        declare const utils: {
-${utilsProps}
-        };
-
-        declare function useSysVars(): {
-          sysVars: {
-${sysVarsProps}
+        declare function useGlobals(): {
+          globals: {
+${varsProps}
           };
-          status: any;
           primaryColor: any;
-        };
-
-        declare function useUtils(): {
-          utils: {
-${utilsProps}
-          };
         };
       `;
     }
@@ -231,50 +212,50 @@ function initEditor() {
   if (isBackend) {
     const extraLib = `
       /**
-       * Gelen istek parametreleri veya görev (Scheduler) bilgileri.
+       * ${t("monaco.jsdoc.payload")}
        */
       declare const payload: {
-        /** Middleware: URL parametreleri (Örn: /api/:id -> payload.params.id) */
+        /** ${t("monaco.jsdoc.payloadParams")} */
         params?: { [key: string]: any };
-        /** Middleware: Gelen istek gövdesi (JSON body) */
+        /** ${t("monaco.jsdoc.payloadBody")} */
         body?: any;
-        /** Middleware: Query string parametreleri */
+        /** ${t("monaco.jsdoc.payloadQuery")} */
         query?: { [key: string]: any };
-        /** Middleware: HTTP Metodu (GET, POST vs.) */
+        /** ${t("monaco.jsdoc.payloadMethod")} */
         method?: string;
-        /** Middleware: Gelen istek başlıkları (Headers) */
+        /** ${t("monaco.jsdoc.payloadHeaders")} */
         headers?: { [key: string]: string };
         
-        /** Scheduler: Çalışan görevin benzersiz ID'si */
+        /** ${t("monaco.jsdoc.payloadJobId")} */
         jobId?: number;
-        /** Scheduler: Çalışan görevin adı */
+        /** ${t("monaco.jsdoc.payloadJobName")} */
         jobName?: string;
-        /** Scheduler: Görevin tetiklendiği zaman (Tarih/Saat) */
+        /** ${t("monaco.jsdoc.payloadRunAt")} */
         runAt?: string;
       };
 
       /**
-       * Global fetch API. HTTP istekleri yapmak için kullanılır.
+       * ${t("monaco.jsdoc.fetch")}
        */
       declare function fetch(url: any, init?: any): any;
 
       /**
-       * Node.js require modülü. Kütüphaneleri yüklemek için kullanılır.
+       * ${t("monaco.jsdoc.require")}
        */
       declare function require(id: string): any;
 
       /**
-       * Node.js process nesnesi.
+       * ${t("monaco.jsdoc.process")}
        */
       declare const process: any;
 
       /**
-       * Mevcut çalışma dizini.
+       * ${t("monaco.jsdoc.dirname")}
        */
       declare const __dirname: string;
 
       /**
-       * Mevcut dosya adı.
+       * ${t("monaco.jsdoc.filename")}
        */
       declare const __filename: string;
 
@@ -288,7 +269,7 @@ function initEditor() {
       };
 
       /**
-       * Ham binary, hex veya base64 veri dönüşümleri ve işlemeleri için Node.js Buffer sınıfı.
+       * ${t("monaco.jsdoc.buffer")}
        */
       declare namespace Buffer {
         function alloc(size: number): any;
@@ -297,7 +278,7 @@ function initEditor() {
       }
 
       /**
-       * Hash alma, HMAC imzalama veya şifreleme/çözme işlemleri için Node.js crypto modülü.
+       * ${t("monaco.jsdoc.crypto")}
        */
       declare namespace crypto {
         function createHash(algorithm: string): any;
@@ -307,7 +288,7 @@ function initEditor() {
       }
 
       /**
-       * Belirli bir konuya (topic) MQTT mesajı yayınlar. Başarılı ise true döner.
+       * ${t("monaco.jsdoc.publishMQTT")}
        */
       declare function publishMQTT(topic: string, message: string): boolean;
 
@@ -318,7 +299,7 @@ function initEditor() {
       declare function publishWS(path: string, payload: any): void;
 
       /**
-       * (Microservices) Gelen tüm MQTT mesajlarını dinlemek için abone olur.
+       * ${t("monaco.jsdoc.subscribeMQTT")}
        */
       declare function subscribeMQTT(callback: (topic: string, payload: any) => void): void;
 
@@ -329,12 +310,12 @@ function initEditor() {
       declare function sleep(ms: number): any;
 
       /**
-       * SMTP sunucusu üzerinden e-posta gönderir.
+       * ${t("monaco.jsdoc.sendEmail")}
        */
       declare function sendEmail(options: { to: string; subject: string; text?: string; html?: string }): any;
 
       /**
-       * Modbus TCP üzerinden veri okur.
+       * ${t("monaco.jsdoc.readModbus")}
        * @param ip Modbus cihazının IP adresi
        * @param port Modbus TCP portu (genelde 502)
        * @param unitId Cihazın Modbus kimliği
@@ -346,7 +327,7 @@ function initEditor() {
       declare function readModbusData(ip: string, port: number, unitId: number, startAddress: number, length: number, type?: 'holding' | 'input' | 'coil' | 'discrete', dataType?: string): any;
 
       /**
-       * Modbus TCP üzerinden veri yazar.
+       * ${t("monaco.jsdoc.writeModbus")}
        * @param ip Modbus cihazının IP adresi
        * @param port Modbus TCP portu (genelde 502)
        * @param unitId Cihazın Modbus kimliği
@@ -361,19 +342,19 @@ function initEditor() {
        * Güvenli şifre hash'leri oluşturma ve karşılaştırma.
        */
       declare const bcrypt: {
-        /** Şifreyi senkron olarak hashler. @param data Hashlenecek metin @param saltOrRounds Salt veya round sayısı (varsayılan: 10) */
+        /** ${t("monaco.jsdoc.bcryptHashSync")} */
         hashSync(data: string, saltOrRounds?: number | string): string;
-        /** Hash'i senkron olarak doğrular. @param data Doğrulanacak metin @param hash Karşılaştırılacak bcrypt hash'i */
+        /** ${t("monaco.jsdoc.bcryptCompareSync")} */
         compareSync(data: string, hash: string): boolean;
-        /** Şifreyi asenkron olarak hashler. */
+        /** ${t("monaco.jsdoc.bcryptHash")} */
         hash(data: string, saltOrRounds: number | string): Promise<string>;
-        /** Hash'i asenkron olarak doğrular. */
+        /** ${t("monaco.jsdoc.bcryptCompare")} */
         compare(data: string, hash: string): Promise<boolean>;
-        /** Salt üretir. @param rounds Round sayısı (varsayılan: 10) */
+        /** ${t("monaco.jsdoc.bcryptGenSaltSync")} */
         genSaltSync(rounds?: number): string;
-        /** Asenkron salt üretir. */
+        /** ${t("monaco.jsdoc.bcryptGenSalt")} */
         genSalt(rounds?: number): Promise<string>;
-        /** Bir hash'in round sayısını döndürür. */
+        /** ${t("monaco.jsdoc.bcryptGetRounds")} */
         getRounds(hash: string): number;
       };
     `;
@@ -498,7 +479,7 @@ function initEditor() {
                   insertText: 'begin(async (sql) => {\n\t${1}\n})',
                   insertTextRules: win.monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
                   range: range,
-                  detail: 'Transaction (SQL İşlemleri)',
+                  detail: t("monaco.jsdoc.transaction"),
                   documentation: {
                     value: 'Veritabanı transaction (işlem) başlatır. Hata durumunda otomatik rollback yapar.\n\nÖrnek:\n```javascript\nawait db.begin(async sql => {\n  await sql`INSERT INTO ...`;\n});\n```'
                   }
@@ -511,7 +492,7 @@ function initEditor() {
                   range: range,
                   detail: 'Raw SQL Query',
                   documentation: {
-                    value: 'Parametreli raw SQL sorgusu çalıştırır.\n\nÖrnek:\n```javascript\nconst rows = await db.unsafe("SELECT * FROM devices WHERE id = $1", [1]);\n```'
+                    value: t("monaco.jsdoc.dbUnsafeDoc")
                   }
                 }
               ]
@@ -568,7 +549,7 @@ function initEditor() {
                   range,
                   detail: '(password: string, rounds?: number) => string',
                   documentation: {
-                    value: 'Şifreyi senkron olarak bcrypt ile hashler.\n\nÖrnek:\n```javascript\nconst hash = bcrypt.hashSync("myPassword", 10);\n```'
+                    value: t("monaco.jsdoc.bcryptHashSyncDoc")
                   }
                 },
                 {
@@ -579,7 +560,7 @@ function initEditor() {
                   range,
                   detail: '(password: string, hash: string) => boolean',
                   documentation: {
-                    value: 'Şifreyi mevcut bcrypt hash ile senkron karşılaştırır.\n\nÖrnek:\n```javascript\nconst isValid = bcrypt.compareSync("test123", storedHash);\n```'
+                    value: t("monaco.jsdoc.bcryptCompareSyncDoc")
                   }
                 },
                 {
@@ -590,7 +571,7 @@ function initEditor() {
                   range,
                   detail: '(password: string, rounds: number) => Promise<string>',
                   documentation: {
-                    value: 'Şifreyi asenkron olarak bcrypt ile hashler.\n\nÖrnek:\n```javascript\nconst hash = await bcrypt.hash("myPassword", 10);\n```'
+                    value: t("monaco.jsdoc.bcryptHashDoc")
                   }
                 },
                 {
@@ -601,7 +582,7 @@ function initEditor() {
                   range,
                   detail: '(password: string, hash: string) => Promise<boolean>',
                   documentation: {
-                    value: 'Şifreyi mevcut bcrypt hash ile asenkron karşılaştırır.\n\nÖrnek:\n```javascript\nconst isValid = await bcrypt.compare("test123", storedHash);\n```'
+                    value: t("monaco.jsdoc.bcryptCompareDoc")
                   }
                 },
                 {
@@ -612,7 +593,7 @@ function initEditor() {
                   range,
                   detail: '(rounds?: number) => string',
                   documentation: {
-                    value: 'Senkron olarak bcrypt salt üretir.\n\nÖrnek:\n```javascript\nconst salt = bcrypt.genSaltSync(12);\nconst hash = bcrypt.hashSync("pass", salt);\n```'
+                    value: t("monaco.jsdoc.bcryptGenSaltSyncDoc")
                   }
                 },
                 {
@@ -623,7 +604,7 @@ function initEditor() {
                   range,
                   detail: '(rounds?: number) => Promise<string>',
                   documentation: {
-                    value: 'Asenkron olarak bcrypt salt üretir.\n\nÖrnek:\n```javascript\nconst salt = await bcrypt.genSalt(12);\n```'
+                    value: t("monaco.jsdoc.bcryptGenSaltDoc")
                   }
                 },
                 {
@@ -634,7 +615,7 @@ function initEditor() {
                   range,
                   detail: '(hash: string) => number',
                   documentation: {
-                    value: 'Bir bcrypt hash\'inin round sayısını döndürür.\n\nÖrnek:\n```javascript\nconst rounds = bcrypt.getRounds(storedHash); // 10\n```'
+                    value: t("monaco.jsdoc.bcryptGetRoundsDoc")
                   }
                 }
               ]
@@ -678,7 +659,7 @@ function initEditor() {
               range: range,
               detail: 'Incoming Request Payload/Params',
               documentation: {
-                value: 'Gelen istek parametreleri ve gövdesi (sadece Middleware).\n\nÖrnek:\n```javascript\nconst id = payload.params.id;\n```'
+                value: t("monaco.jsdoc.payloadDoc")
               }
             },
             {
@@ -700,7 +681,7 @@ function initEditor() {
               range: range,
               detail: 'Node.js require()',
               documentation: {
-                value: 'Node.js require modülü. Kütüphaneleri yüklemek için kullanılır.\n\nÖrnek:\n```javascript\nconst fs = require("fs");\n```'
+                value: t("monaco.jsdoc.requireDoc")
               }
             },
             {
@@ -720,7 +701,7 @@ function initEditor() {
               range: range,
               detail: 'Current directory path',
               documentation: {
-                value: 'Mevcut çalışma dizini.'
+                value: t("monaco.jsdoc.dirnameDoc")
               }
             },
             {
@@ -730,7 +711,7 @@ function initEditor() {
               range: range,
               detail: 'Current file path',
               documentation: {
-                value: 'Mevcut dosya adı.'
+                value: t("monaco.jsdoc.filenameDoc")
               }
             },
             {
@@ -750,7 +731,7 @@ function initEditor() {
               range: range,
               detail: 'Node.js Buffer Class',
               documentation: {
-                value: 'Ham binary, hex veya base64 veri dönüşümleri ve işlemeleri için Node.js Buffer sınıfı.\n\nÖrnek:\n```javascript\nconst buf = Buffer.from("data");\n```'
+                value: t("monaco.jsdoc.bufferDoc")
               }
             },
             {
@@ -760,7 +741,7 @@ function initEditor() {
               range: range,
               detail: 'Node.js crypto Module',
               documentation: {
-                value: 'Hash alma, HMAC imzalama veya şifreleme/çözme işlemleri için Node.js crypto modülü.\n\nÖrnek:\n```javascript\nconst hash = crypto.createHash("sha256").update(data).digest("hex");\n```'
+                value: t("monaco.jsdoc.cryptoDoc")
               }
             },
             {
@@ -768,7 +749,7 @@ function initEditor() {
               kind: win.monaco.languages.CompletionItemKind.Module,
               insertText: 'bcrypt',
               range: range,
-              detail: 'Şifre Hashleme (bcryptjs)',
+              detail: t("monaco.jsdoc.bcryptjs"),
               documentation: {
                 value: 'Güvenli şifre hash\'leme ve doğrulama kütüphanesi.\n\nÖrnekler:\n```javascript\n// Şifre hashleme\nconst hash = bcrypt.hashSync("myPassword", 10);\n\n// Şifre doğrulama\nconst isValid = bcrypt.compareSync("test", hash);\n\n// Asenkron kullanım\nconst hash2 = await bcrypt.hash("pass", 10);\nconst ok = await bcrypt.compare("pass", hash2);\n```'
               }
@@ -781,7 +762,7 @@ function initEditor() {
               range: range,
               detail: 'publishMQTT(topic: string, message: string): boolean',
               documentation: {
-                value: 'Belirli bir konuya (topic) MQTT mesajı yayınlar. Başarılı ise true döner.\n\nÖrnek:\n```javascript\npublishMQTT("commands/led", JSON.stringify({ status: true }));\n```'
+                value: t("monaco.jsdoc.publishMQTTDoc")
               }
             },
             {
@@ -814,7 +795,7 @@ function initEditor() {
               range: range,
               detail: 'sendEmail(options): Promise<any>',
               documentation: {
-                value: 'SMTP sunucusu üzerinden e-posta gönderir.\n\nÖrnek:\n```javascript\nawait sendEmail({\n  to: "92muratyigit@gmail.com",\n  subject: "Alarm",\n  text: "Kritik Sıcaklık!"\n});\n```'
+                value: t("monaco.jsdoc.sendEmailDoc")
               }
             },
             {
@@ -825,7 +806,7 @@ function initEditor() {
               range: range,
               detail: 'Modbus TCP Read',
               documentation: {
-                value: 'Modbus TCP üzerinden veri okur.\n\nÖrnek:\n```javascript\nconst val = await readModbusData("192.168.1.50", 502, 1, 40001, 1, "holding", "uint16");\n```'
+                value: t("monaco.jsdoc.readModbusDataDoc")
               }
             },
             {
@@ -836,7 +817,7 @@ function initEditor() {
               range: range,
               detail: 'Modbus TCP Write',
               documentation: {
-                value: 'Modbus TCP üzerinden veri yazar.\n\nÖrnek:\n```javascript\nawait writeModbusData("192.168.1.50", 502, 1, 40001, 123, "uint16");\n```'
+                value: t("monaco.jsdoc.writeModbusDataDoc")
               }
             },
             {
@@ -1002,9 +983,9 @@ onBeforeUnmount(() => {
   if (editor) {
     const model = editor.getModel();
     if (model) {
-      model.dispose();
+      if(toRaw(model).dispose) toRaw(model).dispose();
     }
-    editor.dispose();
+    if(toRaw(editor).dispose) toRaw(editor).dispose();
   }
 });
 </script>

@@ -25,7 +25,7 @@ export default defineNitroPlugin((nitroApp) => {
   nitroApp.hooks.hook('error', (error: any, { event }) => {
     if (error.statusCode === 401 || error.statusCode === 403) return; // Gereksiz auth hatalarını loglama
     const path = event?.path || 'Bilinmeyen Yol';
-    const msg = `[ALERT] [API Hatası] ${path} -> ${error.message}`;
+    const msg = `[ALERT] [API Error] ${path} -> ${error.message}`;
     console.error(msg);
     logErrorToFile('ApiError', msg);
   });

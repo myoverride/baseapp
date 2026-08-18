@@ -1,4 +1,4 @@
-const CACHE_NAME = 'iiot-cache-v4';
+const CACHE_NAME = 'iiot-cache-v5';
 const ASSETS_TO_CACHE = [
   '/',
   '/manifest.json',
@@ -33,7 +33,12 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
   
   // Sadece GET ve http/https isteklerini önbellekle
-  if (event.request.method !== 'GET' || !url.protocol.startsWith('http') || url.pathname.startsWith('/api/')) {
+  if (event.request.method !== 'GET' || !url.protocol.startsWith('http')) {
+    return;
+  }
+  
+  // Sadece /api/pages ve /api/globals endpointlerine izin ver, diğer API'leri engelle
+  if (url.pathname.startsWith('/api/') && !url.pathname.startsWith('/api/pages/') && !url.pathname.startsWith('/api/globals')) {
     return;
   }
 
@@ -46,7 +51,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Network First for HTML, Cache First for assets like JS/CSS/Images
+  // Network First for HTML
   if (event.request.mode === 'navigate') {
     event.respondWith(
       fetch(event.request).catch(() => {
@@ -55,6 +60,23 @@ self.addEventListener('fetch', (event) => {
     );
     return;
   }
+
+  // Network First for API requests to prevent stale data
+  if (url.pathname.startsWith('/api/')) {
+    event.respondWith(
+      fetch(event.request).then((networkResponse) => {
+        if (networkResponse && networkResponse.status === 200) {
+          const responseToCache = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseToCache));
+        }
+        return networkResponse;
+      }).catch(() => {
+        return caches.match(event.request);
+      })
+    );
+    return;
+  }
+
 
   // Stale-While-Revalidate for other static assets
   event.respondWith(

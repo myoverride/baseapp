@@ -1,7 +1,7 @@
 <template>
   <v-container>
     <div class="mb-4">
-      <v-btn prepend-icon="mdi-arrow-left" variant="text" @click="$router.back()" class="text-none font-weight-medium px-0 text-body-1" color="grey-darken-2">
+      <v-btn prepend-icon="mdi-arrow-left" variant="text" @click="$router.back()" class="text-none font-weight-medium px-0 text-body-1" color="primary">
         {{ backLabel }}
       </v-btn>
     </div>
@@ -10,12 +10,12 @@
       v-if="entity && columns.length > 0"
       ref="crudTable"
       :enable-multi-select="enableMultiSelect"
-      :hide-create="!enableCreate"
-      :hide-edit="!enableEdit"
-      :hide-delete="!enableDelete"
-      :hide-search="!enableSearch"
-      :hide-filter="!enableFilter"
-      :hide-refresh="!enableRefresh"
+      :hide-create="!canCreate"
+      :hide-edit="!canEdit"
+      :hide-delete="!canDelete"
+      :hide-search="!canSearch"
+      :hide-filter="!canFilter"
+      :hide-refresh="!canRefresh"
       :api-endpoint="activeApiEndpoint"
       :columns="columns"
       :title="entity.name ? $localize(typeof entity.name === 'string' ? entity.name : JSON.stringify(entity.name)) : (slug.charAt(0).toUpperCase() + slug.slice(1))"
@@ -27,8 +27,8 @@
       @loaded="onTableLoaded"
     >
       <template #toolbarActions>
-        <v-btn v-if="enableExport" icon="mdi-download" variant="text" :loading="csvExportLoading" @click="exportCSV" class="mr-2" :title="$t('action.exportFormat', { format: 'CSV' })"></v-btn>
-        <v-btn v-if="enableImport" icon="mdi-upload" variant="text" :loading="csvImportLoading" @click="triggerCSVImport" class="mr-2" :title="$t('action.importFormat', { format: 'CSV' })"></v-btn>
+        <v-btn v-if="canExport" icon="mdi-download" variant="text" :loading="csvExportLoading" @click="exportCSV" class="mr-2" :title="$t('action.exportFormat', { format: 'CSV' })"></v-btn>
+        <v-btn v-if="canImport" icon="mdi-upload" variant="text" :loading="csvImportLoading" @click="triggerCSVImport" class="mr-2" :title="$t('action.importFormat', { format: 'CSV' })"></v-btn>
         <input type="file" ref="csvInputRef" accept=".csv" style="display: none" @change="importCSV">
         <slot name="extraToolbarActions"></slot>
       </template>
@@ -54,18 +54,18 @@
           <div class="text-caption">
             <div class="font-weight-bold mb-1 border-b pb-1">{{ $t('table.additionalInfo') }}</div>
             <div v-for="[key, config] in hiddenFields" :key="key" class="mb-1">
-              <span class="font-weight-medium text-grey-lighten-2">{{ $localize((config as any).label) || key }}:</span> {{ formatHiddenValue(item, key, config) }}
+              <span class="font-weight-medium text-medium-emphasis">{{ $localize((config as any).label) || key }}:</span> {{ formatHiddenValue(item, key, config) }}
             </div>
             <v-divider class="my-2 border-opacity-50"></v-divider>
-            <div class="mb-1"><span class="font-weight-medium text-grey-lighten-2">{{ $t('table.createdAt') }}:</span> {{ formatAppDate(item.created_at as any) }}</div>
-            <div><span class="font-weight-medium text-grey-lighten-2">{{ $t('table.updatedAt') }}:</span> {{ formatAppDate(item.updated_at as any) }}</div>
+            <div class="mb-1"><span class="font-weight-medium text-medium-emphasis">{{ $t('table.createdAt') }}:</span> {{ formatAppDate(item.created_at as any) }}</div>
+            <div><span class="font-weight-medium text-medium-emphasis">{{ $t('table.updatedAt') }}:</span> {{ formatAppDate(item.updated_at as any) }}</div>
           </div>
         </v-tooltip>
       </template>
 
       <!-- Dynamic Custom Slot for Relation Columns -->
       <template v-slot:[`item.${colName}`]="{ item }" v-for="colName in relationColumnNames" :key="colName">
-        {{ getRelationDisplayValue(colName, item[colName]) }}
+        {{ getRelationDisplayValue(colName, item[colName], item) }}
       </template>
 
       <!-- Hashtags Slot -->
@@ -85,7 +85,7 @@
 
       <!-- Row Actions -->
       <template v-slot:rowActions="{ item }">
-        <v-btn v-if="enableExportSingle" icon="mdi-download-circle-outline" size="small" color="blue" variant="text" @click="exportSingleJSON(item)" :title="$t('action.exportFormat', { format: '(Single)' })" />
+        <v-btn v-if="canExportSingle" icon="mdi-download-circle-outline" size="small" color="blue" variant="text" @click="exportSingleJSON(item)" :title="$t('action.exportFormat', { format: '(Single)' })" />
         <slot name="extraRowActions" :item="item"></slot>
       </template>
     </CrudTable>
@@ -209,7 +209,7 @@
 </template>
 
 <script setup lang="ts">
-const { primaryColor: color } = useSysVars();
+const { primaryColor: color } = useGlobals();
 import { ref, onMounted, computed, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
@@ -253,6 +253,26 @@ const { t } = useI18n();
 const { $localize, $toast } = useNuxtApp() as any;
 const route = useRoute();
 const router = useRouter();
+
+const user = useState<any>('user');
+
+const hasPermission = (actionTag: string) => {
+  if (user.value?.is_admin || user.value?.is_super_admin) return true;
+  const tags = user.value?.allowed_tags || [];
+  return tags.includes(props.slug) || tags.includes(props.slug + actionTag);
+};
+
+const canCreate = computed(() => props.enableCreate && hasPermission('post'));
+const canEdit = computed(() => props.enableEdit && hasPermission('put'));
+const canDelete = computed(() => props.enableDelete && hasPermission('delete'));
+// For search, filter, refresh, export, view etc, 'get' permission is generally required
+const canSearch = computed(() => props.enableSearch && hasPermission('get'));
+const canFilter = computed(() => props.enableFilter && hasPermission('get'));
+const canRefresh = computed(() => props.enableRefresh && hasPermission('get'));
+const canExport = computed(() => props.enableExport && hasPermission('get'));
+const canExportSingle = computed(() => props.enableExportSingle && hasPermission('get'));
+// Import creates new records, so 'post' permission is needed
+const canImport = computed(() => props.enableImport && hasPermission('post'));
 
 const slug = computed(() => props.slug);
 
@@ -304,7 +324,7 @@ const columns = computed(() => {
   
   cols.push({ title: t('field.hashtags') || 'Hashtags', key: 'hashtags', sortable: false, filterable: true, type: 'string', slot: true });
   if (props.enableRowInfo) {
-    cols.push({ title: t('common.detail'), key: 'info', sortable: false, filterable: false, slot: true, width: '60px', align: 'center' as const });
+    cols.push({ title: t('common.info'), key: 'info', sortable: false, filterable: false, slot: true, width: '60px', align: 'center' as const });
   }
   
   return cols;
@@ -318,7 +338,7 @@ const hiddenFields = computed(() => {
 const formatHiddenValue = (item: any, key: string, config: any) => {
   const val = item[key];
   if (val === undefined || val === null || val === '') return '-';
-  if (config.type === 'relation') return getRelationDisplayValue(key, val);
+  if (config.type === 'relation') return getRelationDisplayValue(key, val, item);
   if (typeof val === 'object') return JSON.stringify(val);
   return String(val);
 };
@@ -375,7 +395,7 @@ const exportCSV = async () => {
             const rowData = headers.map((header: any) => {
                 let valStr = '';
                 if (relationColumnNames.value.includes(header)) {
-                    valStr = String(getRelationDisplayValue(header, row[header]) || '');
+                    valStr = String(getRelationDisplayValue(header, row[header], row) || '');
                 } else {
                     valStr = String(row[header] || '');
                 }
@@ -516,27 +536,11 @@ const loadRelations = async () => {
             : `/api/custom/${targetSlug}?limit=20`;
 
           const recordsRes = await $fetch<any>(relationApiUrl);
-          const records = recordsRes.records || [];
+          const records = recordsRes.data || recordsRes.records || [];
           
-          const schemaEntries = Object.entries(targetSchema).sort((a: any, b: any) => {
-            const oA = a[1]._order !== undefined ? a[1]._order : 999;
-            const oB = b[1]._order !== undefined ? b[1]._order : 999;
-            return oA - oB;
-          });
-          
-          let firstKey: string | null = schemaEntries.find(([, config]: any) => config.isPrimary)?.[0] || null;
-          
-          if (!firstKey) {
-            firstKey = schemaEntries[0] ? schemaEntries[0][0] : null;
-            if (firstKey && targetSchema[firstKey] && targetSchema[firstKey]._order === undefined) {
-               const smartKey = schemaEntries.find(([k]) => ['envanter kodu', 'ad', 'name', 'title', 'label', 'ad soyad', 'isim', 'makine modeli'].includes(k.toLowerCase()))?.[0];
-               if (smartKey) firstKey = smartKey;
-            }
-          }
-
           relationOptions.value[fieldName] = records.map((r: any) => ({
             id: r.id,
-            label: firstKey && r[firstKey] !== undefined && r[firstKey] !== null ? String(r[firstKey]) : `Kayıt #${r.id}`
+            label: r._record_title || t('common.recordWithId', { id: r.id })
           }));
         }
       } catch (e) {
@@ -564,7 +568,7 @@ const onRelationSearch = (fieldName: string, fieldConfig: any, searchQuery: stri
         const baseApiUrl = isSystemApi ? `/api/admin/records/${targetSlug}` : `/api/custom/${targetSlug}`;
         
         const recordsRes = await $fetch<any>(`${baseApiUrl}?search=${encodeURIComponent(searchQuery)}&limit=20`);
-        const records = recordsRes.records || [];
+        const records = recordsRes.data || recordsRes.records || [];
         
         const schemaEntries = Object.entries(targetSchema).sort((a: any, b: any) => {
           const oA = a[1]._order !== undefined ? a[1]._order : 999;
@@ -583,7 +587,7 @@ const onRelationSearch = (fieldName: string, fieldConfig: any, searchQuery: stri
 
         const newOptions = records.map((r: any) => ({
           id: r.id,
-          label: firstKey && r[firstKey] !== undefined && r[firstKey] !== null ? String(r[firstKey]) : `Kayıt #${r.id}`
+          label: firstKey && r[firstKey] !== undefined && r[firstKey] !== null ? String(r[firstKey]) : t('common.recordWithId', { id: r.id })
         }));
         
         const currentOptions = relationOptions.value[fieldName] || [];
@@ -638,7 +642,7 @@ const onTableLoaded = async (items: any[]) => {
         };
         const query = `advancedFilters=${encodeURIComponent(JSON.stringify(advancedFilters))}`;
         const recordsRes = await $fetch<any>(`${baseApiUrl}?${query}&limit=${uniqueMissing.length}`);
-        const records = recordsRes.records || [];
+        const records = recordsRes.data || recordsRes.records || [];
         
         const schemaEntries = Object.entries(targetSchema).sort((a: any, b: any) => {
           const oA = a[1]._order !== undefined ? a[1]._order : 999;
@@ -657,7 +661,7 @@ const onTableLoaded = async (items: any[]) => {
 
         const newOptions = records.map((r: any) => ({
           id: r.id,
-          label: firstKey && r[firstKey] !== undefined && r[firstKey] !== null ? String(r[firstKey]) : `Kayıt #${r.id}`
+          label: firstKey && r[firstKey] !== undefined && r[firstKey] !== null ? String(r[firstKey]) : t('common.recordWithId', { id: r.id })
         }));
         
         const currentOptions = relationOptions.value[fieldName] || [];
@@ -690,8 +694,11 @@ const relationColumnNames = computed(() => {
     .map(([key]) => key);
 });
 
-const getRelationDisplayValue = (fieldName: string, value: any) => {
+const getRelationDisplayValue = (fieldName: string, value: any, item?: any) => {
   if (!value) return '';
+  if (item && item._displayValues && item._displayValues[fieldName]) {
+    return item._displayValues[fieldName];
+  }
   const options = relationOptions.value[fieldName] || [];
   const match = options.find(opt => opt.id === value || String(opt.id) === String(value));
   return match ? match.label : `ID: ${value}`;
@@ -852,7 +859,11 @@ const openEditDialog = (item: any) => {
   dialog.value = true;
 };
 
-const saveItem = async (payload: Record<string, any>) => {
+const saveItem = async (rawPayload: Record<string, any>) => {
+  const payload = { ...rawPayload };
+  const hashtags = payload.hashtags || [];
+  delete payload.hashtags;
+
   // Normalize
   for (const [key, config] of sortedSchemaEntries.value) {
     const type = (config as any).type;
@@ -871,15 +882,52 @@ const saveItem = async (payload: Record<string, any>) => {
 
   try {
     if (dialogMode.value === 'edit') {
-      await $fetch(`${activeApiEndpoint.value}/${editId.value}`, { method: 'PUT', body: { data: payload } });
+      await $fetch(`${activeApiEndpoint.value}/${editId.value}`, { method: 'PUT', body: { data: payload, hashtags } });
     } else {
-      await $fetch(`${activeApiEndpoint.value}`, { method: 'POST', body: { data: payload } });
+      await $fetch(`${activeApiEndpoint.value}`, { method: 'POST', body: { data: payload, hashtags } });
     }
     dialog.value = false;
     if ($toast) $toast.success(dialogMode.value === 'edit' ? t('message.updated') : t('message.created'));
     crudTable.value?.loadItems(); // Tabloyu yenile
   } catch (e: any) {
-    if ($toast) $toast.error(e.statusMessage || t('error.operationFailed'));
+    if ($toast) {
+      const msg = e.data?.message || e.statusMessage || e.message || 'error.operationFailed';
+      if (msg && msg.startsWith('error.uniqueConstraint|')) {
+        const fieldSlug = msg.split('|')[1]?.trim();
+        let label = fieldSlug;
+        if (entity.value?.schema && entity.value.schema[fieldSlug]) {
+          const schemaDef = entity.value.schema[fieldSlug] as any;
+          if (schemaDef.label) {
+            label = typeof $localize === 'function' ? $localize(schemaDef.label) : schemaDef.label;
+          }
+        }
+        let translatedMsg = t('error.uniqueConstraint', { field: label });
+        
+        // Eğer kullanıcı kendi çevirisinde {field} yazmadıysa, hangi alanın hata verdiğini bilsin diye başa ekle.
+        if (translatedMsg === 'error.uniqueConstraint') {
+          translatedMsg = t('error.uniqueConstraintValueInUse', { field: label });
+        } else if (translatedMsg.match(/\{\s*field\s*\}/)) {
+           translatedMsg = translatedMsg.replace(/\{\s*field\s*\}/g, label);
+        } else if (!translatedMsg.includes(label)) {
+           // Mesajda alan adı geçmiyorsa otomatik başa ekle (Örn: "field1: Var bu")
+           translatedMsg = `${label}: ${translatedMsg}`;
+        }
+        
+        $toast.error(translatedMsg);
+      } else {
+        let translatedMsg = msg;
+        if (typeof msg === 'string') {
+          const parts = msg.split('|');
+          if (parts.length > 1) {
+            translatedMsg = t(parts[0] || '', parts.slice(1));
+          } else {
+            const localized = typeof $localize === 'function' ? $localize(msg) : msg;
+            translatedMsg = localized !== msg ? localized : t(msg);
+          }
+        }
+        $toast.error(translatedMsg || msg);
+      }
+    }
   }
 };
 
@@ -890,7 +938,18 @@ const handleDelete = async (item: any) => {
     if ($toast) $toast.warning(t('message.entityDeleted', { name: t('entity.record') }));
     crudTable.value?.loadItems();
   } catch (e: any) {
-    if ($toast) $toast.error(e.statusMessage || 'Silinemedi');
+    const msg = e.data?.message || e.statusMessage || 'Silinemedi';
+    let translatedMsg = msg;
+    if (typeof msg === 'string') {
+      const parts = msg.split('|');
+      if (parts.length > 1) {
+        translatedMsg = t(parts[0] || '', parts.slice(1));
+      } else {
+        const localized = typeof $localize === 'function' ? $localize(msg) : msg;
+        translatedMsg = localized !== msg ? localized : t(msg);
+      }
+    }
+    if ($toast) $toast.error(translatedMsg || msg);
   }
 };
 

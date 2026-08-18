@@ -1,12 +1,16 @@
 import { useDB, getMasterDb } from '../../../utils/db';
 import { type FilterGroup } from '../../../utils/filterEngine';
 import { buildGenericFilter } from '../../../utils/queryBuilder';
+import { checkUsernameUniqueness } from '../../../utils/tenantSecurity';
 import bcrypt from 'bcryptjs';
 
 export default defineEventHandler(async (event) => {
   const user = event.context.user;
-  if (!user || !user.is_admin) {
-    throw createError({ statusCode: 403, message: 'errors.unauthorized' });
+  if (!user) {
+    throw createError({ statusCode: 401, message: 'errors.loginRequired' });
+  }
+  if (!user.is_admin) {
+    throw createError({ statusCode: 403, message: 'errors.forbiddenAdminOnly' });
   }
 
   const sql = useDB(event.context.tenantSlug);
@@ -48,8 +52,8 @@ export default defineEventHandler(async (event) => {
     const totalCount = parseInt((countRes[0] as any)?.count || '0');
 
     const isExport = query.export === 'true';
-    const selectCols = isExport 
-      ? 'u.*, r.name as role_name' 
+    const selectCols = isExport
+      ? 'u.*, r.name as role_name'
       : 'u.id, u.username, u.is_admin, u.role_id, u.home_page, u.menu_list, u.hashtags, r.name as role_name, u.created_at, u.updated_at';
 
     const pagedRes = await sql.unsafe(`
@@ -65,30 +69,15 @@ export default defineEventHandler(async (event) => {
       const uRecords = await sql`SELECT record_id FROM user_records WHERE user_id = ${u.id}`;
       u.linked_record_ids = uRecords.map((x: any) => x.record_id);
     }
-
-    return { records: pagedRes, total: totalCount, page, limit };
+    return { success: true, data: pagedRes, pagination: { total: totalCount, page, limit } };
   }
 
   if (method === 'POST') {
     const body = await readBody(event);
     const masterSql = getMasterDb();
-    
+
     const checkUniqueness = async (uname: string) => {
-      const globalDb = getMasterDb();
-      const masterAppDb = useDB('master');
-      
-      if (event.context.tenantSlug !== 'master') {
-        const masterCheck = await masterAppDb`SELECT id FROM users WHERE username = ${uname}`;
-        if (masterCheck.length > 0) throw createError({ statusCode: 400, message: 'errors.usernameAlreadyTaken' });
-        
-        const globalCheck = await globalDb`SELECT tenant_slug FROM global_users WHERE username = ${uname}`;
-        if (globalCheck.length > 0 && globalCheck[0].tenant_slug !== event.context.tenantSlug) {
-           throw createError({ statusCode: 400, message: 'errors.usernameAlreadyTaken' });
-        }
-      } else {
-        const globalCheck = await globalDb`SELECT tenant_slug FROM global_users WHERE username = ${uname}`;
-        if (globalCheck.length > 0) throw createError({ statusCode: 400, message: 'errors.usernameAlreadyTaken' });
-      }
+      await checkUsernameUniqueness(event.context.tenantSlug, uname);
     };
 
     if (body.records && Array.isArray(body.records)) {
@@ -135,9 +124,9 @@ export default defineEventHandler(async (event) => {
           } else {
             hashToUse = defaultPasswordHash;
           }
-          
+
           await checkUniqueness(rec.username);
-          
+
           await sql`
               INSERT INTO users (username, password_hash, is_admin, role_id, home_page, menu_list, hashtags, created_by, updated_by) 
               VALUES (${rec.username}, ${hashToUse}, ${rec.is_admin || false}, ${rec.role_id || null}, ${rec.home_page || null}, ${rec.menu_list ? sql.json(rec.menu_list) : null}, ${sql.json(rec.hashtags || [])}, ${user.id}, ${user.id})

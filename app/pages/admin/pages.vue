@@ -2,7 +2,7 @@
   <v-container>
     <div class="mb-4" v-if="!hideHeader">
 
-      <v-btn prepend-icon="mdi-arrow-left" variant="text" to="/" class="text-none font-weight-medium px-0 text-body-1" color="grey-darken-2">
+      <v-btn prepend-icon="mdi-arrow-left" variant="text" to="/" class="text-none font-weight-medium px-0 text-body-1" color="primary">
         {{ $t('common.home') }}
       </v-btn>
     </div>
@@ -11,7 +11,7 @@
       ref="crudTable"
       api-endpoint="/api/admin/pages"
       :columns="columns"
-      :title="$t('menu.pages')"
+      :title="$t('common.pages')"
       default-sort-key="created_at"
       default-sort-order="desc"
       @create="openCreateDialog"
@@ -45,7 +45,7 @@
         <v-chip v-if="['landing', 'regular', 'component'].includes(String(item.page_type || 'regular'))" size="small" label variant="tonal" color="teal" class="font-weight-bold">
           {{ item.route_pattern }}
         </v-chip>
-        <span v-else class="text-grey-lighten-1">-</span>
+        <span v-else class="opacity-70">-</span>
       </template>
 
       <template v-slot:item.active="{ item }">
@@ -72,8 +72,8 @@
             <v-btn icon="mdi-information" v-bind="props" color="info" variant="text" size="small"></v-btn>
           </template>
           <div class="text-caption">
-            <div class="mb-1"><span class="font-weight-medium text-grey-lighten-2">{{ $t('table.createdAt') }}:</span> {{ formatAppDate(item.created_at as any) }}</div>
-            <div><span class="font-weight-medium text-grey-lighten-2">{{ $t('table.updatedAt') }}:</span> {{ formatAppDate(item.updated_at as any) }}</div>
+            <div class="mb-1"><span class="font-weight-medium opacity-70">{{ $t('table.createdAt') }}:</span> {{ formatAppDate(item.created_at as any) }}</div>
+            <div><span class="font-weight-medium opacity-70">{{ $t('table.updatedAt') }}:</span> {{ formatAppDate(item.updated_at as any) }}</div>
           </div>
         </v-tooltip>
       </template>
@@ -235,10 +235,10 @@
           
           <!-- Editor Area -->
           <div class="flex-grow-1 d-flex flex-column px-4" style="min-height: 400px;">
-            <div class="d-flex align-center justify-space-between px-2 py-1 bg-grey-lighten-4 border-bottom">
+            <div class="d-flex align-center justify-space-between px-2 py-1 bg-background border-bottom">
               <v-tabs v-model="tab" bg-color="transparent" :color="color" :grow="!mobile" density="compact">
                 <v-tab value="template" :min-width="mobile ? 'auto' : undefined"><v-icon :start="!mobile">mdi-vuejs</v-icon> <span v-if="!mobile">{{ $t('tab.template') }}</span></v-tab>
-                <v-tab value="script" :min-width="mobile ? 'auto' : undefined"><v-icon :start="!mobile">mdi-language-javascript</v-icon> <span v-if="!mobile">{{ $t('tab.script') }}</span></v-tab>
+                <v-tab value="script" :min-width="mobile ? 'auto' : undefined"><v-icon :start="!mobile">mdi-language-javascript</v-icon> <span v-if="!mobile">{{ $t('common.code') }}</span></v-tab>
                 <v-tab value="style" :min-width="mobile ? 'auto' : undefined"><v-icon :start="!mobile">mdi-language-css3</v-icon> <span v-if="!mobile">{{ $t('tab.style') }}</span></v-tab>
                 <v-tab value="preview" :min-width="mobile ? 'auto' : undefined"><v-icon :start="!mobile">mdi-eye</v-icon> <span v-if="!mobile">{{ $t('tab.preview') }}</span></v-tab>
               </v-tabs>
@@ -281,7 +281,7 @@
                 />
               </div>
 
-              <div v-if="tab === 'preview'" class="position-absolute w-100 h-100 overflow-y-auto rounded border bg-grey-lighten-4">
+              <div v-if="tab === 'preview'" class="position-absolute w-100 h-100 overflow-y-auto rounded border bg-background">
                 <v-locale-provider :locale="previewLocale">
                   <DynamicRenderer 
                     :template-string="fd.template_string"
@@ -313,7 +313,7 @@
 </template>
 
 <script setup lang="ts">
-const { primaryColor: color } = useSysVars();
+const { primaryColor: color } = useGlobals();
 import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import CrudTable from '~/components/CrudTable.vue'
@@ -335,14 +335,14 @@ const { $localize, $toast } = useNuxtApp() as any;
 const { mobile } = useDisplay()
 
 const columns = computed(() => [
-  { title: t('table.routePattern'), key: 'route_pattern', sortable: true, filterable: true, slot: true },
-  { title: t('table.priority'), key: 'priority', sortable: true, filterable: true, align: 'center' as const },
+  { title: t('field.routePattern'), key: 'route_pattern', sortable: true, filterable: true, slot: true },
+  { title: t('common.priority'), key: 'priority', sortable: true, filterable: true, align: 'center' as const },
   { title: t('common.title'), key: 'title', sortable: true, filterable: true, slot: true },
   { title: t('table.pageType'), key: 'page_type', sortable: true, filterable: true, slot: true, align: 'center' as const },
   { title: t('common.active'), key: 'active', sortable: true, filterable: false, slot: true },
   { title: t('common.public'), key: 'is_public', sortable: true, filterable: false, slot: true },
   { title: t('field.hashtags'), key: 'hashtags', sortable: false, filterable: true, slot: true },
-  { title: t('common.detail'), key: 'info', sortable: false, filterable: false, slot: true, width: '60px', align: 'center' as const }
+  { title: t('common.info'), key: 'info', sortable: false, filterable: false, slot: true, width: '60px', align: 'center' as const }
 ]);
 
 const historyDialogOpen = ref(false);
@@ -403,7 +403,7 @@ const fetchLayouts = async () => {
         })
       } 
     });
-      const rawLayouts = Array.isArray(res) ? res : (res.records || []);
+      const rawLayouts = Array.isArray(res) ? res : (res.data || res.records || []);
       allLayouts.value = rawLayouts.map((r: any) => ({
         ...r,
         displayTitle: $localize(r?.title)
@@ -472,14 +472,14 @@ const openCreateDialog = () => {
   </v-row>
 </v-container>`,
     script_content: `const { t } = useI18n();
-const { primaryColor: color } = useSysVars();
+const { primaryColor: color } = useGlobals();
 
 const devices = ref([]);
 const loading = ref(false);
 const stats = ref({ devices: 0, telemetry: 0 });
 
 const headers = [
-  { title: t('table.deviceId'), key: 'device_id' },
+  { title: t('field.deviceId'), key: 'device_id' },
   { title: t('table.schema'), key: 'schema.name' },
   { title: t('table.createdAt'), key: 'created_at' }
 ];
@@ -598,7 +598,11 @@ const saveItem = async (payload: any) => {
     crudTable.value?.loadItems();
     if (payload.page_type === 'layout') fetchLayouts();
   } catch (e: any) {
-    if ($toast) $toast.error(t(e.data?.message || 'errors.operationFailed', e.data?.data || {}));
+        const errPayload = err?.data || e?.data;
+    const isArr = Array.isArray(errPayload?.data);
+    const errData = isArr ? errPayload.data[0] : (errPayload?.data || {});
+    const errMsg = isArr ? errPayload.data[0].message : (errPayload?.message || 'errors.operationFailed');
+    if ($toast) $toast.error(t(errMsg, errData));
   }
 };
 
@@ -620,9 +624,13 @@ const saveCodeOnly = async () => {
     };
     await $fetch(`/api/admin/pages/${targetId}`, { method: 'PUT', body });
     crudTable.value?.loadItems();
-    if ($toast) $toast.success(t('message.saved'));
+    if ($toast) $toast.success(t('message.success'));
   } catch (e: any) {
-    if ($toast) $toast.error(t(e.data?.message || 'errors.operationFailed', e.data?.data || {}));
+        const errPayload = err?.data || e?.data;
+    const isArr = Array.isArray(errPayload?.data);
+    const errData = isArr ? errPayload.data[0] : (errPayload?.data || {});
+    const errMsg = isArr ? errPayload.data[0].message : (errPayload?.message || 'errors.operationFailed');
+    if ($toast) $toast.error(t(errMsg, errData));
   }
 };
 
@@ -633,7 +641,11 @@ const handleDelete = async (item: any) => {
     if ($toast) $toast.warning(t('message.entityDeleted', { name: t('entity.page') }));
     crudTable.value?.loadItems();
   } catch (e: any) {
-    if ($toast) $toast.error(t(e.data?.message || 'errors.operationFailed', e.data?.data || {}));
+        const errPayload = err?.data || e?.data;
+    const isArr = Array.isArray(errPayload?.data);
+    const errData = isArr ? errPayload.data[0] : (errPayload?.data || {});
+    const errMsg = isArr ? errPayload.data[0].message : (errPayload?.message || 'errors.operationFailed');
+    if ($toast) $toast.error(t(errMsg, errData));
   }
 };
 

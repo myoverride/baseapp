@@ -2,8 +2,11 @@ import { useDB } from '../../../utils/db';
 
 export default defineEventHandler(async (event) => {
   const user = event.context.user;
-  if (!user || !user.is_admin) {
-    throw createError({ statusCode: 403, message: 'errors.unauthorized' });
+  if (!user) {
+    throw createError({ statusCode: 401, message: 'errors.loginRequired' });
+  }
+  if (!user.is_admin) {
+    throw createError({ statusCode: 403, message: 'errors.forbiddenAdminOnly' });
   }
 
   const sql = useDB(event.context.tenantSlug);
@@ -42,7 +45,7 @@ export default defineEventHandler(async (event) => {
     if (res.length === 0) {
       throw createError({ statusCode: 404, message: 'errors.notFound' });
     }
-    return res[0];
+    return { success: true, message: 'message.success', data: res[0] };
   }
 
   if (method === 'DELETE') {
@@ -50,6 +53,6 @@ export default defineEventHandler(async (event) => {
     if (res.length === 0) {
       throw createError({ statusCode: 404, message: 'errors.notFound' });
     }
-    return { success: true };
+    return { success: true, message: 'message.success', data: { deletedId: id } };
   }
 });

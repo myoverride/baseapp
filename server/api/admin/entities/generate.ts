@@ -41,10 +41,10 @@ const reqId = payload.params?.id;
 if (reqId) return;
 
 try {
-  const result = await recordManager.getRecords(context.tenantSlug, '${slug}', payload.query || query || {});
+  const result = await recordManager.getRecords('${slug}', payload.query || {});
   return { respond: true, status: 200, headers: { 'Content-Type': 'application/json' }, body: result };
 } catch(e) {
-  return { respond: true, status: e.statusCode || 500, headers: { 'Content-Type': 'application/json' }, body: { message: e.message || e } };
+  return { respond: true, status: e.statusCode || 500, headers: { 'Content-Type': 'application/json' }, body: { message: (e.statusCode && e.statusCode < 500) ? (e.message || e) : 'errors.internalError' } };
 }
 `.trim();
 
@@ -55,10 +55,10 @@ const reqId = payload.params?.id;
 if (!reqId || reqId === 'bulk') return;
 
 try {
-  const result = await recordManager.getRecord(context.tenantSlug, '${slug}', reqId);
+  const result = await recordManager.getRecord('${slug}', reqId);
   return { respond: true, status: 200, headers: { 'Content-Type': 'application/json' }, body: result };
 } catch(e) {
-  return { respond: true, status: e.statusCode || 500, headers: { 'Content-Type': 'application/json' }, body: { message: e.message || e } };
+  return { respond: true, status: e.statusCode || 500, headers: { 'Content-Type': 'application/json' }, body: { message: (e.statusCode && e.statusCode < 500) ? (e.message || e) : 'errors.internalError' } };
 }
 `.trim();
 
@@ -69,10 +69,10 @@ const body = payload.body || {};
 const reqUser = context.user;
 
 try {
-  const result = await recordManager.createRecord(context.tenantSlug, '${slug}', body, reqUser?.id);
+  const result = await recordManager.createRecord('${slug}', body, reqUser?.id);
   return { respond: true, status: 200, headers: { 'Content-Type': 'application/json' }, body: result };
 } catch(e) {
-  return { respond: true, status: e.statusCode || 500, headers: { 'Content-Type': 'application/json' }, body: { message: e.message || e, errors: e.data } };
+  return { respond: true, status: e.statusCode || 500, headers: { 'Content-Type': 'application/json' }, body: { message: (e.statusCode && e.statusCode < 500) ? (e.message || e) : 'errors.internalError', errors: e.data } };
 }
 `.trim();
 
@@ -85,10 +85,10 @@ const body = payload.body || {};
 const reqUser = context.user;
 
 try {
-  const result = await recordManager.updateRecord(context.tenantSlug, '${slug}', reqId, body, reqUser?.id);
+  const result = await recordManager.updateRecord('${slug}', reqId, body, reqUser?.id);
   return { respond: true, status: 200, headers: { 'Content-Type': 'application/json' }, body: result };
 } catch(e) {
-  return { respond: true, status: e.statusCode || 500, headers: { 'Content-Type': 'application/json' }, body: { message: e.message || e, errors: e.data } };
+  return { respond: true, status: e.statusCode || 500, headers: { 'Content-Type': 'application/json' }, body: { message: (e.statusCode && e.statusCode < 500) ? (e.message || e) : 'errors.internalError', errors: e.data } };
 }
 `.trim();
 
@@ -99,10 +99,10 @@ const reqId = payload.params?.id;
 if (!reqId || reqId === 'bulk') return;
 
 try {
-  const result = await recordManager.deleteRecord(context.tenantSlug, '${slug}', reqId);
+  const result = await recordManager.deleteRecord('${slug}', reqId);
   return { respond: true, status: 200, headers: { 'Content-Type': 'application/json' }, body: result };
 } catch(e) {
-  return { respond: true, status: e.statusCode || 500, headers: { 'Content-Type': 'application/json' }, body: { message: e.message || e } };
+  return { respond: true, status: e.statusCode || 500, headers: { 'Content-Type': 'application/json' }, body: { message: (e.statusCode && e.statusCode < 500) ? (e.message || e) : 'errors.internalError' } };
 }
 `.trim();
 
@@ -114,35 +114,41 @@ const reqUser = context.user;
 if (reqMethod === 'DELETE') {
   try {
     const ids = body.ids;
-    if (!Array.isArray(ids) || ids.length === 0) throw new Error('ids array required');
-    const result = await recordManager.bulkDeleteRecords(context.tenantSlug, '${slug}', ids);
+    if (!Array.isArray(ids) || ids.length === 0) throw createError({ statusCode: 400, message: 'validation.required', data: { field: 'ids' } });
+    const result = await recordManager.bulkDeleteRecords('${slug}', ids);
     return { respond: true, status: 200, headers: { 'Content-Type': 'application/json' }, body: result };
   } catch(e) {
-    return { respond: true, status: e.statusCode || 500, headers: { 'Content-Type': 'application/json' }, body: { message: e.message || e } };
+    return { respond: true, status: e.statusCode || 500, headers: { 'Content-Type': 'application/json' }, body: { message: (e.statusCode && e.statusCode < 500) ? (e.message || e) : 'errors.internalError' } };
   }
 }
 
 if (reqMethod === 'POST') {
   try {
     const records = body.records;
-    if (!Array.isArray(records) || records.length === 0) throw new Error('records array required');
-    const result = await recordManager.bulkImportRecords(context.tenantSlug, '${slug}', records, reqUser?.id);
+    if (!Array.isArray(records) || records.length === 0) throw createError({ statusCode: 400, message: 'validation.required', data: { field: 'records' } });
+    const isMaster = context.tenantSlug === 'master';
+    const result = isMaster
+      ? await recordManager.bulkImportRecords(context.tenantSlug, '${slug}', records, reqUser?.id)
+      : await recordManager.bulkImportRecords('${slug}', records, reqUser?.id);
     if (!result.success) return { respond: true, status: 400, headers: { 'Content-Type': 'application/json' }, body: { message: result.message } };
     return { respond: true, status: 200, headers: { 'Content-Type': 'application/json' }, body: result };
   } catch(e) {
-    return { respond: true, status: e.statusCode || 500, headers: { 'Content-Type': 'application/json' }, body: { message: e.message || e } };
+    return { respond: true, status: e.statusCode || 500, headers: { 'Content-Type': 'application/json' }, body: { message: (e.statusCode && e.statusCode < 500) ? (e.message || e) : 'errors.internalError' } };
   }
 }
 `.trim();
 
 
   // Helper to insert middleware
-  const insertMw = async (name: string, route: string, code: string) => {
+  const insertMw = async (name: string, route: string, code: string, actionTag: string) => {
+    const customHashtags = Array.isArray(hashtags) ? hashtags : [];
+    const specificTags = [...new Set([...customHashtags, slug, slug + actionTag])];
+    const tagsJson = JSON.stringify(specificTags);
     const existing = await sql`SELECT id FROM endpoints WHERE name = ${name} AND type = 'http'`;
     if (existing.length > 0) {
-      await sql`UPDATE endpoints SET route_pattern=${route}, code=${code}, hashtags=${hashtagsJson}, active=true, updated_at=CURRENT_TIMESTAMP WHERE name=${name} AND type='http'`;
+      await sql`UPDATE endpoints SET route_pattern=${route}, code=${code}, hashtags=${tagsJson}, active=true, updated_at=CURRENT_TIMESTAMP WHERE name=${name} AND type='http'`;
     } else {
-      await sql`INSERT INTO endpoints (name, type, route_pattern, code, hashtags, active, is_public, created_by, updated_by) VALUES (${name}, 'http', ${route}, ${code}, ${hashtagsJson}, true, false, ${user.id}, ${user.id})`;
+      await sql`INSERT INTO endpoints (name, type, route_pattern, code, hashtags, active, is_public, created_by, updated_by) VALUES (${name}, 'http', ${route}, ${code}, ${tagsJson}, true, false, ${user.id}, ${user.id})`;
     }
     insertedMiddlewares++;
   };
@@ -160,15 +166,15 @@ if (reqMethod === 'POST') {
   if (typeof entityNameStr !== 'string') entityNameStr = slug;
 
   // CREATE MIDDLEWARES
-  if (options.apiList) await insertMw(`${entityNameStr} - GET List`, `/api/custom/${slug}`, getListCode);
-  if (options.apiSingle) await insertMw(`${entityNameStr} - GET Single`, `/api/custom/${slug}/:id`, getSingleCode);
-  if (options.apiCreate) await insertMw(`${entityNameStr} - POST`, `/api/custom/${slug}`, postCreateCode);
-  if (options.apiUpdate) await insertMw(`${entityNameStr} - PUT`, `/api/custom/${slug}/:id`, putUpdateCode);
-  if (options.apiDelete) await insertMw(`${entityNameStr} - DELETE`, `/api/custom/${slug}/:id`, deleteCode);
+  if (options.apiList) await insertMw(`${entityNameStr} - GET List`, `/api/custom/${slug}`, getListCode, 'get');
+  if (options.apiSingle) await insertMw(`${entityNameStr} - GET Single`, `/api/custom/${slug}/:id`, getSingleCode, 'get');
+  if (options.apiCreate) await insertMw(`${entityNameStr} - POST`, `/api/custom/${slug}`, postCreateCode, 'post');
+  if (options.apiUpdate) await insertMw(`${entityNameStr} - PUT`, `/api/custom/${slug}/:id`, putUpdateCode, 'put');
+  if (options.apiDelete) await insertMw(`${entityNameStr} - DELETE`, `/api/custom/${slug}/:id`, deleteCode, 'delete');
   
   // Bulk operations
   if (options.apiBulk !== false) {
-    await insertMw(`${entityNameStr} - Bulk Operations`, `/api/custom/${slug}/bulk`, bulkCode);
+    await insertMw(`${entityNameStr} - Bulk Operations`, `/api/custom/${slug}/bulk`, bulkCode, 'post');
   }
 
   // CREATE PAGES
@@ -182,18 +188,21 @@ return {};
 `.trim();
 
   const insertPage = async (title: string, route: string, template: string, script: string, type: string) => {
+    const customHashtags = Array.isArray(hashtags) ? hashtags : [];
+    const pageTags = [...new Set([...customHashtags, slug, slug + 'page'])];
+    const pageTagsJson = JSON.stringify(pageTags);
     const existing = await sql`SELECT id FROM pages WHERE route_pattern = ${route}`;
     if (existing.length > 0) {
-      await sql`UPDATE pages SET title=${title}, template_string=${template}, script_content=${script}, page_type=${type}, hashtags=${hashtagsJson}, updated_at=CURRENT_TIMESTAMP WHERE route_pattern=${route}`;
+      await sql`UPDATE pages SET title=${title}, template_string=${template}, script_content=${script}, page_type=${type}, hashtags=${pageTagsJson}, updated_at=CURRENT_TIMESTAMP WHERE route_pattern=${route}`;
     } else {
-      await sql`INSERT INTO pages (title, route_pattern, template_string, script_content, page_type, hashtags, active, is_public, created_by, updated_by) VALUES (${title}, ${route}, ${template}, ${script}, ${type}, ${hashtagsJson}, true, false, ${user.id}, ${user.id})`;
+      await sql`INSERT INTO pages (title, route_pattern, template_string, script_content, page_type, hashtags, active, is_public, created_by, updated_by) VALUES (${title}, ${route}, ${template}, ${script}, ${type}, ${pageTagsJson}, true, false, ${user.id}, ${user.id})`;
     }
     insertedPages++;
   };
 
   if (options.pageList) {
     const pageTitle = entityNameStr;
-    await insertPage(pageTitle, `generated/${slug}`, listPageTemplate, listPageScript, 'regular');
+    await insertPage(pageTitle, `/generated/${slug}`, listPageTemplate, listPageScript, 'regular');
   }
 
   // Cache temizleme

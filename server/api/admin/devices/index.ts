@@ -67,12 +67,7 @@ export default defineEventHandler(async (event) => {
         LIMIT $${queryParams.length + 1} OFFSET $${queryParams.length + 2}
       `, [...queryParams, limit, offset]);
 
-      return {
-        records: pagedRes,
-        total: totalCount,
-        page: page,
-        limit: limit
-      };
+      return { success: true, data: pagedRes, pagination: { total: totalCount, page, limit } };
     } catch (error: any) {
       throw createError({ statusCode: 500, message: 'errors.internalError' });
     }
@@ -85,7 +80,8 @@ export default defineEventHandler(async (event) => {
       const records = body.records;
       const user = event.context.user;
 
-      if (!user || !user.is_admin) throw createError({ statusCode: 403, message: 'errors.unauthorized' });
+      if (!user) throw createError({ statusCode: 401, message: 'errors.loginRequired' });
+  if (!user.is_admin) throw createError({ statusCode: 403, message: 'errors.forbiddenAdminOnly' });
 
       if (!Array.isArray(records) || records.length === 0) {
         throw createError({ statusCode: 400, message: 'errors.notFound' });
@@ -140,8 +136,8 @@ export default defineEventHandler(async (event) => {
       removeDeviceFromCache(event.context.tenantSlug, body.deviceId.trim());
       return { success: true, data: result[0] };
     } catch (error: any) {
-      if (error.code === '23505') throw createError({ statusCode: 400, message: 'errors.deviceDuplicate' });
-      throw createError({ statusCode: 500, message: error.message });
+      if (error.code === '23505' || (error.message && error.message.includes('UNIQUE constraint failed'))) throw createError({ statusCode: 400, message: 'errors.deviceDuplicate' });
+      throw createError({ statusCode: 500, message: 'errors.internalError' });
     }
   }
 });

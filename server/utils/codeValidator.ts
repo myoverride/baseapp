@@ -40,7 +40,7 @@ export async function validateJS(code: string, sourceName?: string): Promise<voi
         const offset = node.expression.start;
         // calculate line based on codeForOxc, minus 1 for the dummy wrap line
         const line = codeForOxc.slice(0, offset).split('\n').length - 1;
-        throw { key: 'errors.syntaxErrorLine', params: { line, msg: `Bilinmeyen değişken veya typo: ${node.expression.name}` } };
+        throw { key: 'errors.syntaxErrorLine', params: { line, msg: 'error.unknownVariable|' + node.expression.name } };
       }
       for (const key in node) {
         if (typeof node[key] === 'object') {

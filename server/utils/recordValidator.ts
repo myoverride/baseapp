@@ -79,11 +79,8 @@ export const validateRecordData = (payload: any, schema: any) => {
     const isRequired = config.rules?.required;
 
     // --- 1. ZORUNLULUK (REQUIRED) KONTROLÜ ---
-    // Boolean özel durumu: zorunluysa 'true' olmak zorunda
-    if (isRequired && config.type === 'boolean' && String(value) !== 'true' && value !== true) {
-      errors.push({ field: fieldName, message: 'error.fieldMustBeConfirmed' });
-      continue;
-    }
+    // Boolean alanlarda required: true demek alanın null veya tanımsız (undefined) olmamasını gerektirir, 
+    // mutlak surette 'true' olmasını DİYATMAZ. (Kullanıcı false/hayır seçebilir)
 
     if (isRequired && (value === null || value === undefined || value === '')) {
       errors.push({ field: fieldName, message: 'error.fieldIsRequired' });

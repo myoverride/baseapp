@@ -4,7 +4,6 @@ import bcrypt from 'bcryptjs';
 import { createRequire } from 'module';
 import { resolve, join } from 'path';
 import fs from 'fs';
-import { transpileQueryAndParams } from './sqlTranspiler';
 /*
  * Worker Process Execution Script (DAEMON)
  * 
@@ -43,6 +42,13 @@ process.on('message', (msg) => {
     }
   } else if (msg.type === 'mqtt') {
     mqttEmitter(msg.topic, msg.payload);
+  } else if (msg.type === 'update_globals') {
+    if (workerData && msg.globalsObj) {
+      if (!workerData.globalsObj) workerData.globalsObj = {};
+      const target = workerData.globalsObj;
+      for (const k of Object.keys(target)) delete target[k];
+      Object.assign(target, msg.globalsObj);
+    }
   }
 });
 
@@ -91,7 +97,6 @@ async function executeInWorker() {
     });
   };
 
-  // Preserve expected db wrapper logic for custom sql strings, passing everything to main thread via RPC
   const sql = async (strings, ...values) => {
     return callMainThread('db.query', { strings, values });
   };
@@ -100,6 +105,15 @@ async function executeInWorker() {
   };
   sql.begin = async () => { throw new Error("db.begin() not supported in worker."); };
   sql.json = (val) => JSON.stringify(val);
+
+  const telemetrySql = async (strings, ...values) => {
+    return callMainThread('telemetryDb.query', { strings, values });
+  };
+  telemetrySql.unsafe = async (query, params = []) => {
+    return callMainThread('telemetryDb.unsafe', { query, params });
+  };
+
+  const workerGlobals = workerData.globalsObj || {};
 
   const contextObj = {
     payload: workerData.payload || null,
@@ -127,17 +141,17 @@ async function executeInWorker() {
     },
     publishWS: (path, payload) => callMainThread('publishWS', { path, payload }),
     tAsync: (args) => callMainThread('tAsync', { args }),
-    telemetryDb: {
-      unsafe: async (query, params = []) => callMainThread('telemetryDb.unsafe', { query, params })
-    },
+    telemetryDb: telemetrySql,
     publishMQTT: (topic, message) => callMainThread('publishMQTT', { topic, message }),
     subscribeMQTT: (cb) => mqttCallbacks.push(cb),
     sendEmail: (options) => callMainThread('sendEmail', { options }),
     readModbusData: (ip, port, unitId, startAddress, length, type = 'holding', dataType = 'uint16') => callMainThread('readModbusData', { ip, port, unitId, startAddress, length, type, dataType }),
     writeModbusData: (ip, port, unitId, address, value, dataType = 'uint16') => callMainThread('writeModbusData', { ip, port, unitId, address, value, dataType }),
-    useUtil: async (utilName) => async (...args) => callMainThread('useUtil', { utilName, args }),
-    utils: new Proxy({}, {
-      get: (_, prop) => async (...args) => callMainThread('useUtil', { utilName: prop, args })
+    globals: new Proxy(workerGlobals, {
+      get: (target, prop) => {
+        if (prop in target) return target[prop];
+        return async (...args) => callMainThread('runGlobal', { utilName: prop, args })
+      }
     })
   };
 

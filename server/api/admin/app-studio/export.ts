@@ -18,12 +18,12 @@ export default defineEventHandler(async (event) => {
   const components: Record<string, any[]> = {};
 
   const tables = [
-    'system_variables',
+    'globals',
     'roles',
     'users',
     'languages',
     'translation_keys',
-    'utils',
+
     'entities',
     'records',
     'endpoints',
@@ -55,24 +55,66 @@ export default defineEventHandler(async (event) => {
         `;
         const recs = await sql.unsafe(query, likeTags);
         const ents = await sql.unsafe(`SELECT id, slug, schema FROM entities`);
+        const entityMap = new Map<string, any>();
+        const entityPrimaryKeys = new Map<number, string>();
+        for (const ent of ents) {
+            entityMap.set(ent.slug, ent);
+            const targetSchema = typeof ent.schema === 'string' ? JSON.parse(ent.schema) : (ent.schema || {});
+            ent.parsedSchema = targetSchema;
+            for (const [tk, tdef] of Object.entries(targetSchema) as any) {
+                if (tdef.isPrimary) { entityPrimaryKeys.set(ent.id, tk); break; }
+            }
+        }
+        
+        const neededTargetIds = new Set<number>();
+        const parsedRecsData = new Map<number, any>();
+        
         for (const rec of recs) {
-           const dataObj = typeof rec.data === 'string' ? JSON.parse(rec.data) : (rec.data || {});
-           const ent = ents.find((e: any) => e.slug === rec.entity_slug);
-           if (ent) {
-              const schema = typeof ent.schema === 'string' ? JSON.parse(ent.schema) : (ent.schema || {});
-              for (const [key, def] of Object.entries(schema) as any) {
-                 if (def.type === 'relation' && dataObj[key]) {
-                    const targetId = dataObj[key];
-                    try {
-                       const strValRes = await sql.unsafe(`SELECT val_str FROM record_fields WHERE record_id = $1 AND val_str IS NOT NULL LIMIT 1`, [targetId]);
-                       if (strValRes.length > 0) {
-                          dataObj[key] = strValRes[0].val_str;
-                       }
-                    } catch(e) {}
-                 }
-              }
-              rec.data = JSON.stringify(dataObj);
-           }
+            const dataObj = typeof rec.data === 'string' ? JSON.parse(rec.data) : (rec.data || {});
+            parsedRecsData.set(rec.id, dataObj);
+            const ent = entityMap.get(rec.entity_slug);
+            if (ent) {
+                for (const [key, def] of Object.entries(ent.parsedSchema) as any) {
+                     if (def.type === 'relation' && dataObj[key]) {
+                         neededTargetIds.add(Number(dataObj[key]));
+                     }
+                }
+            }
+        }
+        
+        const relationData = new Map<number, Map<string, string>>();
+        const targetIdsArr = Array.from(neededTargetIds);
+        const chunkSize = 500;
+        for (let i = 0; i < targetIdsArr.length; i += chunkSize) {
+            const chunk = targetIdsArr.slice(i, i + chunkSize);
+            const placeholders = chunk.map(() => '?').join(',');
+            const fieldsRes = await sql.unsafe(`SELECT record_id, key, val_str FROM record_fields WHERE record_id IN (${placeholders}) AND val_str IS NOT NULL`, chunk);
+            for (const row of fieldsRes) {
+                if (!relationData.has(row.record_id)) relationData.set(row.record_id, new Map());
+                relationData.get(row.record_id)!.set(row.key, row.val_str);
+            }
+        }
+        
+        for (const rec of recs) {
+            const dataObj = parsedRecsData.get(rec.id);
+            const ent = entityMap.get(rec.entity_slug);
+            if (ent) {
+                for (const [key, def] of Object.entries(ent.parsedSchema) as any) {
+                     if (def.type === 'relation' && dataObj[key]) {
+                         const targetId = Number(dataObj[key]);
+                         const targetKey = entityPrimaryKeys.get(def.targetEntityId);
+                         const rData = relationData.get(targetId);
+                         if (rData) {
+                             if (targetKey && rData.has(targetKey)) {
+                                 dataObj[key] = rData.get(targetKey);
+                             } else if (rData.size > 0) {
+                                 dataObj[key] = Array.from(rData.values())[0];
+                             }
+                         }
+                     }
+                }
+            }
+            rec.data = JSON.stringify(dataObj);
         }
         components[table] = recs;
       } else if (table === 'languages') {

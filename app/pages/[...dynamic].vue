@@ -12,7 +12,7 @@
     <v-card class="pa-8 text-center rounded-xl" elevation="0" border max-width="500" width="100%">
       <v-icon size="72" color="error" class="mb-4">mdi-alert-circle-outline</v-icon>
       <h2 class="text-h5 font-weight-bold mb-2">{{ $t('error.notFound') }}</h2>
-      <p class="text-body-1 text-grey-darken-1 mb-6">{{ $t(error) }}</p>
+      <p class="text-body-1 text-medium-emphasis mb-6">{{ $t(error) }}</p>
       <v-btn to="/" prepend-icon="mdi-home" size="large" rounded="pill" :color="color" elevation="0" class="px-8 text-none font-weight-bold">
         {{ $t('common.home') }}
       </v-btn>
@@ -33,7 +33,7 @@ import { useI18n } from 'vue-i18n';
 
 const { t } = useI18n();
 const { $localize } = useNuxtApp();
-const { primaryColor: color } = useSysVars();
+const { primaryColor: color } = useGlobals();
 const route = useRoute();
 const pageData = ref<any>(null);
 const error = ref<string | null>(null);
@@ -75,7 +75,8 @@ onMounted(async () => {
       pageData.value = { ...matchedPage, routeParams };
     } else {
       // If not in cache or cache is empty, fallback to server fetch just in case
-      const data = await $fetch(`/api/pages/${slug}`);
+      const queryParams = route.query.tenant ? `?tenant=${route.query.tenant}` : '';
+      const data = await $fetch(`/api/pages/${slug}${queryParams}`);
       pageData.value = data;
     }
   } catch (e: any) {

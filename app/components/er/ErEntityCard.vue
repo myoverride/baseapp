@@ -1,10 +1,6 @@
 <template>
-  <div
-    class="er-entity-card"
-    :class="{ 'er-entity-card--selected': selected }"
-    :data-entity-id="entity.id"
-    ref="cardRef"
-  >
+  <div class="er-entity-card" :class="{ 'er-entity-card--selected': selected }" :data-entity-id="entity.id"
+    ref="cardRef">
     <!-- Header -->
     <div class="er-entity-header" :style="headerStyle" @dblclick.stop="$emit('editEntity', entity)">
       <div class="er-entity-header-content">
@@ -12,27 +8,12 @@
         <span class="er-entity-title">{{ $localize(entity.name) }}</span>
       </div>
       <div class="er-entity-header-actions">
-        <v-icon
-          size="13"
-          color="white"
-          class="er-header-btn"
-          @click.stop="$emit('addField', entity)"
-          :title="$t('common.addField')"
-        >mdi-plus</v-icon>
-        <v-icon
-          size="13"
-          color="white"
-          class="er-header-btn"
-          @click.stop="$emit('editEntity', entity)"
-          :title="$t('common.edit')"
-        >mdi-pencil</v-icon>
-        <v-icon
-          size="13"
-          color="white"
-          class="er-header-btn er-header-btn--danger"
-          @click.stop="$emit('deleteEntity', entity)"
-          :title="$t('common.delete')"
-        >mdi-delete</v-icon>
+        <v-icon size="13" color="white" class="er-header-btn" @click.stop="$emit('addField', entity)"
+          :title="$t('common.addField')">mdi-plus</v-icon>
+        <v-icon size="13" color="white" class="er-header-btn" @click.stop="$emit('editEntity', entity)"
+          :title="$t('common.edit')">mdi-pencil</v-icon>
+        <v-icon size="13" color="white" class="er-header-btn er-header-btn--danger"
+          @click.stop="$emit('deleteEntity', entity)" :title="$t('common.delete')">mdi-delete</v-icon>
       </div>
     </div>
 
@@ -44,15 +25,9 @@
 
     <!-- Fields -->
     <div class="er-entity-fields" v-if="fields.length > 0">
-      <ErFieldRow
-        v-for="(field, idx) in fields"
-        :key="field.name + '-' + idx"
-        :field="field"
-        :index="idx"
-        :entity-id="entity.id"
-        @edit="(f, i) => $emit('editField', entity, f, i)"
-        @delete="(f, i) => $emit('deleteField', entity, f, i)"
-      />
+      <ErFieldRow v-for="(field, idx) in fields" :key="field.name + '-' + idx" :field="field" :index="idx"
+        :entity-id="entity.id" @edit="(f, i) => $emit('editField', entity, f, i)"
+        @delete="(f, i) => $emit('deleteField', entity, f, i)" />
     </div>
     <div v-else class="er-entity-empty">
       <span class="text-grey text-caption">Alan yok</span>
@@ -61,19 +36,14 @@
     <!-- Footer: field count -->
     <div class="er-entity-footer">
       <span class="er-entity-count">{{ fields.length }} alan</span>
-      <v-icon
-        size="12"
-        :color="color"
-        class="er-footer-add"
-        @click.stop="$emit('addField', entity)"
-        :title="$t('common.addField')"
-      >mdi-plus-circle</v-icon>
+      <v-icon size="12" :color="color" class="er-footer-add" @click.stop="$emit('addField', entity)"
+        :title="$t('common.addField')">mdi-plus-circle</v-icon>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-const { primaryColor: color } = useSysVars();
+const { primaryColor: color } = useGlobals();
 const props = defineProps<{
   entity: any
   selected?: boolean
@@ -92,6 +62,16 @@ const cardRef = ref<HTMLElement | null>(null)
 
 // Entity color palette
 const entityColors = [
+  '#1565C0', '#2E7D32', '#6A1B9A', '#C62828',
+  '#00695C', '#E65100', '#283593', '#4E342E',
+  '#1565C0', '#2E7D32', '#6A1B9A', '#C62828',
+  '#00695C', '#E65100', '#283593', '#4E342E',
+  '#1565C0', '#2E7D32', '#6A1B9A', '#C62828',
+  '#00695C', '#E65100', '#283593', '#4E342E',
+  '#1565C0', '#2E7D32', '#6A1B9A', '#C62828',
+  '#00695C', '#E65100', '#283593', '#4E342E',
+  '#1565C0', '#2E7D32', '#6A1B9A', '#C62828',
+  '#00695C', '#E65100', '#283593', '#4E342E',
   '#1565C0', '#2E7D32', '#6A1B9A', '#C62828',
   '#00695C', '#E65100', '#283593', '#4E342E',
   '#00838F', '#AD1457', '#33691E', '#4527A0'
@@ -136,7 +116,7 @@ defineExpose({ cardRef, fields })
   background: #ffffff;
   border-radius: 8px;
   border: 1.5px solid #e0e0e0;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
   transition: box-shadow 0.2s ease, border-color 0.2s ease;
   display: flex;
   flex-direction: column;
@@ -145,13 +125,13 @@ defineExpose({ cardRef, fields })
 }
 
 .er-entity-card:hover {
-  box-shadow: 0 4px 16px rgba(0,0,0,0.12), 0 2px 4px rgba(0,0,0,0.06);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12), 0 2px 4px rgba(0, 0, 0, 0.06);
   border-color: #bdbdbd;
 }
 
 .er-entity-card--selected {
   border-color: #1565C0;
-  box-shadow: 0 0 0 2px rgba(21, 101, 192, 0.2), 0 4px 16px rgba(0,0,0,0.12);
+  box-shadow: 0 0 0 2px rgba(21, 101, 192, 0.2), 0 4px 16px rgba(0, 0, 0, 0.12);
 }
 
 /* Header */
@@ -180,7 +160,7 @@ defineExpose({ cardRef, fields })
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
 .er-entity-header-actions {

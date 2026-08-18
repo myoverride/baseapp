@@ -1,0 +1,464 @@
+[
+    {
+        "name": {
+            "tr": "Kapalı Zaman",
+            "en": "Off Time"
+        },
+        "slug": "off_time",
+        "schema": {
+            "personnel": {
+                "label": "{\"tr\":\"Personel\",\"en\":\"Personnel\"}",
+                "type": "relation",
+                "rules": {
+                    "required": true,
+                    "unique": false
+                },
+                "targetEntityId": 13,
+                "onDelete": "cascade",
+                "isPrimary": true,
+                "showInTable": true,
+                "_order": 0
+            },
+            "start_time": {
+                "label": "{\"tr\":\"Başlama Zamanı\",\"en\":\"Start Time\"}",
+                "type": "datetime",
+                "rules": {
+                    "required": true,
+                    "unique": false
+                },
+                "isPrimary": false,
+                "showInTable": true,
+                "_order": 1
+            },
+            "end_time": {
+                "label": "{\"tr\":\"Bitiş Zamanı\",\"en\":\"End Time\"}",
+                "type": "datetime",
+                "rules": {
+                    "required": true,
+                    "unique": false
+                },
+                "isPrimary": false,
+                "showInTable": true,
+                "_order": 2
+            },
+            "description": {
+                "label": "{\"tr\":\"Açıklama\",\"en\":\"Description\"}",
+                "type": "string",
+                "rules": {
+                    "required": false,
+                    "unique": false
+                },
+                "isPrimary": false,
+                "showInTable": true,
+                "_order": 3
+            }
+        },
+        "hashtags": []
+    },
+    {
+        "name": {
+            "tr": "Alınacak Hizmetler",
+            "en": "Appointment Services"
+        },
+        "slug": "appointment_services",
+        "schema": {
+            "appointment": {
+                "label": "{\"tr\":\"Randevu\",\"en\":\"Appointment\"}",
+                "type": "relation",
+                "rules": {
+                    "required": true,
+                    "unique": false
+                },
+                "targetEntityId": 16,
+                "onDelete": "cascade",
+                "isPrimary": true,
+                "showInTable": true,
+                "_order": 0
+            },
+            "service": {
+                "label": "{\"tr\":\"Hizmet\",\"en\":\"Service\"}",
+                "type": "relation",
+                "rules": {
+                    "required": true,
+                    "unique": false
+                },
+                "targetEntityId": 14,
+                "onDelete": "restrict",
+                "isPrimary": false,
+                "showInTable": true,
+                "_order": 1
+            }
+        },
+        "hashtags": []
+    },
+    {
+        "name": {
+            "tr": "Randevu",
+            "en": "Appointment"
+        },
+        "slug": "appointment",
+        "schema": {
+            "customer": {
+                "label": "{\"tr\":\"Müşteri\",\"en\":\"Customer\"}",
+                "type": "relation",
+                "rules": {
+                    "required": true,
+                    "unique": false
+                },
+                "targetEntityId": 15,
+                "onDelete": "cascade",
+                "isPrimary": true,
+                "showInTable": true,
+                "_order": 0
+            },
+            "personnel": {
+                "label": "{\"tr\":\"Personel\",\"en\":\"Personnel\"}",
+                "type": "relation",
+                "rules": {
+                    "required": true,
+                    "unique": false
+                },
+                "targetEntityId": 13,
+                "onDelete": "cascade",
+                "isPrimary": false,
+                "showInTable": true,
+                "_order": 1
+            },
+            "start_time": {
+                "label": "{\"tr\":\"Başlama Zamanı\",\"en\":\"Start Time\"}",
+                "type": "datetime",
+                "rules": {
+                    "required": true,
+                    "unique": false
+                },
+                "isPrimary": false,
+                "showInTable": true,
+                "_order": 2
+            },
+            "status": {
+                "label": "{\"tr\":\"Durum\",\"en\":\"Status\"}",
+                "type": "enum",
+                "rules": {
+                    "required": true,
+                    "unique": false
+                },
+                "options": [
+                    "{\"tr\":\"Onay Bekliyor\",\"en\":\"Pending\"}",
+                    "{\"tr\":\"Reddedildi\",\"en\":\"Denied\"}",
+                    "{\"tr\":\"Onaylandı\",\"en\":\"Approved\"}",
+                    "{\"tr\":\"İptal Edildi\",\"en\":\"Cancelled\"}",
+                    "{\"tr\":\"Gelinmedi\",\"en\":\"Absent\"}",
+                    "{\"tr\":\"Tamamlandı\",\"en\":\"Completed\"}"
+                ],
+                "isPrimary": false,
+                "showInTable": true,
+                "_order": 3
+            },
+            "note": {
+                "label": "{\"tr\":\"Not\",\"en\":\"Note\"}",
+                "type": "string",
+                "rules": {
+                    "required": false,
+                    "unique": false
+                },
+                "isPrimary": false,
+                "showInTable": true,
+                "_order": 4
+            }
+        },
+        "hashtags": []
+    },
+    {
+        "name": {
+            "tr": "Müşteri",
+            "en": "Customer"
+        },
+        "slug": "customer",
+        "schema": {
+            "full_name": {
+                "label": "{\"tr\":\"Tam Ad\",\"en\":\"Full Name\"}",
+                "type": "string",
+                "rules": {
+                    "required": true,
+                    "unique": false
+                },
+                "isPrimary": true,
+                "showInTable": true,
+                "_order": 0
+            },
+            "contact": {
+                "label": "{\"tr\":\"İletişim\",\"en\":\"Contact\"}",
+                "type": "string",
+                "rules": {
+                    "required": true,
+                    "unique": true
+                },
+                "isPrimary": false,
+                "showInTable": true,
+                "_order": 1
+            },
+            "gender": {
+                "label": "{\"tr\":\"Kadın Mı?\",\"en\":\"Is Female?\"}",
+                "type": "boolean",
+                "rules": {
+                    "required": true,
+                    "unique": false
+                },
+                "isPrimary": false,
+                "showInTable": true,
+                "_order": 2
+            }
+        },
+        "hashtags": []
+    },
+    {
+        "name": {
+            "tr": "Hizmet",
+            "en": "Service"
+        },
+        "slug": "service",
+        "schema": {
+            "name": {
+                "label": "{\"tr\":\"Ad\",\"en\":\"Name\"}",
+                "type": "string",
+                "rules": {
+                    "required": true,
+                    "unique": false
+                },
+                "isPrimary": true,
+                "showInTable": true,
+                "_order": 0
+            },
+            "estimated_time": {
+                "label": "{\"tr\":\"Tahmini Süre (dak)\",\"en\":\"Estimated Time (min)\"}",
+                "type": "number",
+                "rules": {
+                    "required": true,
+                    "unique": false,
+                    "custom": [
+                        {
+                            "type": "step",
+                            "value": "5",
+                            "message": "{\"tr\":\"5'in katları olmalı!\",\"en\":\"Must be multiples of five!\"}"
+                        }
+                    ]
+                },
+                "isPrimary": false,
+                "showInTable": true,
+                "_order": 1
+            },
+            "personnel": {
+                "label": "{\"tr\":\"Personel\",\"en\":\"Personnel\"}",
+                "type": "relation",
+                "rules": {
+                    "required": true,
+                    "unique": false
+                },
+                "targetEntityId": 13,
+                "onDelete": "restrict",
+                "isPrimary": false,
+                "showInTable": true,
+                "_order": 2
+            },
+            "active": {
+                "label": "{\"tr\":\"Aktif\",\"en\":\"Active\"}",
+                "type": "boolean",
+                "rules": {
+                    "required": false,
+                    "unique": false
+                },
+                "isPrimary": false,
+                "showInTable": true,
+                "_order": 3
+            }
+        },
+        "hashtags": []
+    },
+    {
+        "name": {
+            "tr": "Personel",
+            "en": "Personnel"
+        },
+        "slug": "personnel",
+        "schema": {
+            "full_name": {
+                "label": "{\"tr\":\"Tam Ad\",\"en\":\"Full Name\"}",
+                "type": "string",
+                "rules": {
+                    "required": true,
+                    "unique": false
+                },
+                "isPrimary": true,
+                "showInTable": true,
+                "_order": 0
+            },
+            "company": {
+                "label": "{\"tr\":\"İşletme\",\"en\":\"Company\"}",
+                "type": "relation",
+                "rules": {
+                    "required": true,
+                    "unique": false
+                },
+                "targetEntityId": 12,
+                "onDelete": "cascade",
+                "isPrimary": false,
+                "showInTable": true,
+                "_order": 1
+            },
+            "work_start": {
+                "label": "{\"tr\":\"Çalışma Başlangıcı\",\"en\":\"Work Start\"}",
+                "type": "time",
+                "rules": {
+                    "required": true,
+                    "unique": false
+                },
+                "isPrimary": false,
+                "showInTable": true,
+                "_order": 2
+            },
+            "work_end": {
+                "label": "{\"tr\":\"Çalışma Bitişi\",\"en\":\"Work End\"}",
+                "type": "time",
+                "rules": {
+                    "required": true,
+                    "unique": false
+                },
+                "isPrimary": false,
+                "showInTable": true,
+                "_order": 3
+            },
+            "gender": {
+                "label": "{\"tr\":\"Kadın Mı?\",\"en\":\"Is Female?\"}",
+                "type": "boolean",
+                "rules": {
+                    "required": true,
+                    "unique": false
+                },
+                "isPrimary": false,
+                "showInTable": true,
+                "_order": 4
+            },
+            "authorized": {
+                "label": "{\"tr\":\"Yetkili\",\"en\":\"Authorized\"}",
+                "type": "boolean",
+                "rules": {
+                    "required": false,
+                    "unique": false
+                },
+                "isPrimary": false,
+                "showInTable": true,
+                "_order": 5
+            }
+        },
+        "hashtags": []
+    },
+    {
+        "name": {
+            "tr": "İşletme",
+            "en": "Company"
+        },
+        "slug": "company",
+        "schema": {
+            "title": {
+                "label": "{\"tr\":\"Ünvan\",\"en\":\"Title\"}",
+                "type": "string",
+                "rules": {
+                    "required": true,
+                    "unique": false
+                },
+                "isPrimary": true,
+                "showInTable": true,
+                "_order": 0
+            },
+            "contact": {
+                "label": "{\"tr\":\"İletişim\",\"en\":\"Contact\"}",
+                "type": "string",
+                "rules": {
+                    "required": true,
+                    "unique": false
+                },
+                "isPrimary": false,
+                "showInTable": true,
+                "_order": 1
+            },
+            "address": {
+                "label": "{\"tr\":\"Adres\",\"en\":\"Address\"}",
+                "type": "string",
+                "rules": {
+                    "required": true,
+                    "unique": false
+                },
+                "isPrimary": false,
+                "showInTable": true,
+                "_order": 2
+            },
+            "location": {
+                "label": "{\"tr\":\"Konum\",\"en\":\"Location\"}",
+                "type": "json",
+                "rules": {
+                    "required": true,
+                    "unique": false,
+                    "custom": [
+                        {
+                            "type": "requiredKeys",
+                            "value": "latitude,longitude",
+                            "message": "{\"tr\":\"Enlem ve boylam doğru verilmelidir!\",\"en\":\"Latitude and longitude must be valid!\"}"
+                        }
+                    ]
+                },
+                "isPrimary": false,
+                "showInTable": true,
+                "_order": 3
+            },
+            "target": {
+                "label": "{\"tr\":\"Hedef Kitle\",\"en\":\"Target\"}",
+                "type": "enum",
+                "rules": {
+                    "required": true,
+                    "unique": false
+                },
+                "options": [
+                    "{\"tr\":\"Erkek\",\"en\":\"Man\"}",
+                    "{\"tr\":\"Kadın\",\"en\":\"Woman\"}",
+                    "{\"tr\":\"Karma\",\"en\":\"Unisex\"}"
+                ],
+                "isPrimary": false,
+                "showInTable": true,
+                "_order": 4
+            },
+            "dayoff": {
+                "label": "{\"tr\":\"Tatil Günü\",\"en\":\"Dayoff\"}",
+                "type": "enum",
+                "rules": {
+                    "required": true,
+                    "unique": false
+                },
+                "options": [
+                    "{\"tr\":\"Yok\",\"en\":\"None\"}",
+                    "{\"tr\":\"Pazartesi\",\"en\":\"Monday\"}",
+                    "{\"tr\":\"Salı\",\"en\":\"Tuesday\"}",
+                    "{\"tr\":\"Çarşamba\",\"en\":\"Wednesday\"}",
+                    "{\"tr\":\"Perşembe\",\"en\":\"Thursday\"}",
+                    "{\"tr\":\"Cuma\",\"en\":\"Friday\"}",
+                    "{\"tr\":\"Cumartesi\",\"en\":\"Saturday\"}",
+                    "{\"tr\":\"Pazar\",\"en\":\"Sunday\"}"
+                ],
+                "isPrimary": false,
+                "showInTable": true,
+                "_order": 5
+            },
+            "approved": {
+                "label": "{\"tr\":\"Onaylı\",\"en\":\"Approved\"}",
+                "type": "boolean",
+                "rules": {
+                    "required": false,
+                    "unique": false
+                },
+                "isPrimary": false,
+                "showInTable": true,
+                "_order": 6
+            }
+        },
+        "hashtags": []
+    }
+]

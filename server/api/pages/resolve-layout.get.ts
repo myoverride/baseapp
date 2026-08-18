@@ -34,7 +34,7 @@ export default defineEventHandler(async (event) => {
       // Check permissions for the page
       if (!p.is_public) {
         if (!user) {
-          unauthorizedError = createError({ statusCode: 401, message: tEvent(event, 'errors.loginRequired') });
+          unauthorizedError = createError({ statusCode: 401, message: 'errors.loginRequired' });
           continue;
         }
         if (!user.is_admin) {
@@ -44,7 +44,7 @@ export default defineEventHandler(async (event) => {
           const allowed = pageTags.some((tag: string) => allowedTags.includes(tag));
 
           if (!allowed) {
-            unauthorizedError = createError({ statusCode: 403, message: tEvent(event, 'errors.unauthorized') });
+            unauthorizedError = createError({ statusCode: 403, message: 'errors.unauthorized' });
             continue;
           }
         }

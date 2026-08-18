@@ -5,8 +5,11 @@ import { validateJS } from '../../../utils/codeValidator';
 
 export default defineEventHandler(async (event) => {
   const user = event.context.user;
-  if (!user || (!user.is_admin && !user.is_super_admin)) {
-    throw createError({ statusCode: 403, message: 'errors.unauthorized' });
+  if (!user) {
+    throw createError({ statusCode: 401, message: 'errors.loginRequired' });
+  }
+  if (!user.is_admin && !user.is_super_admin) {
+    throw createError({ statusCode: 403, message: 'errors.forbiddenAdminOnly' });
   }
   const method = getMethod(event);
   const sql = useDB(event.context.tenantSlug);
@@ -15,8 +18,8 @@ export default defineEventHandler(async (event) => {
     const query = getQuery(event);
     const type = query.type as string | undefined;
     const search = ((query.search as string) || '').replace(/^#/, '');
-    const page = parseInt(query.page as string) || 1;
-    const limit = Math.min(parseInt(query.limit as string) || 25, 100);
+    const page = Math.max(1, parseInt(query.page as string) || 1);
+    const limit = Math.max(1, parseInt(query.limit as string) || 25);
     const sortBy = (query.sortBy as string) || 'created_at';
     const sortOrder = (query.sortOrder as string) === 'asc' ? 'ASC' : 'DESC';
     const offset = (page - 1) * limit;
@@ -45,14 +48,14 @@ export default defineEventHandler(async (event) => {
           whereClause += ` AND ${sqlFilter.fragment}`;
           params.push(...sqlFilter.params);
         }
-      } catch(e) { }
+      } catch (e) { }
     }
 
     const countRes = await sql.unsafe(`SELECT COUNT(*) as c FROM workers ${whereClause}`, params);
-    
+
     const isExport = query.export === 'true';
-    const selectCols = isExport 
-      ? '*' 
+    const selectCols = isExport
+      ? '*'
       : 'id, name, type, cron_expression, autostart, active, status, error_msg, last_run_second, hashtags, created_at, updated_at';
 
     const records = await sql.unsafe(
@@ -60,24 +63,23 @@ export default defineEventHandler(async (event) => {
        FROM workers ${whereClause} ORDER BY ${safeSort} ${sortOrder} LIMIT ? OFFSET ?`,
       [...params, limit, offset]
     );
-
-    return { records, total: countRes[0]?.c || 0, page, limit };
+    return { success: true, data: records, pagination: { total: countRes[0]?.c || 0, page, limit } };
   }
 
   if (method === 'POST') {
     const body = await readBody(event);
-    
+
     // BULK IMPORT LOGIC
     if (body.records && Array.isArray(body.records)) {
       // PRE-SAVE VALIDATION (SHIELD)
       try {
         for (const rec of body.records) {
           if (rec.code) {
-             await validateJS(rec.code, `Worker: ${rec.name || 'Bilinmeyen'}`);
+            await validateJS(rec.code, `Worker: ${rec.name || 'Bilinmeyen'}`);
           }
         }
       } catch (err: any) {
-        throw createError({ statusCode: 400, message: err.key || err.message, data: err.params });
+        throw createError({ statusCode: 400, message: err.key || 'errors.databaseError', data: err.key ? err.params : undefined });
       }
 
       let importedCount = 0;
@@ -85,7 +87,7 @@ export default defineEventHandler(async (event) => {
         if (!rec.name) continue;
         const existing = await sql.unsafe('SELECT id FROM workers WHERE name = ?', [rec.name]);
         const hashtagsStr = typeof rec.hashtags === 'string' ? rec.hashtags : JSON.stringify(rec.hashtags || []);
-        
+
         if (existing.length > 0) {
           await sql.unsafe(`
             UPDATE workers SET type = ?, code = ?, cron_expression = ?, autostart = ?, active = ?, hashtags = ?, updated_by = ? WHERE id = ?
@@ -104,7 +106,7 @@ export default defineEventHandler(async (event) => {
         }
         importedCount++;
       }
-      
+
       import('../../../utils/history').then(m => m.saveHistory(event.context.tenantSlug, 'workers', 'import', { count: importedCount })).catch(console.error);
       import('../../../utils/workerManager').then(m => m.refreshCronCache()).catch(console.error);
       return { success: true, message: 'message.success' };
@@ -121,21 +123,24 @@ export default defineEventHandler(async (event) => {
       try {
         await validateJS(body.code, `Worker: ${body.name || 'Yeni'}`);
       } catch (err: any) {
-        throw createError({ statusCode: 400, message: err.key || err.message, data: err.params });
+        throw createError({ statusCode: 400, message: err.key || 'errors.databaseError', data: err.key ? err.params : undefined });
       }
     }
 
     const hashtagsStr = JSON.stringify(body.hashtags || []);
-    
-    await sql.unsafe(`
+
+    const insertRes = await sql.unsafe(`
       INSERT INTO workers (name, type, code, cron_expression, autostart, active, status, hashtags, created_by, updated_by)
       VALUES (?, ?, ?, ?, ?, ?, 'stopped', ?, ?, ?)
+      RETURNING *
     `, [
       body.name, body.type, body.code, body.cron_expression || null, body.autostart ? 1 : 0,
       body.active ? 1 : 0, hashtagsStr, user.id, user.id
     ]);
 
-    import('../../../utils/history').then(m => m.saveHistory(event.context.tenantSlug, 'workers', 'create', { name: body.name })).catch(console.error);
+    if (insertRes.length > 0) {
+      import('../../../utils/history').then(m => m.saveHistory(event.context.tenantSlug, 'workers', insertRes[0].id, insertRes[0])).catch(console.error);
+    }
     import('../../../utils/workerManager').then(m => m.refreshCronCache()).catch(console.error);
     return { success: true };
   }
