@@ -3,12 +3,6 @@ import {} from '../../../utils/globalsManager';
 
 export default defineEventHandler(async (event) => {
   const user = event.context.user;
-  if (!user) {
-    throw createError({ statusCode: 401, message: 'errors.loginRequired' });
-  }
-  if (!user.is_admin && !user.is_super_admin) {
-    throw createError({ statusCode: 403, message: 'errors.forbiddenAdminOnly' });
-  }
   const method = getMethod(event);
   const sql = useDB(event.context.tenantSlug);
   const id = event.context.params?.id;
@@ -20,6 +14,12 @@ export default defineEventHandler(async (event) => {
     const r = records[0];
     if (typeof r.hashtags === 'string') r.hashtags = JSON.parse(r.hashtags || '[]');
     if (typeof r.scope === 'string') r.scope = JSON.parse(r.scope || '[]');
+    
+    // Maske: Hash'li şifreleri arayüze gönderme
+    if (r.data_type === 'password' && r.hash_algorithm !== 'plain') {
+      r.value = ''; 
+    }
+    
     return r;
   }
 
@@ -49,27 +49,44 @@ export default defineEventHandler(async (event) => {
     const isUtil = globalType === 'util';
 
     const key = body.key;
-    const value = isVar ? (body.value || '') : null;
+    let value = isVar ? (body.value || '') : null;
     const code = isUtil ? (body.code || '') : null;
     const data_type = isVar ? (body.data_type || 'string') : null;
+    
+    const hashAlgo = data_type === 'password' ? (body.hash_algorithm || 'plain') : 'plain';
+    
+    // Eğer şifre alanıysa ve yeni değer girilmemişse (boş gelmişse veya *** ise), eski değeri koru
+    if (data_type === 'password' && (!value || value === '***')) {
+      const existingVal = await sql.unsafe('SELECT value FROM globals WHERE id = ?', [id]);
+      if (existingVal.length > 0) value = existingVal[0].value;
+    } else if (data_type === 'password' && value) {
+      // Yeni şifre girilmiş, hash algoritmasına göre şifrele
+      if (hashAlgo === 'bcrypt') {
+        const bcrypt = await import('bcryptjs');
+        value = await bcrypt.default.hash(value, 10);
+      } else if (hashAlgo === 'sha256') {
+        const crypto = await import('crypto');
+        value = crypto.createHash('sha256').update(value).digest('hex');
+      }
+    }
+
     const target = body.target || 'shared';
-    const is_public = body.is_public ? 1 : 0;
-    const is_secret = body.is_secret ? 1 : 0;
     const active = body.active !== undefined ? (body.active ? 1 : 0) : 1;
     const scope = isUtil ? (Array.isArray(body.scope) ? JSON.stringify(body.scope) : body.scope) : '[]';
-    const description = body.description || '';
     const hashtags = Array.isArray(body.hashtags) ? JSON.stringify(body.hashtags) : (body.hashtags || '[]');
+    const description = body.description || '';
+    const isSystem = user.is_super_admin ? 1 : 0;
 
     await sql.unsafe(`
       UPDATE globals SET 
-        key = ?, value = ?, code = ?, data_type = ?, target = ?,
-        is_public = ?, is_secret = ?, active = ?, scope = ?,
-        description = ?, hashtags = ?, updated_by = ?, updated_at = CURRENT_TIMESTAMP
+        key = ?, value = ?, code = ?, data_type = ?, hash_algorithm = ?, target = ?,
+        active = ?, scope = ?,
+        description = ?, hashtags = ?, updated_by = ?, system_modified = ?, updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
     `, [
-      key, value, code, data_type, target,
-      is_public, is_secret, active, scope,
-      description, hashtags, user.id, id
+      key, value, code, data_type, hashAlgo, target,
+      active, scope,
+      description, hashtags, user.id, isSystem, id
     ]);
 
     const updatedRec = await sql.unsafe('SELECT * FROM globals WHERE id = ?', [id]);

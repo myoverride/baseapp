@@ -374,7 +374,7 @@ const sendDeviceCommand = async () => {
       if ($toast) $toast.error(res.error || t('message.commandFailed'));
     }
     } catch (e: any) {
-          const errPayload = err?.data || e?.data;
+    const errPayload = e?.data;
     const isArr = Array.isArray(errPayload?.data);
     const errData = isArr ? errPayload.data[0] : (errPayload?.data || {});
     const errMsg = isArr ? errPayload.data[0].message : (errPayload?.message || 'errors.operationFailed');
@@ -475,7 +475,7 @@ const saveItem = async (payload: any) => {
     if ($toast) $toast.success(dialogMode.value === 'edit' ? t('message.success') : t('message.success'));
     crudTable.value?.loadItems();
   } catch (e: any) {
-        const errPayload = err?.data || e?.data;
+        const errPayload = e?.data;
     const isArr = Array.isArray(errPayload?.data);
     const errData = isArr ? errPayload.data[0] : (errPayload?.data || {});
     const errMsg = isArr ? errPayload.data[0].message : (errPayload?.message || 'errors.operationFailed');
@@ -487,10 +487,10 @@ const handleDelete = async (item: any) => {
   if (!confirm(t('confirm.delete'))) return;
   try {
     await $fetch(`/api/admin/devices/${item.id}`, { method: 'DELETE' });
-    if ($toast) $toast.warning(t('message.entityDeleted', { name: t('entity.device') }));
+    if ($toast) $toast.success(t('message.deleted'));
     crudTable.value?.loadItems();
   } catch (e: any) {
-        const errPayload = err?.data || e?.data;
+        const errPayload = e?.data;
     const isArr = Array.isArray(errPayload?.data);
     const errData = isArr ? errPayload.data[0] : (errPayload?.data || {});
     const errMsg = isArr ? errPayload.data[0].message : (errPayload?.message || 'errors.operationFailed');

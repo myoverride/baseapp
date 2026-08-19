@@ -55,9 +55,10 @@ const reqMethod = payload.method;
 if (reqMethod !== 'POST') return;
 const body = payload.body || {};
 const reqUser = context.user;
+const isSystem = reqUser?.is_super_admin ? 1 : 0;
 
 try {
-  const result = await recordManager.createRecord('${slug}', body, reqUser?.id);
+  const result = await recordManager.createRecord('${slug}', body, reqUser?.id, isSystem);
   return { respond: true, status: 200, headers: { 'Content-Type': 'application/json' }, body: result };
 } catch(e) {
   return { respond: true, status: e.statusCode || 500, headers: { 'Content-Type': 'application/json' }, body: { message: (e.statusCode && e.statusCode < 500) ? (e.message || e) : 'errors.internalError', errors: e.data } };
@@ -71,9 +72,10 @@ const reqId = payload.params?.id;
 if (!reqId || reqId === 'bulk') return;
 const body = payload.body || {};
 const reqUser = context.user;
+const isSystem = reqUser?.is_super_admin ? 1 : 0;
 
 try {
-  const result = await recordManager.updateRecord('${slug}', reqId, body, reqUser?.id);
+  const result = await recordManager.updateRecord('${slug}', reqId, body, reqUser?.id, isSystem);
   return { respond: true, status: 200, headers: { 'Content-Type': 'application/json' }, body: result };
 } catch(e) {
   return { respond: true, status: e.statusCode || 500, headers: { 'Content-Type': 'application/json' }, body: { message: (e.statusCode && e.statusCode < 500) ? (e.message || e) : 'errors.internalError', errors: e.data } };
@@ -123,14 +125,16 @@ if (reqMethod === 'POST') {
 }
 `.trim();
 
+    const isSystem = user.is_super_admin ? 1 : 0;
+
     const insertMw = async (name: string, route: string, code: string, actionTag: string) => {
       const specificTags = [slug, slug + actionTag];
       const tagsJson = JSON.stringify(specificTags);
       const existing = await sql`SELECT id FROM endpoints WHERE name = ${name} AND type = 'http'`;
       if (existing.length > 0) {
-        await sql`UPDATE endpoints SET route_pattern=${route}, code=${code}, hashtags=${tagsJson}, active=true, updated_at=CURRENT_TIMESTAMP WHERE name=${name} AND type='http'`;
+        await sql`UPDATE endpoints SET route_pattern=${route}, code=${code}, hashtags=${tagsJson}, active=true, updated_at=CURRENT_TIMESTAMP, updated_by=${user.id}, system_modified=${isSystem} WHERE name=${name} AND type='http'`;
       } else {
-        await sql`INSERT INTO endpoints (name, type, route_pattern, code, hashtags, active, is_public, created_by, updated_by) VALUES (${name}, 'http', ${route}, ${code}, ${tagsJson}, true, false, ${user.id}, ${user.id})`;
+        await sql`INSERT INTO endpoints (name, type, route_pattern, code, hashtags, active, is_public, created_by, updated_by, system_created, system_modified) VALUES (${name}, 'http', ${route}, ${code}, ${tagsJson}, true, false, ${user.id}, ${user.id}, ${isSystem}, ${isSystem})`;
       }
       insertedMiddlewares++;
     };
@@ -164,9 +168,9 @@ if (reqMethod === 'POST') {
       const pageTagsJson = JSON.stringify(pageTags);
       const existing = await sql`SELECT id FROM pages WHERE route_pattern = ${route}`;
       if (existing.length > 0) {
-        await sql`UPDATE pages SET title=${title}, template_string=${template}, script_content=${script}, page_type=${type}, hashtags=${pageTagsJson}, updated_at=CURRENT_TIMESTAMP WHERE route_pattern=${route}`;
+        await sql`UPDATE pages SET title=${title}, template_string=${template}, script_content=${script}, page_type=${type}, hashtags=${pageTagsJson}, updated_at=CURRENT_TIMESTAMP, updated_by=${user.id}, system_modified=${isSystem} WHERE route_pattern=${route}`;
       } else {
-        await sql`INSERT INTO pages (title, route_pattern, template_string, script_content, page_type, hashtags, active, is_public, created_by, updated_by) VALUES (${title}, ${route}, ${template}, ${script}, ${type}, ${pageTagsJson}, true, false, ${user.id}, ${user.id})`;
+        await sql`INSERT INTO pages (title, route_pattern, template_string, script_content, page_type, hashtags, active, is_public, created_by, updated_by, system_created, system_modified) VALUES (${title}, ${route}, ${template}, ${script}, ${type}, ${pageTagsJson}, true, false, ${user.id}, ${user.id}, ${isSystem}, ${isSystem})`;
       }
       insertedPages++;
     };

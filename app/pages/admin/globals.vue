@@ -38,7 +38,7 @@
 
       <template v-slot:item.value="{ item }">
         <span v-if="item.type === 'variable'">
-          <span v-if="item.is_secret" class="text-grey">***</span>
+          <span v-if="item.data_type === 'password'" class="text-grey">***</span>
           <span v-else-if="item.value" class="text-truncate"
             style="max-width: 200px; display: inline-block; vertical-align: bottom;">
             {{ String(item.value).length > 50 ? String(item.value).substring(0, 50) + '...' : item.value }}
@@ -58,12 +58,6 @@
       <template v-slot:item.active="{ item }">
         <v-icon :color="item.active ? 'success' : 'error'">
           {{ item.active ? 'mdi-check-circle' : 'mdi-close-circle' }}
-        </v-icon>
-      </template>
-
-      <template v-slot:item.is_public="{ item }">
-        <v-icon :color="item.is_public ? 'success' : 'grey'">
-          {{ item.is_public ? 'mdi-earth' : 'mdi-lock' }}
         </v-icon>
       </template>
 
@@ -98,7 +92,7 @@
       :title="dialogMode === 'create' ? $t('common.add') : $t('common.edit')" :initial-data="initialFormData" fullscreen
       @save="save">
       <template #default="{ formData }">
-        <div class="d-flex flex-column fill-height bg-white">
+        <div class="d-flex flex-column fill-height">
           <v-row class="mt-4 flex-grow-0" density="compact">
             <v-col cols="12" md="3">
               <v-select v-model="formData.type"
@@ -123,14 +117,23 @@
           <v-row class="mt-2 flex-grow-0" density="compact" v-if="formData.type === 'variable'">
             <v-col cols="12" md="2">
               <v-select v-model="formData.data_type"
-                :items="[{ title: 'String', value: 'string' }, { title: 'Number', value: 'number' }, { title: 'Boolean', value: 'boolean' }, { title: 'JSON', value: 'json' }, { title: 'Color', value: 'color' }, { title: 'Date', value: 'date' }, { title: 'Time', value: 'time' }]"
+                :items="[{ title: 'String', value: 'string' }, { title: 'Number', value: 'number' }, { title: 'Boolean', value: 'boolean' }, { title: 'JSON', value: 'json' }, { title: 'Color', value: 'color' }, { title: 'Date', value: 'date' }, { title: 'Time', value: 'time' }, { title: 'Datetime', value: 'datetime' }, { title: 'Password', value: 'password' }, { title: 'Array', value: 'array' }, { title: 'UUID', value: 'uuid' }]"
                 item-title="title" item-value="value" :label="$t('field.dataType')" variant="outlined" density="compact"
                 hide-details></v-select>
             </v-col>
             <v-col cols="12" md="10">
-              <v-text-field v-if="formData.data_type === 'string' || formData.data_type === 'number'"
+              <v-text-field v-if="formData.data_type === 'password'"
+                v-model="formData.value" 
+                :label="$t('common.value')"
+                :type="formData.hash_algorithm === 'plain' ? (showPassword ? 'text' : 'password') : 'password'"
+                :placeholder="dialogMode === 'edit' && formData.hash_algorithm !== 'plain' ? 'Değiştirmek için yeni şifre girin (Gizli)' : ''"
+                :append-inner-icon="formData.hash_algorithm === 'plain' ? (showPassword ? 'mdi-eye-off' : 'mdi-eye') : undefined"
+                @click:append-inner="showPassword = !showPassword"
+                variant="outlined" density="compact" hide-details></v-text-field>
+
+              <v-text-field v-else-if="formData.data_type === 'string' || formData.data_type === 'number' || formData.data_type === 'uuid'"
                 v-model="formData.value" :label="$t('common.value')"
-                :type="formData.is_secret ? 'password' : (formData.data_type === 'number' ? 'number' : 'text')"
+                :type="formData.data_type === 'number' ? 'number' : 'text'"
                 variant="outlined" density="compact" hide-details></v-text-field>
 
               <v-switch v-else-if="formData.data_type === 'boolean'" v-model="formData.value" :true-value="'true'"
@@ -157,6 +160,23 @@
               <v-text-field v-else-if="formData.data_type === 'time'" v-model="formData.value"
                 :label="$t('common.value')" type="time" variant="outlined" density="compact" hide-details
                 style="max-width: 250px"></v-text-field>
+
+              <v-text-field v-else-if="formData.data_type === 'datetime'" v-model="formData.value"
+                :label="$t('common.value')" type="datetime-local" variant="outlined" density="compact" hide-details
+                style="max-width: 250px"></v-text-field>
+
+              <v-combobox v-else-if="formData.data_type === 'array'" v-model="formData.value"
+                :label="$t('common.value')" multiple chips variant="outlined" density="compact" hide-details></v-combobox>
+            </v-col>
+          </v-row>
+          
+          <v-row class="mt-2 flex-grow-0" density="compact" v-if="formData.type === 'variable' && formData.data_type === 'password'">
+            <v-col cols="12" md="6">
+              <v-select v-model="formData.hash_algorithm" :items="[
+                { title: $t('common.plainText'), value: 'plain' },
+                { title: $t('field.bcrypt'), value: 'bcrypt' },
+                { title: $t('field.sha256'), value: 'sha256' }
+              ]" item-title="title" item-value="value" :label="$t('field.hashAlgorithm')" variant="outlined" density="compact" hide-details></v-select>
             </v-col>
           </v-row>
 
@@ -171,15 +191,8 @@
             </v-col>
           </v-row>
           <v-row class="mt-2 mb-2 flex-grow-0" density="compact">
+
             <v-col cols="auto" class="py-0">
-              <v-switch v-model="formData.is_public" :label="$t('common.public')" color="primary" density="compact"
-                hide-details></v-switch>
-            </v-col>
-            <v-col cols="auto" class="py-0" v-if="formData.type === 'variable'">
-              <v-switch v-model="formData.is_secret" :label="$t('field.isSecret')" color="warning" density="compact"
-                hide-details></v-switch>
-            </v-col>
-            <v-col cols="auto" class="py-0" v-if="formData.type === 'util'">
               <v-switch v-model="formData.active" :label="$t('common.active')" color="success" density="compact"
                 hide-details></v-switch>
             </v-col>
@@ -301,6 +314,7 @@ const testPayload = ref('[\n  "arg1",\n  "arg2"\n]');
 const testResult = ref('');
 const isTesting = ref(false);
 const monacoTheme = ref('vs-dark');
+const showPassword = ref(false);
 
 const handleHistorySelect = (data: any) => {
   if (data && data.code !== undefined && itemDialogRef.value) {
@@ -398,7 +412,6 @@ const columns = computed<any[]>(() => [
   { key: 'value', title: t('common.value'), sortable: false, width: '15%' },
   { key: 'target', title: t('common.target'), sortable: true, width: '10%' },
   { key: 'active', title: t('common.active'), sortable: true, width: '7%', align: 'center' },
-  { key: 'is_public', title: t('common.public'), sortable: true, width: '7%', align: 'center' },
   { key: 'hashtags', title: t('field.hashtags'), sortable: false, width: '10%' },
   { key: 'info', title: t('common.info') || 'Info', sortable: false, width: '5%', align: 'center' }
 ]);
@@ -450,9 +463,8 @@ export default async function(ctx, ...args) {
   
 }`,
     data_type: 'string',
+    hash_algorithm: 'plain',
     target: 'shared',
-    is_public: false,
-    is_secret: false,
     protected: false,
     active: true,
     scope: [],
@@ -467,10 +479,18 @@ const openEditDialog = async (item: any) => {
   try {
     const detail = await $fetch(`/api/admin/globals/${item.id}`) as any;
     initialFormData.value = { ...detail };
-    initialFormData.value.is_public = !!detail.is_public;
-    initialFormData.value.is_secret = !!detail.is_secret;
     initialFormData.value.active = !!detail.active;
     initialFormData.value.protected = !!detail.protected;
+    initialFormData.value.hash_algorithm = detail.hash_algorithm || 'plain';
+    
+    if (detail.data_type === 'array') {
+      try {
+        initialFormData.value.value = JSON.parse(detail.value || '[]');
+      } catch (e) {
+        initialFormData.value.value = [];
+      }
+    }
+    
     if (typeof initialFormData.value.hashtags === 'string') {
       initialFormData.value.hashtags = JSON.parse(initialFormData.value.hashtags || '[]');
     }
@@ -507,7 +527,7 @@ const handleDelete = async (item: any) => {
 
   try {
     await $fetch(`/api/admin/globals/${item.id}`, { method: 'DELETE' });
-    if ($toast) $toast.warning(t('message.entityDeleted', { name: 'Global' }));
+    if ($toast) $toast.success(t('message.deleted'));
     crudTable.value?.loadItems();
   } catch (err: any) {
     if ($toast) $toast.error(t(err.data?.message || 'errors.operationFailed', err.data?.data || {}));

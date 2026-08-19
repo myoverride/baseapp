@@ -57,10 +57,13 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: e?.statusCode || 400, message: e?.message || 'errors.validationFailed' });
     }
 
+    const isSystem = event.context.user?.is_super_admin ? 1 : 0;
+    const userId = event.context.user?.id || null;
+
     try {
       const result = await sql`
         UPDATE entities 
-        SET name = ${body.name}, slug = ${body.slug}, schema = ${sql.json(body.schema)}, hashtags = ${sql.json(body.hashtags || [])}, updated_at = CURRENT_TIMESTAMP 
+        SET name = ${body.name}, slug = ${body.slug}, schema = ${sql.json(body.schema)}, hashtags = ${sql.json(body.hashtags || [])}, updated_at = CURRENT_TIMESTAMP, updated_by = ${userId}, system_modified = ${isSystem} 
         WHERE id = ${id} 
         RETURNING *
       `;

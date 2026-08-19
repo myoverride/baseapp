@@ -8,12 +8,18 @@ export default defineNuxtPlugin(async (_nuxtApp) => {
       const { data, error } = await useFetch('/api/auth/me', { headers: useRequestHeaders(['cookie']) });
       
       if (error.value) {
-        // Network error or 500 error
-        const cachedUser = await getCachedData('user');
-        if (cachedUser) {
-          user.value = cachedUser;
-        } else {
+        if (error.value.statusCode === 401 || error.value.status === 401) {
+          // Explicitly unauthorized, clear everything
           user.value = null;
+          await setCachedData('user', null);
+        } else {
+          // Network error or 500 error, safe to fallback to offline cache
+          const cachedUser = await getCachedData('user');
+          if (cachedUser) {
+            user.value = cachedUser;
+          } else {
+            user.value = null;
+          }
         }
       } else if (data.value && (data.value as any).success) {
         user.value = (data.value as any).user;

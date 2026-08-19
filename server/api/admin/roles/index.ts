@@ -4,12 +4,7 @@ import { buildGenericFilter } from '../../../utils/queryBuilder';
 
 export default defineEventHandler(async (event) => {
   const user = event.context.user;
-  if (!user) {
-    throw createError({ statusCode: 401, message: 'errors.loginRequired' });
-  }
-  if (!user.is_admin) {
-    throw createError({ statusCode: 403, message: 'errors.forbiddenAdminOnly' });
-  }
+
 
   const sql = useDB(event.context.tenantSlug);
   const method = getMethod(event);
@@ -70,6 +65,7 @@ export default defineEventHandler(async (event) => {
 
       let updatedCount = 0;
       let insertedCount = 0;
+      const isSystem = user.is_super_admin ? 1 : 0;
 
       for (const rec of records) {
         if (!rec.name) continue;
@@ -83,14 +79,15 @@ export default defineEventHandler(async (event) => {
                   menu_list = ${sql.json(rec.menu_list || [])}, 
                   hashtags = ${sql.json(rec.hashtags || [])},
                   updated_at = CURRENT_TIMESTAMP,
-                  updated_by = ${user.id}
+                  updated_by = ${user.id},
+                  system_modified = ${isSystem}
               WHERE name = ${rec.name}
             `;
           updatedCount++;
         } else {
           await sql`
-              INSERT INTO roles (name, allowed_tags, home_page, menu_list, hashtags, created_by, updated_by) 
-              VALUES (${rec.name}, ${sql.json(rec.allowed_tags || [])}, ${rec.home_page || null}, ${sql.json(rec.menu_list || [])}, ${sql.json(rec.hashtags || [])}, ${user.id}, ${user.id})
+              INSERT INTO roles (name, allowed_tags, home_page, menu_list, hashtags, created_by, updated_by, system_created, system_modified) 
+              VALUES (${rec.name}, ${sql.json(rec.allowed_tags || [])}, ${rec.home_page || null}, ${sql.json(rec.menu_list || [])}, ${sql.json(rec.hashtags || [])}, ${user.id}, ${user.id}, ${isSystem}, ${isSystem})
             `;
           insertedCount++;
         }
@@ -101,9 +98,10 @@ export default defineEventHandler(async (event) => {
 
     if (!body.name) throw createError({ statusCode: 400, message: 'errors.validationFailed' });
 
+    const isSystem = user.is_super_admin ? 1 : 0;
     const res = await sql`
-      INSERT INTO roles (name, allowed_tags, home_page, menu_list, hashtags, created_by, updated_by)
-      VALUES (${body.name}, ${sql.json(body.allowed_tags || [])}, ${body.home_page || null}, ${sql.json(body.menu_list || [])}, ${sql.json(body.hashtags || [])}, ${user.id}, ${user.id})
+      INSERT INTO roles (name, allowed_tags, home_page, menu_list, hashtags, created_by, updated_by, system_created, system_modified)
+      VALUES (${body.name}, ${sql.json(body.allowed_tags || [])}, ${body.home_page || null}, ${sql.json(body.menu_list || [])}, ${sql.json(body.hashtags || [])}, ${user.id}, ${user.id}, ${isSystem}, ${isSystem})
       RETURNING *
     `;
     return res[0];

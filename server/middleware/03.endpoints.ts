@@ -63,9 +63,14 @@ export default defineEventHandler(async (event) => {
     }
 
     // Parametreleri temizle (Radix3 payload propertysini dahil etme)
-    const cleanParams: Record<string, string> = {};
-    for (const key of Object.keys(params)) {
-      if (key !== 'payload') cleanParams[key] = params[key];
+    const cleanParams: Record<string, any> = {};
+    if (match.params) {
+      Object.assign(cleanParams, match.params);
+    }
+    for (const key of Object.keys(match)) {
+      if (key !== 'payload' && key !== 'params') {
+        cleanParams[key] = match[key];
+      }
     }
     
     event.context.params = { ...event.context.params, ...cleanParams };

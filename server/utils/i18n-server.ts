@@ -15,21 +15,14 @@ export async function initI18nCache(force = false) {
   try {
     // 1. Load Master Translations
     const masterSql = useDB('master');
-    const masterTrans = await masterSql`SELECT code as locale, translations FROM languages`;
+    const masterTrans = await masterSql`SELECT language_code as locale, key, value FROM translations`;
     
     const masterMap = new Map<string, Record<string, string>>();
     for (const row of masterTrans) {
       if (!masterMap.has(row.locale)) {
         masterMap.set(row.locale, {});
       }
-      if (row.translations) {
-        try {
-          const parsed = typeof row.translations === 'string' ? JSON.parse(row.translations) : row.translations;
-          masterMap.set(row.locale, parsed);
-        } catch (e) {
-          console.error('Failed to parse translations in i18n-server', e);
-        }
-      }
+      masterMap.get(row.locale)![row.key] = row.value;
     }
     i18nCache.set('master', masterMap);
 
@@ -42,21 +35,14 @@ export async function initI18nCache(force = false) {
       
       try {
         const tenantSql = useDB(slug);
-        const tenantTrans = await tenantSql`SELECT code as locale, translations FROM languages`;
+        const tenantTrans = await tenantSql`SELECT language_code as locale, key, value FROM translations`;
         
         const tenantMap = new Map<string, Record<string, string>>();
         for (const row of tenantTrans) {
           if (!tenantMap.has(row.locale)) {
             tenantMap.set(row.locale, {});
           }
-          if (row.translations) {
-            try {
-              const parsed = typeof row.translations === 'string' ? JSON.parse(row.translations) : row.translations;
-              tenantMap.set(row.locale, parsed);
-            } catch (e) {
-              console.error('Failed to parse translations in i18n-server (tenant)', e);
-            }
-          }
+          tenantMap.get(row.locale)![row.key] = row.value;
         }
         i18nCache.set(slug, tenantMap);
       } catch (e) {

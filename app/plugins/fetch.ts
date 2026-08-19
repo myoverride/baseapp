@@ -22,6 +22,16 @@ export default defineNuxtPlugin((nuxtApp) => {
     } catch (err: any) {
       if (import.meta.client && (err?.response?.status === 401 || err?.status === 401 || err?.statusCode === 401)) {
         console.warn('Global 401 Unauthorized detected. Redirecting to login...');
+        
+        try {
+          const user = useState('user');
+          user.value = null;
+          const { setCachedData } = await import('../utils/offlineStore');
+          await setCachedData('user', null);
+        } catch (e) {
+          console.error('Failed to clear user state on 401', e);
+        }
+
         const router = nuxtApp.$router as any;
         if (router) {
           router.push({ path: '/login', query: { redirect: window.location.pathname } });

@@ -5,12 +5,6 @@ import {} from '../../../utils/globalsManager';
 
 export default defineEventHandler(async (event) => {
   const user = event.context.user;
-  if (!user) {
-    throw createError({ statusCode: 401, message: 'errors.loginRequired' });
-  }
-  if (!user.is_admin && !user.is_super_admin) {
-    throw createError({ statusCode: 403, message: 'errors.forbiddenAdminOnly' });
-  }
   const method = getMethod(event);
   const sql = useDB(event.context.tenantSlug);
 
@@ -55,8 +49,8 @@ export default defineEventHandler(async (event) => {
     
     const isExport = query.export === 'true';
     const selectCols = isExport 
-      ? '*' 
-      : 'id, type, key, value, data_type, target, active, is_public, is_secret, protected, hashtags, description, created_at, updated_at';
+      ? 'id, type, key, target, active, protected, description, hashtags'
+      : 'id, type, key, value, data_type, hash_algorithm, target, active, protected, hashtags, description, created_at, updated_at';
 
     const records = await sql.unsafe(
       `SELECT ${selectCols} 
@@ -69,26 +63,41 @@ export default defineEventHandler(async (event) => {
   if (method === 'POST') {
     const body = await readBody(event);
     
-    const isVar = body.type === 'variable';
-    const isUtil = body.type === 'util';
-    
     if (!body.key) throw createError({ statusCode: 400, message: 'errors.validationFailed' });
 
     try {
+      const isVar = body.type === 'variable';
+      const isUtil = body.type === 'util';
+      let valueStr = isVar ? (typeof body.value === 'object' ? JSON.stringify(body.value) : String(body.value)) : null;
+      
+      const hashAlgo = body.data_type === 'password' ? (body.hash_algorithm || 'plain') : 'plain';
+      if (body.data_type === 'password' && valueStr) {
+        if (hashAlgo === 'bcrypt') {
+          const bcrypt = await import('bcryptjs');
+          valueStr = await bcrypt.default.hash(valueStr, 10);
+        } else if (hashAlgo === 'sha256') {
+          const crypto = await import('crypto');
+          valueStr = crypto.createHash('sha256').update(valueStr).digest('hex');
+        }
+      }
+
+      const isSystem = user.is_super_admin ? 1 : 0;
       const sqlParams = [
-        body.type, body.key, body.value || '', body.code || '', body.data_type || 'string',
-        body.target || 'shared', body.is_public ? 1 : 0, body.is_secret ? 1 : 0,
+        body.type, body.key, valueStr, body.code || '', body.data_type || 'string', hashAlgo,
+        body.target || 'shared', 
         0, body.active !== false ? 1 : 0,
-        JSON.stringify(body.scope || []), body.description || '', JSON.stringify(body.hashtags || []),
-        user.id, user.id
+        isUtil ? (Array.isArray(body.scope) ? JSON.stringify(body.scope) : body.scope) : '[]', 
+        body.description || '', 
+        Array.isArray(body.hashtags) ? JSON.stringify(body.hashtags) : (body.hashtags || '[]'),
+        user.id, user.id, isSystem, isSystem
       ];
 
       const res = await sql.unsafe(`
         INSERT INTO globals (
-          type, key, value, code, data_type, target, 
-          is_public, is_secret, protected, active, scope, 
-          description, hashtags, created_by, updated_by
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          type, key, value, code, data_type, hash_algorithm, target, 
+          protected, active, scope, 
+          description, hashtags, created_by, updated_by, system_created, system_modified
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         RETURNING *
       `, sqlParams);
 

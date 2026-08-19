@@ -59,8 +59,12 @@ export default defineEventHandler(async (event) => {
     const router = await getActiveEndpointsRouter(event.context.tenantSlug, 'http');
     if (router) {
       const match = router.lookup(pathname);
-      if (match && match.payload && match.payload.is_public) {
-        return; // Herkese açık özel API
+      if (match && match.payload) {
+        const eps = Array.isArray(match.payload) ? match.payload : [match.payload];
+        const isPublic = eps.some((ep: any) => ep.is_public === 1 || ep.is_public === true || ep.is_public === '1');
+        if (isPublic) {
+          return; // Herkese açık özel API
+        }
       }
     }
   } catch (e) {

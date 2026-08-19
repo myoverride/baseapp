@@ -19,7 +19,16 @@ export default defineEventHandler(async (event) => {
     .map(u => ({ key: u.key, code: u.code, target: u.target }));
 
   // Fetch locales
-  const locales = await sql`SELECT code, name, is_default, dir, translations as translation_json FROM languages WHERE is_active = 1`;
+  const locales = await sql`
+    SELECT 
+      code, 
+      name, 
+      is_default, 
+      dir, 
+      COALESCE((SELECT json_group_object(key, value) FROM translations WHERE language_code = languages.code), '{}') as translation_json 
+    FROM languages 
+    WHERE is_active = 1
+  `;
   
   // Fetch pages
   const user = event.context.user;

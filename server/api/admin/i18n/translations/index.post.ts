@@ -3,37 +3,22 @@ import { bumpGlobalVersion } from '../../../../utils/versionManager';
 
 export default defineEventHandler(async (event) => {
   const user = event.context.user;
-  if (!user) {
-    throw createError({ statusCode: 401, message: 'errors.loginRequired' });
-  }
-  if (!user.is_admin && !user.is_super_admin) {
-    throw createError({ statusCode: 403, message: 'errors.forbiddenAdminOnly' });
-  }
-
   const tenantSlug = event.context.tenantSlug || 'master';
   const sql = useDB(tenantSlug);
 
   const body = await readBody(event);
+  const isSystem = user.is_super_admin ? 1 : 0;
   
   const updateLanguageTranslations = async (locale: string, key: string, val: string | null) => {
-    const langs = await sql.unsafe('SELECT translations FROM languages WHERE code = ?', [locale]);
-    if (langs.length > 0) {
-      let transObj: Record<string, string> = {};
-      if (langs[0].translations) {
-        try {
-          transObj = typeof langs[0].translations === 'string' ? JSON.parse(langs[0].translations) : langs[0].translations;
-        } catch (e) {
-          console.error('Failed to parse translations in post API', e);
-        }
-      }
-      
-      if (val === null || val === '') {
-        delete transObj[key];
-      } else {
-        transObj[key] = val;
-      }
-
-      await sql.unsafe('UPDATE languages SET translations = ?, updated_at = CURRENT_TIMESTAMP WHERE code = ?', [JSON.stringify(transObj), locale]);
+    if (val === null || val === '') {
+      await sql.unsafe('DELETE FROM translations WHERE language_code = $1 AND key = $2', [locale, key]);
+    } else {
+      await sql.unsafe(`
+        INSERT INTO translations (key, language_code, value, created_by, updated_by, system_created, system_modified) 
+        VALUES ($1, $2, $3, $4, $4, $5, $5) 
+        ON CONFLICT(language_code, key) DO UPDATE 
+        SET value = excluded.value, updated_at = CURRENT_TIMESTAMP, updated_by = excluded.updated_by, system_modified = excluded.system_modified
+      `, [key, locale, val, user.id, isSystem]);
     }
   };
 
@@ -62,7 +47,7 @@ export default defineEventHandler(async (event) => {
       // Update hashtags
       const hashtagsArr = rec.hashtags || [];
       const hashtagsStr = Array.isArray(hashtagsArr) ? JSON.stringify(hashtagsArr) : (typeof hashtagsArr === 'string' ? hashtagsArr : '[]');
-      await sql.unsafe('INSERT INTO translation_keys (key, hashtags) VALUES ($1, $2) ON CONFLICT(key) DO UPDATE SET hashtags = excluded.hashtags, updated_at = CURRENT_TIMESTAMP', [key, hashtagsStr]);
+      await sql.unsafe('INSERT INTO translation_keys (key, hashtags, created_by, updated_by, system_created, system_modified) VALUES ($1, $2, $3, $3, $4, $4) ON CONFLICT(key) DO UPDATE SET hashtags = excluded.hashtags, updated_at = CURRENT_TIMESTAMP, updated_by = excluded.updated_by, system_modified = excluded.system_modified', [key, hashtagsStr, user.id, isSystem]);
       
       if (hasUpdate) updatedCount++;
     }
@@ -95,7 +80,7 @@ export default defineEventHandler(async (event) => {
 
     const hashtagsArr = hashtags || [];
     const hashtagsStr = Array.isArray(hashtagsArr) ? JSON.stringify(hashtagsArr) : (typeof hashtagsArr === 'string' ? hashtagsArr : '[]');
-    await sql.unsafe('INSERT INTO translation_keys (key, hashtags) VALUES ($1, $2) ON CONFLICT(key) DO UPDATE SET hashtags = excluded.hashtags, updated_at = CURRENT_TIMESTAMP', [key, hashtagsStr]);
+    await sql.unsafe('INSERT INTO translation_keys (key, hashtags, created_by, updated_by, system_created, system_modified) VALUES ($1, $2, $3, $3, $4, $4) ON CONFLICT(key) DO UPDATE SET hashtags = excluded.hashtags, updated_at = CURRENT_TIMESTAMP, updated_by = excluded.updated_by, system_modified = excluded.system_modified', [key, hashtagsStr, user.id, isSystem]);
 
     bumpGlobalVersion(tenantSlug);
     return { success: true };

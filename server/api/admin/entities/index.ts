@@ -107,6 +107,8 @@ export default defineEventHandler(async (event) => {
       try {
         let updatedCount = 0;
         let insertedCount = 0;
+        const isSystem = event.context.user?.is_super_admin ? 1 : 0;
+        const userId = event.context.user?.id || null;
 
         for (const rec of validRecords) {
           const existing = await sql`SELECT id FROM entities WHERE slug = ${rec.slug}`;
@@ -120,15 +122,15 @@ export default defineEventHandler(async (event) => {
             
             await sql`
                 UPDATE entities 
-                SET name = ${rec.name}, schema = ${sql.json(rec.schema)}, hashtags = ${sql.json(rec.hashtags || [])}, updated_at = CURRENT_TIMESTAMP 
+                SET name = ${rec.name}, schema = ${sql.json(rec.schema)}, hashtags = ${sql.json(rec.hashtags || [])}, updated_at = CURRENT_TIMESTAMP, updated_by = ${userId}, system_modified = ${isSystem}
                 WHERE slug = ${rec.slug}
               `;
             updatedCount++;
           } else {
             // Insert
             await sql`
-                INSERT INTO entities (name, slug, schema, hashtags) 
-                VALUES (${rec.name}, ${rec.slug}, ${sql.json(rec.schema)}, ${sql.json(rec.hashtags || [])})
+                INSERT INTO entities (name, slug, schema, hashtags, created_by, updated_by, system_created, system_modified) 
+                VALUES (${rec.name}, ${rec.slug}, ${sql.json(rec.schema)}, ${sql.json(rec.hashtags || [])}, ${userId}, ${userId}, ${isSystem}, ${isSystem})
               `;
             insertedCount++;
           }
@@ -157,10 +159,13 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: e?.statusCode || 400, message: e?.message || 'errors.validationFailed' });
     }
 
+    const isSystem = event.context.user?.is_super_admin ? 1 : 0;
+    const userId = event.context.user?.id || null;
+
     try {
       const result = await sql`
-        INSERT INTO entities (name, slug, schema, hashtags) 
-        VALUES (${body.name}, ${body.slug}, ${sql.json(body.schema)}, ${sql.json(body.hashtags || [])}) 
+        INSERT INTO entities (name, slug, schema, hashtags, created_by, updated_by, system_created, system_modified) 
+        VALUES (${body.name}, ${body.slug}, ${sql.json(body.schema)}, ${sql.json(body.hashtags || [])}, ${userId}, ${userId}, ${isSystem}, ${isSystem}) 
         RETURNING *
       `;
       return result[0];

@@ -1,7 +1,7 @@
 <template>
     <v-card>
         <!-- Toolbar with title, search, and add button -->
-        <v-toolbar flat :color="color" height="76" class="px-2">
+        <v-toolbar flat :color="color" class="px-2">
             <v-toolbar-title class="text-h6 font-weight-bold">
                 <slot name="title">
                     {{ title }}
@@ -120,7 +120,7 @@
                 <slot :name="`item.${col.key}`" :item="item">
                     <span v-if="Array.isArray(item[col.key])">
                         <v-chip size="small" class="mr-1 mb-1" v-for="(v, i) in item[col.key]" :key="i">{{ $localize(v)
-                        }}</v-chip>
+                            }}</v-chip>
                     </span>
                     <span v-else>{{ $localize(item[col.key]) }}</span>
                 </slot>

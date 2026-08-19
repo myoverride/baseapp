@@ -40,7 +40,7 @@ globalVarsState.value = globalsMap;
 
 onMounted(() => {
   if (import.meta.client && 'serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/sw.js?v=4').then(reg => {
+    navigator.serviceWorker.register('/sw.js?v=6').then(reg => {
       reg.update();
     }).catch((err) => {
       console.warn('Service Worker registration failed:', err);

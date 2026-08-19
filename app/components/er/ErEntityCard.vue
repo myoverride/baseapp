@@ -8,8 +8,6 @@
         <span class="er-entity-title">{{ $localize(entity.name) }}</span>
       </div>
       <div class="er-entity-header-actions">
-        <v-icon size="13" color="white" class="er-header-btn" @click.stop="$emit('addField', entity)"
-          :title="$t('common.addField')">mdi-plus</v-icon>
         <v-icon size="13" color="white" class="er-header-btn" @click.stop="$emit('editEntity', entity)"
           :title="$t('common.edit')">mdi-pencil</v-icon>
         <v-icon size="13" color="white" class="er-header-btn er-header-btn--danger"
@@ -26,36 +24,38 @@
     <!-- Fields -->
     <div class="er-entity-fields" v-if="fields.length > 0">
       <ErFieldRow v-for="(field, idx) in fields" :key="field.name + '-' + idx" :field="field" :index="idx"
-        :entity-id="entity.id" @edit="(f, i) => $emit('editField', entity, f, i)"
-        @delete="(f, i) => $emit('deleteField', entity, f, i)" />
+        :entity-id="entity.id" @edit="(f, i) => $emit('editField', entity, f, i)" />
     </div>
     <div v-else class="er-entity-empty">
-      <span class="text-grey text-caption">Alan yok</span>
+      <span class="text-grey text-caption">{{ $t('common.noData') || 'Alan yok' }}</span>
     </div>
 
     <!-- Footer: field count -->
     <div class="er-entity-footer">
       <span class="er-entity-count">{{ fields.length }} alan</span>
-      <v-icon size="12" :color="color" class="er-footer-add" @click.stop="$emit('addField', entity)"
-        :title="$t('common.addField')">mdi-plus-circle</v-icon>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
+interface ErEntity {
+  id: string | number
+  name: string
+  slug: string
+  schema?: Record<string, any>
+}
+
 const { primaryColor: color } = useGlobals();
 const props = defineProps<{
-  entity: any
+  entity: ErEntity
   selected?: boolean
   colorIndex?: number
 }>()
 
 defineEmits<{
-  editEntity: [entity: any]
-  deleteEntity: [entity: any]
-  addField: [entity: any]
-  editField: [entity: any, field: any, index: number]
-  deleteField: [entity: any, field: any, index: number]
+  editEntity: [entity: ErEntity]
+  deleteEntity: [entity: ErEntity]
+  editField: [entity: ErEntity, field: any, index: number]
 }>()
 
 const cardRef = ref<HTMLElement | null>(null)
@@ -64,21 +64,11 @@ const cardRef = ref<HTMLElement | null>(null)
 const entityColors = [
   '#1565C0', '#2E7D32', '#6A1B9A', '#C62828',
   '#00695C', '#E65100', '#283593', '#4E342E',
-  '#1565C0', '#2E7D32', '#6A1B9A', '#C62828',
-  '#00695C', '#E65100', '#283593', '#4E342E',
-  '#1565C0', '#2E7D32', '#6A1B9A', '#C62828',
-  '#00695C', '#E65100', '#283593', '#4E342E',
-  '#1565C0', '#2E7D32', '#6A1B9A', '#C62828',
-  '#00695C', '#E65100', '#283593', '#4E342E',
-  '#1565C0', '#2E7D32', '#6A1B9A', '#C62828',
-  '#00695C', '#E65100', '#283593', '#4E342E',
-  '#1565C0', '#2E7D32', '#6A1B9A', '#C62828',
-  '#00695C', '#E65100', '#283593', '#4E342E',
   '#00838F', '#AD1457', '#33691E', '#4527A0'
 ]
 
 const headerColor = computed(() => {
-  const idx = props.colorIndex ?? (props.entity.id % entityColors.length)
+  const idx = props.colorIndex ?? (Number(props.entity.id) || 0) % entityColors.length
   return entityColors[idx]
 })
 
@@ -240,14 +230,5 @@ defineExpose({ cardRef, fields })
   font-weight: 500;
 }
 
-.er-footer-add {
-  cursor: pointer;
-  opacity: 0.5;
-  transition: opacity 0.2s, transform 0.2s;
-}
 
-.er-footer-add:hover {
-  opacity: 1;
-  transform: scale(1.2);
-}
 </style>

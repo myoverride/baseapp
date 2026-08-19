@@ -9,7 +9,7 @@ export default defineEventHandler(async (event) => {
   
   // 5 attempts per 5 minutes
   if (!checkRateLimit(rateLimitKey, 5, 5 * 60 * 1000)) {
-    throw createError({ statusCode: 429, message: 'errors.tooManyRequests' || 'Too many login attempts. Please try again later.' });
+    throw createError({ statusCode: 429, message: 'errors.tooManyRequests' });
   }
 
   const body = await readBody(event);

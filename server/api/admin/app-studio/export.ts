@@ -88,10 +88,10 @@ export default defineEventHandler(async (event) => {
         for (let i = 0; i < targetIdsArr.length; i += chunkSize) {
             const chunk = targetIdsArr.slice(i, i + chunkSize);
             const placeholders = chunk.map(() => '?').join(',');
-            const fieldsRes = await sql.unsafe(`SELECT record_id, key, val_str FROM record_fields WHERE record_id IN (${placeholders}) AND val_str IS NOT NULL`, chunk);
+            const fieldsRes = await sql.unsafe(`SELECT record_id, key, val_str, val_num FROM record_fields WHERE record_id IN (${placeholders}) AND (val_str IS NOT NULL OR val_num IS NOT NULL)`, chunk);
             for (const row of fieldsRes) {
                 if (!relationData.has(row.record_id)) relationData.set(row.record_id, new Map());
-                relationData.get(row.record_id)!.set(row.key, row.val_str);
+                relationData.get(row.record_id)!.set(row.key, row.val_str !== null ? row.val_str : String(row.val_num));
             }
         }
         
@@ -125,10 +125,17 @@ export default defineEventHandler(async (event) => {
         } catch (e) {}
 
         let langs = [];
+        const langsQuery = `
+          SELECT 
+            *, 
+            COALESCE((SELECT json_group_object(key, value) FROM translations WHERE language_code = languages.code), '{}') as translations 
+          FROM languages
+        `;
+
         if (matchingKeys.length > 0) {
-          langs = await sql.unsafe(`SELECT * FROM languages`);
+          langs = await sql.unsafe(langsQuery);
         } else {
-          langs = await sql.unsafe(`SELECT * FROM languages WHERE ${whereClause}`, likeTags);
+          langs = await sql.unsafe(langsQuery + ` WHERE ${whereClause}`, likeTags);
         }
 
         const processedLangs = [];
@@ -170,10 +177,11 @@ export default defineEventHandler(async (event) => {
               for (const [key, field] of Object.entries(schemaObj)) {
                 const f: any = field;
                 if (f.type === 'relation' && f.targetEntityId) {
-                  const targetEnt = await sql.unsafe(`SELECT slug FROM entities WHERE id = $1 LIMIT 1`, [f.targetEntityId]);
+                  const targetEnt = await sql.unsafe(`SELECT slug FROM entities WHERE id = ? LIMIT 1`, [f.targetEntityId]);
                   if (targetEnt.length > 0) {
                     f.targetEntitySlug = targetEnt[0].slug;
                   }
+                  delete f.targetEntityId;
                 }
               }
               ents[i].schema = JSON.stringify(schemaObj);

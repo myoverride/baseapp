@@ -1135,6 +1135,14 @@
     "en": "Syntax Error (Line {line}): {msg}",
     "tr": "Sözdizimi Hatası (Satır {line}): {msg}"
   },
+  "errors.importCritical": {
+    "en": "Critical Error During Import: {details}",
+    "tr": "İçe Aktarım Sırasında Kritik Hata: {details}"
+  },
+  "errors.importWithErrors": {
+    "en": "Import completed with some errors.",
+    "tr": "İçe aktarım bazı hatalarla tamamlandı."
+  },
   "errors.templateErrorMismatch": {
     "en": "Template Validation: Invalid closing tag. Expected </{expected}> but found </{found}>.",
     "tr": "Şablon Doğrulama Hatası: Hatalı kapanış etiketi. </{expected}> bekleniyordu ancak </{found}> bulundu."
@@ -1146,6 +1154,10 @@
   "errors.templateErrorUnopened": {
     "en": "Template Validation: Found closing tag </{tag}> without an opening tag.",
     "tr": "Şablon Doğrulama Hatası: Açılış etiketi olmadan kapanış etiketi bulundu: </{tag}>."
+  },
+  "errors.systemPageCannotBeDeleted": {
+    "en": "System pages cannot be deleted.",
+    "tr": "Sistem sayfaları silinemez."
   },
   "errors.tenantMismatch": {
     "en": "Access denied. Session mismatch.",
@@ -2419,10 +2431,7 @@
     "en": "BaseApp Login",
     "tr": "BaseApp Girişi"
   },
-  "page.noLandingPage": {
-    "en": "You have not created a landing page for this tenant yet.",
-    "tr": "Bu kiracı için henüz bir landing page oluşturmadınız."
-  },
+
   "page.notifications": {
     "en": "Notifications",
     "tr": "Bildirimler"
@@ -2471,10 +2480,7 @@
     "en": "Component",
     "tr": "Bileşen"
   },
-  "pageType.landing": {
-    "en": "Landing Page",
-    "tr": "Landing Page"
-  },
+
   "pageType.layout": {
     "en": "System Layout",
     "tr": "Sistem Ana Şablonu"

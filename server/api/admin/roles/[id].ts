@@ -2,12 +2,7 @@ import { useDB } from '../../../utils/db';
 
 export default defineEventHandler(async (event) => {
   const user = event.context.user;
-  if (!user) {
-    throw createError({ statusCode: 401, message: 'errors.loginRequired' });
-  }
-  if (!user.is_admin) {
-    throw createError({ statusCode: 403, message: 'errors.forbiddenAdminOnly' });
-  }
+
 
   const sql = useDB(event.context.tenantSlug);
   const method = getMethod(event);
@@ -29,6 +24,7 @@ export default defineEventHandler(async (event) => {
     const body = await readBody(event);
     if (!body.name) throw createError({ statusCode: 400, message: 'errors.validationFailed' });
 
+    const isSystem = user.is_super_admin ? 1 : 0;
     const res = await sql`
       UPDATE roles
       SET name = ${body.name},
@@ -37,7 +33,8 @@ export default defineEventHandler(async (event) => {
           home_page = ${body.home_page || null},
           menu_list = ${sql.json(body.menu_list || [])},
           updated_at = CURRENT_TIMESTAMP,
-          updated_by = ${user.id}
+          updated_by = ${user.id},
+          system_modified = ${isSystem}
       WHERE id = ${id}
       RETURNING *
     `;

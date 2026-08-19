@@ -4,12 +4,7 @@ import bcrypt from 'bcryptjs';
 
 export default defineEventHandler(async (event) => {
   const user = event.context.user;
-  if (!user) {
-    throw createError({ statusCode: 401, message: 'errors.loginRequired' });
-  }
-  if (!user.is_admin) {
-    throw createError({ statusCode: 403, message: 'errors.forbiddenAdminOnly' });
-  }
+
 
   const sql = useDB(event.context.tenantSlug);
   const method = getMethod(event);
@@ -48,6 +43,7 @@ export default defineEventHandler(async (event) => {
     }
 
     let res;
+    const isSystem = user.is_super_admin ? 1 : 0;
     if (body.password) {
       const hash = await bcrypt.hash(body.password, 10);
       res = await sql`
@@ -60,7 +56,8 @@ export default defineEventHandler(async (event) => {
             menu_list = ${body.menu_list ? sql.json(body.menu_list) : null},
             hashtags = ${sql.json(body.hashtags || [])},
             updated_at = CURRENT_TIMESTAMP,
-            updated_by = ${user.id}
+            updated_by = ${user.id},
+            system_modified = ${isSystem}
         WHERE id = ${id}
         RETURNING id, username, is_admin, role_id, home_page, menu_list, hashtags, created_at, updated_at
       `;
@@ -75,7 +72,8 @@ export default defineEventHandler(async (event) => {
             menu_list = ${body.menu_list ? sql.json(body.menu_list) : null},
             hashtags = ${sql.json(body.hashtags || [])},
             updated_at = CURRENT_TIMESTAMP,
-            updated_by = ${user.id}
+            updated_by = ${user.id},
+            system_modified = ${isSystem}
         WHERE id = ${id}
         RETURNING id, username, is_admin, role_id, home_page, menu_list, hashtags, created_at, updated_at
       `;

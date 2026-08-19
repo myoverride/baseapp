@@ -603,7 +603,9 @@ export async function setupTenantDatabase(tenantSlug: string, refs: TenantDbRefs
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         created_by INTEGER,
-        updated_by INTEGER
+        updated_by INTEGER,
+        system_created BOOLEAN DEFAULT 0,
+        system_modified BOOLEAN DEFAULT 0
       )
     `);
     await mainSql.unsafe(`
@@ -623,7 +625,9 @@ export async function setupTenantDatabase(tenantSlug: string, refs: TenantDbRefs
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         created_by INTEGER,
-        updated_by INTEGER
+        updated_by INTEGER,
+        system_created BOOLEAN DEFAULT 0,
+        system_modified BOOLEAN DEFAULT 0
       )
     `);
     await mainSql.unsafe(`
@@ -636,7 +640,9 @@ export async function setupTenantDatabase(tenantSlug: string, refs: TenantDbRefs
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         created_by INTEGER,
-        updated_by INTEGER
+        updated_by INTEGER,
+        system_created BOOLEAN DEFAULT 0,
+        system_modified BOOLEAN DEFAULT 0
       )
     `);
     await mainSql.unsafe(`
@@ -649,7 +655,9 @@ export async function setupTenantDatabase(tenantSlug: string, refs: TenantDbRefs
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         created_by INTEGER,
-        updated_by INTEGER
+        updated_by INTEGER,
+        system_created BOOLEAN DEFAULT 0,
+        system_modified BOOLEAN DEFAULT 0
       )
     `);
     await mainSql.unsafe(`
@@ -665,7 +673,9 @@ export async function setupTenantDatabase(tenantSlug: string, refs: TenantDbRefs
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         created_by INTEGER,
-        updated_by INTEGER
+        updated_by INTEGER,
+        system_created BOOLEAN DEFAULT 0,
+        system_modified BOOLEAN DEFAULT 0
       )
     `);
     await mainSql.unsafe(`
@@ -673,11 +683,61 @@ export async function setupTenantDatabase(tenantSlug: string, refs: TenantDbRefs
         key VARCHAR(255) PRIMARY KEY,
         hashtags TEXT DEFAULT '[]',
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        created_by INTEGER,
+        updated_by INTEGER,
+        system_created BOOLEAN DEFAULT 0,
+        system_modified BOOLEAN DEFAULT 0
       )
     `);
     try { await mainSql.unsafe(`ALTER TABLE translation_keys ADD COLUMN created_at DATETIME DEFAULT CURRENT_TIMESTAMP`); } catch(e) {}
     try { await mainSql.unsafe(`ALTER TABLE translation_keys ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP`); } catch(e) {}
+    try { await mainSql.unsafe(`ALTER TABLE translation_keys ADD COLUMN created_by INTEGER`); } catch(e) {}
+    try { await mainSql.unsafe(`ALTER TABLE translation_keys ADD COLUMN updated_by INTEGER`); } catch(e) {}
+    try { await mainSql.unsafe(`ALTER TABLE translation_keys ADD COLUMN system_created BOOLEAN DEFAULT 0`); } catch(e) {}
+    try { await mainSql.unsafe(`ALTER TABLE translation_keys ADD COLUMN system_modified BOOLEAN DEFAULT 0`); } catch(e) {}
+
+    await mainSql.unsafe(`
+      CREATE TABLE IF NOT EXISTS translations (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        key VARCHAR(255) NOT NULL REFERENCES translation_keys(key) ON DELETE CASCADE,
+        language_code VARCHAR(10) NOT NULL REFERENCES languages(code) ON DELETE CASCADE,
+        value TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        created_by INTEGER,
+        updated_by INTEGER,
+        system_created BOOLEAN DEFAULT 0,
+        system_modified BOOLEAN DEFAULT 0,
+        UNIQUE(language_code, key)
+      )
+    `);
+    await mainSql.unsafe(`CREATE INDEX IF NOT EXISTS idx_translations_key ON translations(key)`);
+    await mainSql.unsafe(`CREATE INDEX IF NOT EXISTS idx_translations_lang ON translations(language_code)`);
+
+    // Otomatik Migration (Eski JSON çevirileri tabloya taşı)
+    try {
+      const existingTransCount = await mainSql.unsafe('SELECT COUNT(*) as count FROM translations');
+      if (existingTransCount[0].count === 0) {
+        const langs = await mainSql.unsafe('SELECT code, translations FROM languages');
+        for (const lang of langs) {
+          if (lang.translations) {
+            try {
+               const transObj = typeof lang.translations === 'string' ? JSON.parse(lang.translations) : lang.translations;
+               for (const [key, val] of Object.entries(transObj)) {
+                 if (typeof val === 'string') {
+                    await mainSql.unsafe('INSERT INTO translation_keys (key) VALUES ($1) ON CONFLICT(key) DO NOTHING', [key]);
+                    await mainSql.unsafe('INSERT INTO translations (key, language_code, value) VALUES ($1, $2, $3) ON CONFLICT(language_code, key) DO NOTHING', [key, lang.code, val]);
+                 }
+               }
+            } catch (e) { console.error('Migration failed for language', lang.code, e); }
+          }
+        }
+      }
+    } catch(e) {
+      console.error('[Migration] Failed to check/migrate translations:', e);
+    }
+
     await mainSql.unsafe(`
       CREATE TABLE IF NOT EXISTS records (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -686,6 +746,8 @@ export async function setupTenantDatabase(tenantSlug: string, refs: TenantDbRefs
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         created_by INTEGER,
         updated_by INTEGER,
+        system_created BOOLEAN DEFAULT 0,
+        system_modified BOOLEAN DEFAULT 0,
         hashtags TEXT DEFAULT '[]'
       )
     `);
@@ -726,9 +788,8 @@ export async function setupTenantDatabase(tenantSlug: string, refs: TenantDbRefs
         value TEXT,
         code TEXT,
         data_type VARCHAR(50) DEFAULT 'string',
+        hash_algorithm VARCHAR(20) DEFAULT 'plain',
         target VARCHAR(50) NOT NULL DEFAULT 'shared' CHECK(target IN ('ui', 'api', 'shared')),
-        is_public BOOLEAN DEFAULT 0,
-        is_secret BOOLEAN DEFAULT 0,
         protected BOOLEAN DEFAULT 0,
         active BOOLEAN DEFAULT 1,
         scope TEXT DEFAULT '[]',
@@ -737,7 +798,9 @@ export async function setupTenantDatabase(tenantSlug: string, refs: TenantDbRefs
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         created_by INTEGER,
-        updated_by INTEGER
+        updated_by INTEGER,
+        system_created BOOLEAN DEFAULT 0,
+        system_modified BOOLEAN DEFAULT 0
       )
     `);
     await mainSql.unsafe(`
@@ -754,7 +817,9 @@ export async function setupTenantDatabase(tenantSlug: string, refs: TenantDbRefs
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         created_by INTEGER,
-        updated_by INTEGER
+        updated_by INTEGER,
+        system_created BOOLEAN DEFAULT 0,
+        system_modified BOOLEAN DEFAULT 0
       )
     `);
     await mainSql.unsafe(`
@@ -773,7 +838,9 @@ export async function setupTenantDatabase(tenantSlug: string, refs: TenantDbRefs
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         created_by INTEGER,
-        updated_by INTEGER
+        updated_by INTEGER,
+        system_created BOOLEAN DEFAULT 0,
+        system_modified BOOLEAN DEFAULT 0
       )
     `);
 
@@ -796,7 +863,9 @@ export async function setupTenantDatabase(tenantSlug: string, refs: TenantDbRefs
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         created_by INTEGER,
-        updated_by INTEGER
+        updated_by INTEGER,
+        system_created BOOLEAN DEFAULT 0,
+        system_modified BOOLEAN DEFAULT 0
       )
     `);
 
@@ -804,6 +873,13 @@ export async function setupTenantDatabase(tenantSlug: string, refs: TenantDbRefs
     await mainSql.unsafe(`CREATE UNIQUE INDEX IF NOT EXISTS idx_endpoints_name ON endpoints(name)`);
     await mainSql.unsafe(`CREATE UNIQUE INDEX IF NOT EXISTS idx_workers_name ON workers(name)`);
     await mainSql.unsafe(`CREATE UNIQUE INDEX IF NOT EXISTS idx_pages_title ON pages(title)`);
+    
+    // Retroactively add system flags to existing tables
+    const tablesToAlter = ['roles', 'users', 'devices', 'entities', 'languages', 'records', 'globals', 'endpoints', 'workers', 'pages'];
+    for (const tbl of tablesToAlter) {
+      try { await mainSql.unsafe(`ALTER TABLE ${tbl} ADD COLUMN system_created BOOLEAN DEFAULT 0`); } catch (e) {}
+      try { await mainSql.unsafe(`ALTER TABLE ${tbl} ADD COLUMN system_modified BOOLEAN DEFAULT 0`); } catch (e) {}
+    }
     // =========================================================================
     // --- NEW ISOLATED SEED LOGIC ---
     if (isNewDb) {

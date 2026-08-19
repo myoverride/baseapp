@@ -1,14 +1,6 @@
 import { useDB } from '../../../../utils/db';
 
 export default defineEventHandler(async (event) => {
-  const user = event.context.user;
-  if (!user) {
-    throw createError({ statusCode: 401, message: 'errors.loginRequired' });
-  }
-  if (!user.is_admin && !user.is_super_admin) {
-    throw createError({ statusCode: 403, message: 'errors.forbiddenAdminOnly' });
-  }
-
   const tenantSlug = event.context.tenantSlug || 'master';
   const query = getQuery(event);
   const page = parseInt(query.page as string) || 1;

@@ -34,29 +34,29 @@
         <!-- SVG Relations Overlay (Underneath Entities) -->
         <svg class="er-relations-svg" :width="svgWidth" :height="svgHeight" :viewBox="`0 0 ${svgWidth} ${svgHeight}`">
           <defs>
-            <marker id="arrowhead" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+            <marker :id="svgMarkerId" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
               <polygon points="0 0, 8 3, 0 6" fill="#90A4AE" />
             </marker>
-            <marker id="arrowhead-active" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+            <marker :id="`${svgMarkerId}-active`" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
               <polygon points="0 0, 8 3, 0 6" fill="#C62828" />
             </marker>
           </defs>
 
           <ErRelationLine v-for="(rel, rIdx) in computedRelations" :key="rIdx" :source-x="rel.sourceX"
             :source-y="rel.sourceY" :target-x="rel.targetX" :target-y="rel.targetY" :label="rel.fieldName"
-            :relation="rel" @click="onRelationClick" />
+            :relation="rel" :marker-id="svgMarkerId" />
         </svg>
 
         <!-- Native Draggable Entities -->
         <div v-for="entity in entities" :key="entity.id" class="er-draggable-entity" :style="{
           left: `${getPosition(entity.id).x}px`,
           top: `${getPosition(entity.id).y}px`,
-          zIndex: draggingId === String(entity.id) ? 100 : 10,
+          zIndex: activeEntityId === String(entity.id) ? 100 : 10,
           width: '260px'
         }" @mousedown="onEntityMouseDown($event, String(entity.id))">
           <ErEntityCard :entity="entity" :color-index="getColorIndex(String(entity.id))"
             :ref="el => setCardRef(String(entity.id), el)" @edit-entity="onEditEntity" @delete-entity="onDeleteEntity"
-            @add-field="onAddField" @edit-field="onEditField" @delete-field="onDeleteField" />
+            @edit-field="onEditField" />
         </div>
       </div>
 
@@ -79,15 +79,22 @@ import { useI18n } from 'vue-i18n'
 
 const { t } = useI18n()
 
+interface ErEntity {
+  id: string | number
+  name: string
+  slug: string
+  schema?: Record<string, any>
+}
+
 const props = defineProps<{
-  entities: any[]
+  entities: ErEntity[]
 }>()
 
 const emit = defineEmits<{
-  'entity-update': [entity: any]
+  'entity-update': [entity: ErEntity]
   'entity-create': [data: any]
-  'entity-delete': [entity: any]
-  'edit-entity': [entity: any]
+  'entity-delete': [entity: ErEntity]
+  'edit-entity': [entity: ErEntity]
   'create-entity': []
 }>()
 
@@ -107,10 +114,12 @@ const panStartY = ref(0)
 // Native Drag State
 const positions = ref<Record<string, { x: number, y: number }>>({})
 const draggingId = ref<string | null>(null)
+const activeEntityId = ref<string | null>(null)
 let dragStartX = 0
 let dragStartY = 0
 let entityStartX = 0
 let entityStartY = 0
+const svgMarkerId = `arrowhead-${Math.random().toString(36).substring(2, 9)}`
 
 
 
@@ -194,6 +203,7 @@ const onEntityMouseDown = (e: MouseEvent, id: string) => {
   if (e.button !== 0) return // only left click
 
   draggingId.value = id
+  activeEntityId.value = id
   dragStartX = e.clientX
   dragStartY = e.clientY
 
@@ -270,16 +280,49 @@ const initPositions = () => {
 }
 
 const autoLayout = () => {
-  const cols = Math.ceil(Math.sqrt(props.entities.length))
+  if (!props.entities.length) return
 
-  props.entities.forEach((entity, idx) => {
+  // 1. Akıllı Sıralama (Topological-ish Sort)
+  // Hiçbir yabancı anahtarı (foreign key) olmayan kök tabloları başa,
+  // en çok ilişkisi olanları sona alarak birbirleriyle gruplanmalarını sağlıyoruz.
+  const sortedEntities = [...props.entities].sort((a, b) => {
+    const fkA = Object.values(a.schema || {}).filter((f: any) => f.type === 'relation').length
+    const fkB = Object.values(b.schema || {}).filter((f: any) => f.type === 'relation').length
+    return fkA - fkB
+  })
+
+  const cols = Math.ceil(Math.sqrt(sortedEntities.length))
+
+  // 2. Dinamik Dikey (Y) Yükseklik Hesaplaması
+  // Her satırdaki en uzun tablonun yüksekliğini buluyoruz
+  const rowMaxHeights: number[] = []
+  
+  sortedEntities.forEach((entity, idx) => {
+    const row = Math.floor(idx / cols)
+    const fieldCount = Object.keys(entity.schema || {}).length
+    // Tablonun DOM'da kaplayacağı tahmini yükseklik (Header + Footer + Slug = ~80px, Alan başı = ~28px)
+    const estimatedHeight = 80 + (fieldCount * 28)
+
+    if (!rowMaxHeights[row] || estimatedHeight > rowMaxHeights[row]) {
+      rowMaxHeights[row] = estimatedHeight
+    }
+  })
+
+  // 3. Tabloları Koordinatlara Yerleştirme
+  sortedEntities.forEach((entity, idx) => {
     const id = String(entity.id)
     const col = idx % cols
     const row = Math.floor(idx / cols)
 
+    // Kendinden önceki satırların maksimum yüksekliklerini toplayıp Y pozisyonunu buluyoruz
+    let yPos = 40
+    for (let i = 0; i < row; i++) {
+      yPos += (rowMaxHeights[i] || 250) + 60 // 60px tablolar arası dikey boşluk
+    }
+
     positions.value[id] = {
-      x: 40 + col * 320,
-      y: 40 + row * 250
+      x: 40 + col * 320, // 320px = 260px tablo genişliği + 60px yatay boşluk
+      y: yPos
     }
   })
 
@@ -299,9 +342,6 @@ const computedRelations = computed(() => {
     const sourceId = String(entity.id)
 
     const sourcePos = getPosition(sourceId)
-    // Find the rendered card element to compute height accurately
-    const sourceCard = cardRefs.value[sourceId]?.$el || cardRefs.value[sourceId]?.cardRef
-    const sourceHeight = sourceCard ? sourceCard.offsetHeight : 150
     const sourceWidth = 260 // Fixed width
 
     Object.entries(schema).forEach(([fieldName, fieldDef]: [string, any]) => {
@@ -311,8 +351,6 @@ const computedRelations = computed(() => {
         if (!props.entities.find(e => String(e.id) === targetId)) return
 
         const targetPos = getPosition(targetId)
-        const targetCard = cardRefs.value[targetId]?.$el || cardRefs.value[targetId]?.cardRef
-        const targetHeight = targetCard ? targetCard.offsetHeight : 150
 
         // Ok her zaman kaynağın sağından (anchor noktasından) çıkar
         let sx = sourcePos.x + sourceWidth
@@ -353,11 +391,11 @@ const computedRelations = computed(() => {
 })
 
 // --- Entity Operations ---
-const onEditEntity = (entity: any) => {
+const onEditEntity = (entity: ErEntity) => {
   emit('edit-entity', entity)
 }
 
-const onDeleteEntity = (entity: any) => {
+const onDeleteEntity = (entity: ErEntity) => {
   if (confirm(t('confirm.delete'))) {
     emit('entity-delete', entity)
     delete positions.value[String(entity.id)]
@@ -366,37 +404,8 @@ const onDeleteEntity = (entity: any) => {
 }
 
 // --- Field Operations ---
-const onAddField = (entity: any) => {
+const onEditField = (entity: ErEntity, field: any, index: number) => {
   emit('edit-entity', entity)
-}
-
-const onEditField = (entity: any, field: any, index: number) => {
-  emit('edit-entity', entity)
-}
-
-const onDeleteField = (entity: any, field: any, _index: number) => {
-  if (!confirm(t('confirm.delete'))) return
-
-  const schema = { ...(entity.schema || {}) }
-  delete schema[field.name]
-
-  let order = 0
-  Object.keys(schema).forEach(key => {
-    schema[key] = { ...schema[key], _order: order++ }
-  })
-
-  emit('entity-update', { ...entity, schema })
-}
-
-const onRelationClick = (rel: any) => {
-  if (confirm(t('confirm.delete'))) {
-    const entity = props.entities.find(e => String(e.id) === rel.sourceEntityId)
-    if (entity) {
-      const schema = { ...(entity.schema || {}) }
-      delete schema[rel.fieldName]
-      emit('entity-update', { ...entity, schema })
-    }
-  }
 }
 
 // --- Watchers ---

@@ -10,12 +10,6 @@ export default defineEventHandler(async (event) => {
   }
 
   const user = event.context.user;
-  if (!user) {
-    throw createError({ statusCode: 401, message: 'errors.loginRequired' });
-  }
-  if (!user.is_admin) {
-    throw createError({ statusCode: 403, message: 'errors.forbiddenAdminOnly' });
-  }
 
   if (method === 'GET') {
     try {
@@ -33,7 +27,8 @@ export default defineEventHandler(async (event) => {
     // BULK IMPORT LOGIC
     if (body.records && Array.isArray(body.records)) {
       try {
-        const res = await bulkImportRecords(tenantSlug, slug, body.records, user.id);
+        const isSystem = user.is_super_admin ? 1 : 0;
+        const res = await bulkImportRecords(tenantSlug, slug, body.records, user.id, isSystem);
         if (!res.success) throw createError({ statusCode: 400, message: res.message });
         return { success: true, message: 'success.importSuccessful' };
       } catch (e: any) {
@@ -43,7 +38,8 @@ export default defineEventHandler(async (event) => {
 
     // SINGLE CREATE LOGIC
     try {
-      const result = await createRecord(tenantSlug, slug, body, user.id);
+      const isSystem = user.is_super_admin ? 1 : 0;
+      const result = await createRecord(tenantSlug, slug, body, user.id, isSystem);
       return result;
     } catch (e: any) {
       if (e.statusCode) {

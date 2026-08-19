@@ -43,8 +43,9 @@ export default defineEventHandler(async (event) => {
         ...(body.targetRecordId ? { target_record_id: Number(body.targetRecordId) } : {})
       };
 
+      const isSystem = event.context.user?.is_super_admin ? 1 : 0;
       const updated = await sql`
-        UPDATE devices SET device_id = ${body.deviceId.trim()}, secret_key = COALESCE(${body.secretKey || null}, secret_key), schema = ${sql.json(mergedSchema)}, hashtags = ${sql.json(body.hashtags || [])}, updated_at = CURRENT_TIMESTAMP, updated_by = ${event.context.user.id}
+        UPDATE devices SET device_id = ${body.deviceId.trim()}, secret_key = COALESCE(${body.secretKey || null}, secret_key), schema = ${sql.json(mergedSchema)}, hashtags = ${sql.json(body.hashtags || [])}, updated_at = CURRENT_TIMESTAMP, updated_by = ${event.context.user?.id || null}, system_modified = ${isSystem}
         WHERE id = ${id} RETURNING *
       `;
 

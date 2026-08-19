@@ -54,11 +54,11 @@
           <div class="text-caption">
             <div class="font-weight-bold mb-1 border-b pb-1">{{ $t('table.additionalInfo') }}</div>
             <div v-for="[key, config] in hiddenFields" :key="key" class="mb-1">
-              <span class="font-weight-medium text-medium-emphasis">{{ $localize((config as any).label) || key }}:</span> {{ formatHiddenValue(item, key, config) }}
+              <span class="font-weight-medium opacity-70">{{ $localize((config as any).label) || key }}:</span> {{ formatHiddenValue(item, key, config) }}
             </div>
             <v-divider class="my-2 border-opacity-50"></v-divider>
-            <div class="mb-1"><span class="font-weight-medium text-medium-emphasis">{{ $t('table.createdAt') }}:</span> {{ formatAppDate(item.created_at as any) }}</div>
-            <div><span class="font-weight-medium text-medium-emphasis">{{ $t('table.updatedAt') }}:</span> {{ formatAppDate(item.updated_at as any) }}</div>
+            <div class="mb-1"><span class="font-weight-medium opacity-70">{{ $t('table.createdAt') }}:</span> {{ formatAppDate(item.created_at as any) }}</div>
+            <div><span class="font-weight-medium opacity-70">{{ $t('table.updatedAt') }}:</span> {{ formatAppDate(item.updated_at as any) }}</div>
           </div>
         </v-tooltip>
       </template>
@@ -386,7 +386,7 @@ const exportCSV = async () => {
             return
         }
 
-        const exportCols = columns.value.filter(c => c.key !== 'actions' && !c.key.startsWith('_'))
+        const exportCols = columns.value.filter(c => c.key !== 'actions' && c.key !== 'info' && !c.key.startsWith('_'))
         const headers = exportCols.map(c => c.key)
         
         let csvContent = headers.join(',') + '\n'
@@ -420,6 +420,8 @@ const exportCSV = async () => {
 
     } catch (e) {
         if ($toast) $toast.error(t('message.exportError'));
+    } finally {
+        csvExportLoading.value = false;
     }
 }
 
@@ -503,7 +505,7 @@ const importCSV = async (event: Event) => {
                 recordsToImport.push(record)
             }
 
-            const res = await $fetch<any>(`${activeApiEndpoint.value}`, {
+            const res = await $fetch<any>(`${activeApiEndpoint.value}/bulk`, {
                 method: 'POST',
                 body: { records: recordsToImport }
             })

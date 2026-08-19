@@ -6,17 +6,11 @@ export default defineEventHandler(async (event) => {
   const user = event.context.user;
   
   try {
-    const vars = await sql`SELECT key, value, target, is_public, is_secret FROM globals WHERE type = 'variable' AND target IN ('ui', 'shared')`;
+    const vars = await sql`SELECT key, value, target, data_type FROM globals WHERE type = 'variable' AND target IN ('ui', 'shared') AND (active = 1 OR active = true)`;
     const result: Record<string, string> = {};
     
     for (const v of vars) {
-      const isPublic = v.is_public === 1 || v.is_public === true;
-      const isSecret = v.is_secret === 1 || v.is_secret === true;
-
-      // If user is not authenticated, only include public variables
-      if (!user && !isPublic) {
-        continue;
-      }
+      const isSecret = v.data_type === 'password';
 
       let valueToReturn = v.value;
       if (isSecret) {

@@ -111,176 +111,177 @@ export const getRecords = async (tenantSlug: string, slug: string, query: any) =
     orderClause = `rf_sort.val_num ${sortOrder}, rf_sort.val_str ${sortOrder}`;
   }
 
-  const [countRes, pagedRes] = await Promise.all([
-    sql.unsafe(`SELECT COUNT(*) as count FROM records ${joinClause} ${whereClause}`, queryParams),
-    sql.unsafe(`
-      SELECT records.id, records.created_at, records.updated_at, records.hashtags, records.created_by, records.updated_by,
-      (
-        SELECT json_group_object(
-            rf.key, 
-            CASE 
-              WHEN rf.val_str IS NOT NULL THEN rf.val_str 
-              WHEN rf.val_num IS NOT NULL THEN rf.val_num 
-              WHEN rf.val_bool IS NOT NULL THEN json(CASE WHEN rf.val_bool = 1 THEN 'true' ELSE 'false' END) 
-            END
-        )
-        FROM record_fields rf WHERE rf.record_id = records.id
-      ) as data
-      FROM records
-      ${joinClause}
-      ${whereClause}
-      ORDER BY ${orderClause} 
-      LIMIT $${paramCount + 1} OFFSET $${paramCount + 2}
-    `, [...queryParams, limit, offset])
-  ]);
+    const [countRes, pagedRes] = await Promise.all([
+      sql.unsafe(`SELECT COUNT(*) as count FROM records ${joinClause} ${whereClause}`, queryParams),
+      sql.unsafe(`
+        SELECT records.id, records.created_at, records.updated_at, records.hashtags, records.created_by, records.updated_by, records.system_created, records.system_modified,
+        (
+          SELECT json_group_object(
+              rf.key, 
+              CASE 
+                WHEN rf.val_str IS NOT NULL THEN rf.val_str 
+                WHEN rf.val_num IS NOT NULL THEN rf.val_num 
+                WHEN rf.val_bool IS NOT NULL THEN json(CASE WHEN rf.val_bool = 1 THEN 'true' ELSE 'false' END) 
+              END
+          )
+          FROM record_fields rf WHERE rf.record_id = records.id
+        ) as data
+        FROM records
+        ${joinClause}
+        ${whereClause}
+        ORDER BY ${orderClause} 
+        LIMIT $${paramCount + 1} OFFSET $${paramCount + 2}
+      `, [...queryParams, limit, offset])
+    ]);
 
-  const totalCount = parseInt((countRes[0] as any)?.count || '0');
-  const secretKeys = Object.entries(parsedSchema || {})
-    .filter(([_, def]: any) => def.type === 'password')
-    .map(([k]) => k);
+    const totalCount = parseInt((countRes[0] as any)?.count || '0');
+    const secretKeys = Object.entries(parsedSchema || {})
+      .filter(([_, def]: any) => def.type === 'password')
+      .map(([k]) => k);
 
-  const finalRecords = pagedRes.map((r: any) => {
-    let parsedData: any = {};
-    if (typeof r.data === 'string') {
-      try { parsedData = JSON.parse(r.data); } catch { }
-    } else {
-      parsedData = r.data || {};
-    }
-    
-    secretKeys.forEach((k: string) => {
-      if (parsedData[k] !== undefined && parsedData[k] !== null && parsedData[k] !== '') {
-        parsedData[k] = '********';
+    const finalRecords = pagedRes.map((r: any) => {
+      let parsedData: any = {};
+      if (typeof r.data === 'string') {
+        try { parsedData = JSON.parse(r.data); } catch { }
+      } else {
+        parsedData = r.data || {};
       }
+      
+      secretKeys.forEach((k: string) => {
+        if (parsedData[k] !== undefined && parsedData[k] !== null && parsedData[k] !== '') {
+          parsedData[k] = '********';
+        }
+      });
+
+      let parsedHashtags = [];
+      if (typeof r.hashtags === 'string' && r.hashtags.trim()) {
+        try { parsedHashtags = JSON.parse(r.hashtags); } catch { }
+      } else if (Array.isArray(r.hashtags)) {
+        parsedHashtags = r.hashtags;
+      }
+
+      return {
+        ...parsedData,
+        id: r.id,
+        hashtags: parsedHashtags,
+        created_at: r.created_at,
+        updated_at: r.updated_at,
+        created_by: r.created_by,
+        updated_by: r.updated_by,
+        system_created: r.system_created,
+        system_modified: r.system_modified
+      };
     });
 
-    let parsedHashtags = [];
-    if (typeof r.hashtags === 'string' && r.hashtags.trim()) {
-      try { parsedHashtags = JSON.parse(r.hashtags); } catch { }
-    } else if (Array.isArray(r.hashtags)) {
-      parsedHashtags = r.hashtags;
-    }
+    const finalRecordsWithDisplay = await Promise.all(finalRecords.map(async (r: any) => {
+      const recordTitle = await resolveRecordTitle(sql, entity.id, r.id, 0, r);
+      const displayValues: Record<string, string> = {};
+      for (const [key, fieldDef] of Object.entries(parsedSchema || {}) as any) {
+        if (fieldDef.type === 'relation' && fieldDef.targetEntityId && r[key] !== undefined && r[key] !== null) {
+          displayValues[key] = await resolveRecordTitle(sql, Number(fieldDef.targetEntityId), Number(r[key]), 0);
+        }
+      }
+
+      return {
+        ...r,
+        _record_title: recordTitle,
+        _displayValues: Object.keys(displayValues).length > 0 ? displayValues : undefined
+      };
+    }));
 
     return {
-      ...parsedData,
-      id: r.id,
-      hashtags: parsedHashtags,
-      created_at: r.created_at,
-      updated_at: r.updated_at,
-      created_by: r.created_by,
-      updated_by: r.updated_by
+      success: true,
+      data: finalRecordsWithDisplay,
+      entity: entity,
+      pagination: {
+        total: totalCount,
+        page: page,
+        limit: limit
+      }
     };
-  });
+  };
 
-  const finalRecordsWithDisplay = await Promise.all(finalRecords.map(async (r: any) => {
-    // Determine the main record title
-    const recordTitle = await resolveRecordTitle(sql, entity.id, r.id, 0, r);
+  export const createRecord = async (tenantSlug: string, slug: string, body: any, userId: any, isSystem: number = 0) => {
+    const sql = useDB(tenantSlug || 'master');
+    const entityResult = await sql`SELECT id, name, schema FROM entities WHERE slug = ${slug}`;
+    if (entityResult.length === 0) throw { statusCode: 404, message: 'errors.entityNotFound' };
+    const entity = entityResult[0] as any;
+    const parsedSchema = (typeof entity.schema === 'string' && entity.schema.trim()) ? (() => { try { return JSON.parse(entity.schema); } catch { return {}; } })() : (entity.schema || {});
 
-    // Determine relation display values
-    const displayValues: Record<string, string> = {};
-    for (const [key, fieldDef] of Object.entries(parsedSchema || {}) as any) {
-      if (fieldDef.type === 'relation' && fieldDef.targetEntityId && r[key] !== undefined && r[key] !== null) {
-        displayValues[key] = await resolveRecordTitle(sql, Number(fieldDef.targetEntityId), Number(r[key]), 0);
+    const validation = validateRecordData(body.data || {}, parsedSchema);
+    if (!validation.isValid) {
+      throw {
+        statusCode: 400,
+        statusMessage: 'error.validationError',
+        message: validation.errors.map(e => e.message).join(' | '),
+        data: validation.errors
+      };
+    }
+
+    const uniqueError = await checkUniqueConstraints(sql, entity.id, parsedSchema, validation.processedPayload);
+    if (uniqueError) {
+      throw { statusCode: 400, message: uniqueError };
+    }
+
+    const safeData = validation.processedPayload;
+    const passwordFields = Object.entries(parsedSchema || {}).filter(([_, def]: any) => def.type === 'password');
+      
+    for (const [key, _] of passwordFields as [string, any][]) {
+      const val = safeData[key];
+      if (val !== undefined && val !== null && val !== '') {
+        safeData[key] = await bcrypt.hash(String(val), 10);
       }
     }
 
-    return {
-      ...r,
-      _record_title: recordTitle,
-      _displayValues: Object.keys(displayValues).length > 0 ? displayValues : undefined
-    };
-  }));
+    return await sql.begin(async (tx: any) => {
+      let recHashtagsArr = Array.isArray(body.hashtags) ? body.hashtags : [];
+      const hashtags = JSON.stringify(recHashtagsArr);
+      const userIdStr = userId ? String(userId) : null;
 
-  return {
-    success: true,
-    data: finalRecordsWithDisplay,
-    entity: entity,
-    pagination: {
-      total: totalCount,
-      page: page,
-      limit: limit
-    }
+      const result = await tx.unsafe(`
+        INSERT INTO records (entity_id, hashtags, created_by, updated_by, system_created, system_modified) 
+        VALUES ($1, $2, $3, $4, $5, $5) 
+        RETURNING id, created_at, updated_at, created_by, updated_by, system_created, system_modified
+      `, [entity.id, hashtags, userIdStr, userIdStr, isSystem]);
+
+      const record = result[0];
+
+      const placeholders: string[] = [];
+      const params: any[] = [];
+
+      for (const [key, value] of Object.entries(safeData)) {
+        if (value === undefined || value === null) continue;
+        let valStr = null, valNum = null, valBool = null;
+
+        if (typeof value === 'boolean') valBool = value;
+        else if (typeof value === 'number') valNum = value;
+        else if (typeof value === 'object') valStr = JSON.stringify(value);
+        else valStr = String(value);
+
+        placeholders.push('(?, ?, ?, ?, ?)');
+        params.push(record.id, key, valStr, valNum, valBool);
+      }
+
+      if (placeholders.length > 0) {
+        await tx.unsafe(`
+          INSERT INTO record_fields (record_id, key, val_str, val_num, val_bool)
+          VALUES ${placeholders.join(', ')}
+        `, params);
+      }
+
+      return {
+        ...safeData,
+        id: record.id,
+        hashtags: recHashtagsArr,
+        created_at: record.created_at,
+        updated_at: record.updated_at,
+        created_by: record.created_by,
+        updated_by: record.updated_by,
+        system_created: record.system_created,
+        system_modified: record.system_modified
+      };
+    });
   };
-};
-
-export const createRecord = async (tenantSlug: string, slug: string, body: any, userId: any) => {
-  const sql = useDB(tenantSlug || 'master');
-  const entityResult = await sql`SELECT id, name, schema FROM entities WHERE slug = ${slug}`;
-  if (entityResult.length === 0) throw { statusCode: 404, message: 'errors.entityNotFound' };
-  const entity = entityResult[0] as any;
-  const parsedSchema = (typeof entity.schema === 'string' && entity.schema.trim()) ? (() => { try { return JSON.parse(entity.schema); } catch { return {}; } })() : (entity.schema || {});
-
-  const validation = validateRecordData(body.data || {}, parsedSchema);
-  if (!validation.isValid) {
-    throw {
-      statusCode: 400,
-      statusMessage: 'error.validationError',
-      message: validation.errors.map(e => e.message).join(' | '),
-      data: validation.errors
-    };
-  }
-
-  const uniqueError = await checkUniqueConstraints(sql, entity.id, parsedSchema, validation.processedPayload);
-  if (uniqueError) {
-    throw { statusCode: 400, message: uniqueError };
-  }
-
-  const safeData = validation.processedPayload;
-  const passwordFields = Object.entries(parsedSchema || {}).filter(([_, def]: any) => def.type === 'password');
-    
-  for (const [key, _] of passwordFields as [string, any][]) {
-    const val = safeData[key];
-    if (val !== undefined && val !== null && val !== '') {
-      safeData[key] = await bcrypt.hash(String(val), 10);
-    }
-  }
-
-  return await sql.begin(async (tx: any) => {
-    let recHashtagsArr = Array.isArray(body.hashtags) ? body.hashtags : [];
-    const hashtags = JSON.stringify(recHashtagsArr);
-    const userIdStr = userId ? String(userId) : null;
-
-    const result = await tx.unsafe(`
-      INSERT INTO records (entity_id, hashtags, created_by, updated_by) 
-      VALUES ($1, $2, $3, $4) 
-      RETURNING id, created_at, updated_at, created_by, updated_by
-    `, [entity.id, hashtags, userIdStr, userIdStr]);
-
-    const record = result[0];
-
-    const placeholders: string[] = [];
-    const params: any[] = [];
-
-    for (const [key, value] of Object.entries(safeData)) {
-      if (value === undefined || value === null) continue;
-      let valStr = null, valNum = null, valBool = null;
-
-      if (typeof value === 'boolean') valBool = value;
-      else if (typeof value === 'number') valNum = value;
-      else if (typeof value === 'object') valStr = JSON.stringify(value);
-      else valStr = String(value);
-
-      placeholders.push('(?, ?, ?, ?, ?)');
-      params.push(record.id, key, valStr, valNum, valBool);
-    }
-
-    if (placeholders.length > 0) {
-      await tx.unsafe(`
-        INSERT INTO record_fields (record_id, key, val_str, val_num, val_bool)
-        VALUES ${placeholders.join(', ')}
-      `, params);
-    }
-
-    return {
-      ...safeData,
-      id: record.id,
-      hashtags: recHashtagsArr,
-      created_at: record.created_at,
-      updated_at: record.updated_at,
-      created_by: record.created_by,
-      updated_by: record.updated_by
-    };
-  });
-};
 
 export const getRecord = async (tenantSlug: string, slug: string, id: any) => {
   const sql = useDB(tenantSlug || 'master');
@@ -288,7 +289,7 @@ export const getRecord = async (tenantSlug: string, slug: string, id: any) => {
   if (entityResult.length === 0) throw { statusCode: 404, message: 'errors.entityNotFound' };
   const entity = entityResult[0] as any;
 
-  const [recordInfo] = await sql.unsafe(`SELECT created_at, updated_at, hashtags, created_by, updated_by FROM records WHERE id = ? AND entity_id = ?`, [id, entity.id]);
+  const [recordInfo] = await sql.unsafe(`SELECT created_at, updated_at, hashtags, created_by, updated_by, system_created, system_modified FROM records WHERE id = ? AND entity_id = ?`, [id, entity.id]);
   if (!recordInfo) throw { statusCode: 404, message: 'error.recordNotFound' };
 
   const parsedSchema = (typeof entity.schema === 'string' && entity.schema.trim()) ? (() => { try { return JSON.parse(entity.schema); } catch { return {}; } })() : (entity.schema || {});
@@ -332,11 +333,13 @@ export const getRecord = async (tenantSlug: string, slug: string, id: any) => {
     updated_at: recordInfo.updated_at,
     created_by: recordInfo.created_by,
     updated_by: recordInfo.updated_by,
+    system_created: recordInfo.system_created,
+    system_modified: recordInfo.system_modified,
     hashtags: parsedHashtags
   };
 };
 
-export const updateRecord = async (tenantSlug: string, slug: string, id: any, body: any, userId: any) => {
+export const updateRecord = async (tenantSlug: string, slug: string, id: any, body: any, userId: any, isSystem: number = 0) => {
   const sql = useDB(tenantSlug || 'master');
   const entityResult = await sql`SELECT id, name, schema FROM entities WHERE slug = ${slug}`;
   if (entityResult.length === 0) throw { statusCode: 404, message: 'errors.entityNotFound' };
@@ -395,10 +398,10 @@ export const updateRecord = async (tenantSlug: string, slug: string, id: any, bo
 
     const result = await tx.unsafe(`
       UPDATE records 
-      SET updated_at = CURRENT_TIMESTAMP, hashtags = $3, updated_by = $4
+      SET updated_at = CURRENT_TIMESTAMP, hashtags = $3, updated_by = $4, system_modified = $5
       WHERE id = $1 AND entity_id = $2 
-      RETURNING id, created_at, updated_at, created_by, updated_by
-    `, [id, entity.id, hashtags, userIdStr]);
+      RETURNING id, created_at, updated_at, created_by, updated_by, system_created, system_modified
+    `, [id, entity.id, hashtags, userIdStr, isSystem]);
 
     const record = result[0];
     await tx.unsafe(`DELETE FROM record_fields WHERE record_id = $1`, [id]);
@@ -432,7 +435,9 @@ export const updateRecord = async (tenantSlug: string, slug: string, id: any, bo
       created_at: record.created_at,
       updated_at: record.updated_at,
       created_by: record.created_by,
-      updated_by: record.updated_by
+      updated_by: record.updated_by,
+      system_created: record.system_created,
+      system_modified: record.system_modified
     };
   });
 };
@@ -471,7 +476,7 @@ export const bulkDeleteRecords = async (tenantSlug: string, slug: string, ids: s
   return { success: true, count: deletedCount };
 };
 
-export const bulkImportRecords = async (tenantSlug: string, slug: string, records: any[], userId: any) => {
+export const bulkImportRecords = async (tenantSlug: string, slug: string, records: any[], userId: any, isSystem: number = 0) => {
   if (!Array.isArray(records)) return { success: false, message: 'error.recordsArrayExpected' };
   
   const sql = useDB(tenantSlug || 'master');
@@ -626,10 +631,10 @@ export const bulkImportRecords = async (tenantSlug: string, slug: string, record
         const hashtags = JSON.stringify(recHashtagsArr);
         
         const result = await tx.unsafe(`
-          INSERT INTO records (entity_id, hashtags, created_by, updated_by) 
-          VALUES ($1, $2, $3, $4) 
+          INSERT INTO records (entity_id, hashtags, created_by, updated_by, system_created, system_modified) 
+          VALUES ($1, $2, $3, $4, $5, $5) 
           RETURNING id
-        `, [entity.id, hashtags, userIdStr, userIdStr]);
+        `, [entity.id, hashtags, userIdStr, userIdStr, isSystem]);
         
         const recordId = result[0].id;
         const placeholders: string[] = [];

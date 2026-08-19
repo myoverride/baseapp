@@ -70,7 +70,7 @@ async function fetchGlobals(tenantSlug: string): Promise<TenantGlobalsCache> {
   try {
     const sql = useDB(tenantSlug);
     const rows = await sql<any[]>`
-      SELECT id, type, key, value, data_type, target, code, scope, is_secret
+      SELECT id, type, key, value, data_type, target, code, scope
       FROM globals
       WHERE active = true OR active = 1
     `;
@@ -89,7 +89,7 @@ async function fetchGlobals(tenantSlug: string): Promise<TenantGlobalsCache> {
         cache.vars.set(row.key, {
           key: row.key,
           value: parsedVal,
-          is_secret: !!row.is_secret
+          is_secret: row.data_type === 'password'
         });
       } else if (row.type === 'util') {
         cache.methods.set(row.key, {

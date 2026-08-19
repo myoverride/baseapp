@@ -1,31 +1,26 @@
 <template>
   <v-container>
     <div class="mb-4" v-if="!hideHeader">
-      <v-btn prepend-icon="mdi-arrow-left" variant="text" to="/" class="text-none font-weight-medium px-0 text-body-1" color="primary">
+      <v-btn prepend-icon="mdi-arrow-left" variant="text" to="/" class="text-none font-weight-medium px-0 text-body-1"
+        color="primary">
         {{ $t('common.home') }}
       </v-btn>
     </div>
 
-    <CrudTable
-      ref="crudTable"
-      api-endpoint="/api/admin/endpoints"
-      :columns="columns"
-      :title="$t('menu.endpoints')"
-      default-sort-key="priority"
-      default-sort-order="desc"
-      :enable-multi-select="true"
-      @create="openCreateDialog"
-      @edit="openEditDialog"
-      @delete="handleDelete"
-    >
+    <CrudTable ref="crudTable" api-endpoint="/api/admin/endpoints" :columns="columns" :title="$t('menu.endpoints')"
+      default-sort-key="priority" default-sort-order="desc" :enable-multi-select="true" @create="openCreateDialog"
+      @edit="openEditDialog" @delete="handleDelete">
       <template #toolbarActions>
-        <v-btn icon="mdi-download" variant="text" :loading="jsonExportLoading" @click="exportJSON('endpoints')" class="mr-2" :title="$t('action.exportFormat', { format: 'JSON' })"></v-btn>
-        <v-btn icon="mdi-upload" variant="text" :loading="jsonImportLoading" @click="triggerJSONImport" class="mr-2" :title="$t('action.importFormat', { format: 'JSON' })"></v-btn>
+        <v-btn icon="mdi-download" variant="text" :loading="jsonExportLoading" @click="exportJSON('endpoints')"
+          class="mr-2" :title="$t('action.exportFormat', { format: 'JSON' })"></v-btn>
+        <v-btn icon="mdi-upload" variant="text" :loading="jsonImportLoading" @click="triggerJSONImport" class="mr-2"
+          :title="$t('action.importFormat', { format: 'JSON' })"></v-btn>
         <input type="file" ref="jsonInputRef" accept=".json" style="display: none" @change="importJSON">
       </template>
 
       <template #rowActions="{ item }">
-        <v-btn icon="mdi-download-circle-outline" size="small" color="blue" variant="text" @click="exportSingleJSON(item, 'endpoint')" :title="$t('action.exportFormat', { format: '(Single)' })" />
+        <v-btn icon="mdi-download-circle-outline" size="small" color="blue" variant="text"
+          @click="exportSingleJSON(item, 'endpoint')" :title="$t('action.exportFormat', { format: '(Single)' })" />
       </template>
 
       <template v-slot:item.type="{ item }">
@@ -33,7 +28,7 @@
           {{ String(item.type).toUpperCase() }}
         </v-chip>
       </template>
-      
+
       <template v-slot:item.active="{ item }">
         <v-icon :color="item.active ? 'success' : 'error'">
           {{ item.active ? 'mdi-check-circle' : 'mdi-close-circle' }}
@@ -52,8 +47,10 @@
             <v-btn icon="mdi-information" v-bind="props" color="info" variant="text" size="small"></v-btn>
           </template>
           <div class="text-caption">
-            <div class="mb-1"><span class="font-weight-medium opacity-70">{{ $t('table.createdAt') }}:</span> {{ formatAppDate(item.created_at as any) }}</div>
-            <div><span class="font-weight-medium opacity-70">{{ $t('table.updatedAt') }}:</span> {{ formatAppDate(item.updated_at as any) }}</div>
+            <div class="mb-1"><span class="font-weight-medium opacity-70">{{ $t('table.createdAt') }}:</span> {{
+              formatAppDate(item.created_at as any) }}</div>
+            <div><span class="font-weight-medium opacity-70">{{ $t('table.updatedAt') }}:</span> {{
+              formatAppDate(item.updated_at as any) }}</div>
           </div>
         </v-tooltip>
       </template>
@@ -62,11 +59,7 @@
         <div class="d-flex flex-wrap gap-1">
           <v-chip
             v-for="tag in (typeof item.hashtags === 'string' ? JSON.parse(item.hashtags || '[]') : (item.hashtags || []))"
-            :key="tag"
-            size="x-small"
-            :color="color"
-            variant="flat"
-          >
+            :key="tag" size="x-small" :color="color" variant="flat">
             {{ tag }}
           </v-chip>
         </div>
@@ -74,160 +67,100 @@
     </CrudTable>
 
     <!-- Create/Edit Dialog -->
-    <ItemDialog
-      ref="itemDialogRef"
-      v-model="dialog"
-      :mode="dialogMode"
-      :title="dialogMode === 'create' ? $t('common.add') : $t('common.edit')"
-      :initial-data="initialFormData"
-      fullscreen
-      @save="save"
-    >
+    <ItemDialog ref="itemDialogRef" v-model="dialog" :mode="dialogMode"
+      :title="dialogMode === 'create' ? $t('common.add') : $t('common.edit')" :initial-data="initialFormData" fullscreen
+      @save="save">
       <template #default="{ formData }">
-        <div class="d-flex flex-column fill-height bg-white">
+        <div class="d-flex flex-column fill-height">
           <v-row class="mt-4 flex-grow-0" density="compact">
             <v-col cols="12" md="3">
-              <v-text-field
-                v-model="formData.name"
-                :label="$t('common.name')"
-                variant="outlined"
-                density="compact"
-                hide-details
-              ></v-text-field>
+              <v-text-field v-model="formData.name" :label="$t('common.name')" variant="outlined" density="compact"
+                hide-details></v-text-field>
             </v-col>
             <v-col cols="12" md="2">
-              <v-select
-                v-model="formData.type"
-                :items="['http', 'ws', 'mqtt']"
-                :label="$t('common.type')"
-                variant="outlined"
-                density="compact"
-                hide-details
-                @update:model-value="onTypeChange($event, formData)"
-              ></v-select>
+              <v-select v-model="formData.type" :items="['http', 'ws', 'mqtt']" :label="$t('common.type')"
+                variant="outlined" density="compact" hide-details
+                @update:model-value="onTypeChange($event, formData)"></v-select>
             </v-col>
             <v-col cols="12" md="5" v-if="['http', 'ws'].includes(formData.type)">
-              <v-text-field
-                v-model="formData.route_pattern"
-                :label="$t('field.routePattern')"
-                variant="outlined"
-                density="compact"
-                :placeholder="getRouteHint(formData.type)"
-                :rules="[
+              <v-text-field v-model="formData.route_pattern" :label="$t('field.routePattern')" variant="outlined"
+                density="compact" :placeholder="getRouteHint(formData.type)" :rules="[
                   (v: any) => !!v || $t('validation.required'),
                   (v: string) => formData.type === 'mqtt' || String(v).startsWith('/') || $t('validation.invalidRoutePattern')
-                ]"
-              ></v-text-field>
+                ]"></v-text-field>
             </v-col>
             <v-col cols="12" md="5" v-if="formData.type === 'mqtt'">
-              <v-text-field
-                v-model="formData.route_pattern"
-                :label="$t('field.topicPattern')"
-                variant="outlined"
-                density="compact"
-                :placeholder="$t('field.topicPatternHint')"
-                hide-details
-              ></v-text-field>
+              <v-text-field v-model="formData.route_pattern" :label="$t('field.topicPattern')" variant="outlined"
+                density="compact" :placeholder="$t('field.topicPatternHint')" hide-details></v-text-field>
             </v-col>
             <v-col cols="12" md="2">
-              <v-text-field
-                v-model.number="formData.priority"
-                :label="$t('common.priority')"
-                type="number"
-                variant="outlined"
-                density="compact"
-                hide-details
-              ></v-text-field>
+              <v-text-field v-model.number="formData.priority" :label="$t('common.priority')" type="number"
+                variant="outlined" density="compact" hide-details></v-text-field>
             </v-col>
           </v-row>
           <v-row class="mt-1 flex-grow-0" density="compact">
             <v-col cols="12" md="8">
-              <v-combobox
-                v-model="formData.hashtags"
-                :items="availableTags"
-                :label="$t('field.hashtags')"
-                multiple
-                chips
-                closable-chips
-                clearable
-                variant="outlined"
-                density="compact"
-                hide-details
-              ></v-combobox>
+              <v-combobox v-model="formData.hashtags" :items="availableTags" :label="$t('field.hashtags')" multiple
+                chips closable-chips clearable variant="outlined" density="compact" hide-details></v-combobox>
             </v-col>
             <v-col cols="6" md="2">
-              <v-switch
-                v-model="formData.is_public"
-                :label="$t('common.public')"
-                :color="color"
-                density="compact"
-                hide-details
-              ></v-switch>
+              <v-switch v-model="formData.is_public" :label="$t('common.public')" :color="color" density="compact"
+                hide-details></v-switch>
             </v-col>
             <v-col cols="6" md="2">
-              <v-switch
-                v-model="formData.active"
-                :label="$t('common.active')"
-                color="success"
-                density="compact"
-                hide-details
-              ></v-switch>
+              <v-switch v-model="formData.active" :label="$t('common.active')" color="success" density="compact"
+                hide-details></v-switch>
             </v-col>
           </v-row>
-          
+
           <v-divider class="my-3"></v-divider>
-          
+
           <div class="flex-grow-1 d-flex flex-column px-4 pb-4" style="min-height: 400px;">
             <div class="d-flex align-center justify-space-between mb-2">
               <v-tabs v-model="tab" :color="color" density="compact">
                 <v-tab value="code">
-                  <v-icon start size="small">mdi-code-braces</v-icon> <span v-if="!mobile">{{ $t('common.codeEditor') }}</span>
+                  <v-icon start size="small">mdi-code-braces</v-icon> <span v-if="!mobile">{{ $t('common.codeEditor')
+                  }}</span>
                 </v-tab>
                 <v-tab value="test">
                   <v-icon start size="small">mdi-flask</v-icon> <span v-if="!mobile">Test</span>
                 </v-tab>
                 <v-tab value="console">
-                  <v-icon start size="small">mdi-console</v-icon> <span v-if="!mobile">{{ $t('common.virtualConsole') }}</span>
+                  <v-icon start size="small">mdi-console</v-icon> <span v-if="!mobile">{{ $t('common.virtualConsole')
+                  }}</span>
                 </v-tab>
               </v-tabs>
 
               <div class="d-flex align-center">
-                <v-btn v-if="dialogMode === 'edit'" class="mr-2" size="small" :color="color" variant="tonal" prepend-icon="mdi-history" @click="historyDialogOpen = true">
+                <v-btn v-if="dialogMode === 'edit'" class="mr-2" size="small" :color="color" variant="tonal"
+                  prepend-icon="mdi-history" @click="historyDialogOpen = true">
                   <span v-if="!mobile">{{ $t('action.history') }}</span>
                 </v-btn>
               </div>
             </div>
-            
+
             <div class="mt-2 flex-grow-1 position-relative">
-              <div v-show="tab === 'code'" class="position-absolute w-100 h-100 border rounded" style="overflow: hidden;">
-                <MonacoEditor
-                  v-model="formData.code"
-                  language="javascript"
-                  height="100%"
-                  :theme="monacoTheme"
-                  @save="saveCodeOnly"
-                />
+              <div v-show="tab === 'code'" class="position-absolute w-100 h-100 border rounded"
+                style="overflow: hidden;">
+                <MonacoEditor v-model="formData.code" language="javascript" height="100%" :theme="monacoTheme"
+                  @save="saveCodeOnly" />
               </div>
-              
+
               <div v-show="tab === 'test'" class="position-absolute w-100 h-100">
                 <v-row class="fill-height ma-0">
                   <!-- Payload Editor -->
                   <v-col cols="12" md="6" class="pa-1 d-flex flex-column fill-height">
                     <div class="d-flex align-center justify-space-between mb-1">
                       <div class="text-caption font-weight-bold opacity-70">{{ $t('ide.testPayloadJson') }}</div>
-                      <v-btn size="x-small" :color="color" @click="runTest('endpoint')" :loading="isTesting" prepend-icon="mdi-play">
+                      <v-btn size="x-small" :color="color" @click="runTest('endpoint')" :loading="isTesting"
+                        prepend-icon="mdi-play">
                         {{ $t('action.run') }}
                       </v-btn>
                     </div>
                     <div class="border rounded flex-grow-1 position-relative" style="min-height: 250px;">
                       <div class="position-absolute w-100 h-100" style="overflow: hidden;">
-                        <MonacoEditor
-                          v-model="testPayload"
-                          language="json"
-                          height="100%"
-                          :theme="monacoTheme"
-                          @save="saveCodeOnly"
-                        />
+                        <MonacoEditor v-model="testPayload" language="json" height="100%" :theme="monacoTheme"
+                          @save="saveCodeOnly" />
                       </div>
                     </div>
                   </v-col>
@@ -237,29 +170,26 @@
                       <div class="text-caption font-weight-bold opacity-70">{{ $t('ide.testResult') }}</div>
                       <v-btn size="x-small" variant="text" icon="mdi-content-copy" @click="copyTestResult"></v-btn>
                     </div>
-                    <div class="border rounded flex-grow-1 bg-surface-variant pa-2" style="overflow-y: auto; font-family: monospace; font-size: 13px; white-space: pre-wrap; min-height: 250px;">
-{{ testResult }}
+                    <div class="border rounded flex-grow-1 bg-surface-variant pa-2"
+                      style="overflow-y: auto; font-family: monospace; font-size: 13px; white-space: pre-wrap; min-height: 250px;">
+                      {{ testResult }}
                     </div>
                   </v-col>
                 </v-row>
               </div>
 
               <div v-show="tab === 'console'" class="position-absolute w-100 h-100">
-                <VirtualConsole :source-id="editId ? `${editId},test-sandbox-endpoint` : 'test-sandbox-endpoint'" height="100%" />
+                <VirtualConsole :source-id="editId ? `${editId},test-sandbox-endpoint` : 'test-sandbox-endpoint'"
+                  height="100%" />
               </div>
             </div>
           </div>
         </div>
       </template>
     </ItemDialog>
-    
-    <CodeHistoryDialog
-      v-model="historyDialogOpen"
-      type="endpoints"
-      :id="editId || ''"
-      :current-code="itemDialogRef?.formData?.code || ''"
-      @select="handleHistorySelect"
-    />
+
+    <CodeHistoryDialog v-model="historyDialogOpen" type="endpoints" :id="editId || ''"
+      :current-code="itemDialogRef?.formData?.code || ''" @select="handleHistorySelect" />
   </v-container>
 </template>
 
@@ -351,16 +281,16 @@ const toggleMonacoTheme = () => {
 const saveCodeOnly = async () => {
   const payload = itemDialogRef.value?.formData || initialFormData.value;
   const targetId = payload.id || editId.value;
-  
+
   if (!targetId) {
     if ($toast) $toast.warning(t('message.saveCodeNotAllowed'));
     return;
   }
-  
+
   if (payload.type === 'mqtt' && !payload.route_pattern) {
-    payload.route_pattern = '#'; 
+    payload.route_pattern = '#';
   }
-  
+
   try {
     await $fetch(`/api/admin/endpoints/${targetId}`, {
       method: 'PUT',
@@ -504,7 +434,7 @@ onMounted(async () => {
     const tags = await $fetch<string[]>('/api/admin/app-studio/tags');
     availableTags.value = tags || [];
   } catch (e) {
-    
+
   }
 });
 
@@ -527,7 +457,7 @@ const onTypeChange = (newType: string, slotData: any) => {
   }
 
   // 2. Dinamik Rota Şablonu Güncellemesi
-  if (dialogMode.value === 'edit') return; 
+  if (dialogMode.value === 'edit') return;
   if (newType === 'mqtt') {
     slotData.route_pattern = 'telemetry/devices/#';
   } else if (newType === 'ws') {
@@ -561,7 +491,7 @@ const openEditDialog = async (item: any) => {
     hashtags: typeof item.hashtags === 'string' ? JSON.parse(item.hashtags || '[]') : (item.hashtags || []),
     code: ''
   };
-  
+
   try {
     const detail = await $fetch<any>(`/api/admin/endpoints/${item.id}`);
     if (detail) {
@@ -571,8 +501,8 @@ const openEditDialog = async (item: any) => {
       initialFormData.value.hashtags = typeof detail.hashtags === 'string' ? JSON.parse(detail.hashtags || '[]') : (detail.hashtags || []);
     }
   } catch (e: any) {
-    
-        const errPayload = err?.data || e?.data;
+
+    const errPayload = e?.data;
     const isArr = Array.isArray(errPayload?.data);
     const errData = isArr ? errPayload.data[0] : (errPayload?.data || {});
     const errMsg = isArr ? errPayload.data[0].message : (errPayload?.message || 'errors.operationFailed');
@@ -589,20 +519,20 @@ const closeDialog = () => {
 
 const save = async (payload: any) => {
   loading.value = true;
-  
+
   if (payload.type === 'mqtt' && !payload.route_pattern) {
-    payload.route_pattern = '#'; 
+    payload.route_pattern = '#';
   }
 
   try {
     const url = dialogMode.value === 'edit' ? `/api/admin/endpoints/${payload.id}` : '/api/admin/endpoints';
     const method = dialogMode.value === 'edit' ? 'PUT' : 'POST';
-    
+
     await $fetch(url, {
       method,
       body: payload
     });
-    
+
     closeDialog();
     crudTable.value?.loadItems();
     if ($toast) $toast.success(t('message.success'));
@@ -617,7 +547,7 @@ const handleDelete = async (item: any) => {
   if (!confirm(t('confirm.delete', { name: item.name || item.route_pattern }))) return;
   try {
     await $fetch(`/api/admin/endpoints/${item.id}`, { method: 'DELETE' });
-    if ($toast) $toast.warning(t('message.entityDeleted', { name: 'Endpoint' }));
+    if ($toast) $toast.success(t('message.deleted'));
     crudTable.value?.loadItems();
   } catch (err: any) {
     if ($toast) $toast.error(t(err.data?.message || 'errors.operationFailed', err.data?.data || {}));
@@ -626,7 +556,8 @@ const handleDelete = async (item: any) => {
 </script>
 
 <style scoped>
-:deep(.v-window), :deep(.v-window__container) {
+:deep(.v-window),
+:deep(.v-window__container) {
   flex-grow: 1;
   display: flex;
   flex-direction: column;

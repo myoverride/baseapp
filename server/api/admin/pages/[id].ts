@@ -60,9 +60,10 @@ export default defineEventHandler(async (event) => {
         await sql`UPDATE pages SET is_default_layout = 0 WHERE page_type = 'layout' AND id != ${id}`;
       }
 
+      const isSystem = event.context.user?.is_super_admin ? 1 : 0;
       const result = await sql`
         UPDATE pages
-        SET route_pattern = ${newRoutePattern || null}, priority = ${body.priority || 0}, title = ${body.title}, page_type = ${newPageType}, template_string = ${body.template_string || ''}, script_content = ${body.script_content || ''}, style_content = ${body.style_content || ''}, active = ${body.active !== false}, is_public = ${body.is_public || false}, hashtags = ${sql.json(body.hashtags || [])}, is_default_layout = ${body.is_default_layout ? 1 : 0}, layout_id = ${body.layout_id || null}, updated_at = CURRENT_TIMESTAMP
+        SET route_pattern = ${newRoutePattern || null}, priority = ${body.priority || 0}, title = ${body.title}, page_type = ${newPageType}, template_string = ${body.template_string || ''}, script_content = ${body.script_content || ''}, style_content = ${body.style_content || ''}, active = ${body.active !== false}, is_public = ${body.is_public || false}, hashtags = ${sql.json(body.hashtags || [])}, is_default_layout = ${body.is_default_layout ? 1 : 0}, layout_id = ${body.layout_id || null}, updated_by = ${event.context.user?.id || null}, system_modified = ${isSystem}, updated_at = CURRENT_TIMESTAMP
         WHERE id = ${id}
         RETURNING *
       `;

@@ -1,6 +1,6 @@
 {
   "name": "Alınacak Hizmetler",
   "slug": "appointment_services",
-  "schema": "{\"appointment\":{\"label\":\"{\\\"tr\\\":\\\"Randevu\\\",\\\"en\\\":\\\"Appointment\\\"}\",\"type\":\"relation\",\"rules\":{\"required\":true,\"unique\":false},\"targetEntityId\":16,\"onDelete\":\"cascade\",\"isPrimary\":true,\"showInTable\":true,\"_order\":0},\"service\":{\"label\":\"{\\\"tr\\\":\\\"Hizmet\\\",\\\"en\\\":\\\"Service\\\"}\",\"type\":\"relation\",\"rules\":{\"required\":true,\"unique\":false},\"targetEntityId\":14,\"onDelete\":\"restrict\",\"isPrimary\":false,\"showInTable\":true,\"_order\":1}}",
+  "schema": "{\"appointment\":{\"label\":\"{\\\"tr\\\":\\\"Randevu\\\",\\\"en\\\":\\\"Appointment\\\"}\",\"type\":\"relation\",\"rules\":{\"required\":true,\"unique\":false},\"targetEntitySlug\":\"appointment\",\"onDelete\":\"cascade\",\"isPrimary\":true,\"showInTable\":true,\"_order\":0},\"service\":{\"label\":\"{\\\"tr\\\":\\\"Hizmet\\\",\\\"en\\\":\\\"Service\\\"}\",\"type\":\"relation\",\"rules\":{\"required\":true,\"unique\":false},\"targetEntitySlug\":\"service\",\"onDelete\":\"restrict\",\"isPrimary\":false,\"showInTable\":true,\"_order\":1}}",
   "hashtags": "[\"#makas\"]"
 }

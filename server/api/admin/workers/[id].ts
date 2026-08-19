@@ -3,12 +3,7 @@ import { clearSandboxCache } from '../../../utils/sandbox';
 
 export default defineEventHandler(async (event) => {
   const user = event.context.user;
-  if (!user) {
-    throw createError({ statusCode: 401, message: 'errors.loginRequired' });
-  }
-  if (!user.is_admin && !user.is_super_admin) {
-    throw createError({ statusCode: 403, message: 'errors.forbiddenAdminOnly' });
-  }
+
   const method = getMethod(event);
   const sql = useDB(event.context.tenantSlug);
   const id = event.context.params?.id;
@@ -42,13 +37,14 @@ export default defineEventHandler(async (event) => {
     }
 
     const hashtagsStr = JSON.stringify(body.hashtags || []);
+    const isSystem = user.is_super_admin ? 1 : 0;
     await sql.unsafe(`
       UPDATE workers SET 
-        name = ?, type = ?, code = ?, cron_expression = ?, autostart = ?, active = ?, hashtags = ?, updated_by = ?, updated_at = CURRENT_TIMESTAMP
+        name = ?, type = ?, code = ?, cron_expression = ?, autostart = ?, active = ?, hashtags = ?, updated_by = ?, system_modified = ?, updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
     `, [
       body.name, body.type, body.code, body.cron_expression || null, body.autostart ? 1 : 0,
-      body.active ? 1 : 0, hashtagsStr, user.id, id
+      body.active ? 1 : 0, hashtagsStr, user.id, isSystem, id
     ]);
     const updatedRec = await sql.unsafe('SELECT * FROM workers WHERE id = ?', [id]);
     if (updatedRec.length > 0) {

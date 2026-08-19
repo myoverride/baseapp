@@ -1,6 +1,6 @@
 export const DEFAULT_LOGIN_TEMPLATE = `
-<div class="w-100 h-100 bg-grey-lighten-4">
-  <v-container class="fill-height bg-grey-lighten-4 pa-0 pa-sm-4" fluid>
+<div class="w-100 h-100 bg-background">
+  <v-container class="fill-height bg-background pa-0 pa-sm-4" fluid>
     <v-row align="center" justify="center" class="fill-height ma-0">
       <v-col cols="12" sm="10" md="8" lg="5" xl="4" class="px-6 px-sm-3">
 
@@ -8,7 +8,7 @@ export const DEFAULT_LOGIN_TEMPLATE = `
         <div class="d-flex d-sm-none flex-column align-center justify-center mb-8">
           <div v-if="globals?.APP_LOGO" v-html="globals.APP_LOGO" style="width: 240px; height: 220px;" class="text-primary mb-4"></div>
           <img v-else :src="'/logo.svg'" style="width: 220px; height: 220px;" class="mb-4" @error="($event.target).style.display = 'none'" />
-          <h1 class="text-h1 font-weight-bold text-grey-darken-4 text-center px-4">{{ globals?.APP_NAME }}</h1>
+          <h1 class="text-h1 font-weight-bold text-high-emphasis text-center px-4">{{ globals?.APP_NAME }}</h1>
         </div>
 
         <!-- The Card Wrapper (Animasyon için relative kapsayıcı eklendi) -->
@@ -34,7 +34,7 @@ export const DEFAULT_LOGIN_TEMPLATE = `
               <div class="d-none d-sm-flex align-center justify-center mb-8">
                 <div v-if="globals?.APP_LOGO" v-html="globals.APP_LOGO" style="width: 56px; height: 56px;" class="text-primary mr-3"></div>
                 <img v-else :src="'/logo.svg'" style="width: 56px; height: 56px;" class="mr-3" @error="($event.target).style.display = 'none'" />
-                <h1 class="text-h3 font-weight-bold text-grey-darken-4" style="letter-spacing: -1px;">{{ globals?.APP_NAME }}</h1>
+                <h1 class="text-h3 font-weight-bold text-high-emphasis" style="letter-spacing: -1px;">{{ globals?.APP_NAME }}</h1>
               </div>
 
               <v-alert v-if="!tenantSlug && savedTenantSlug && savedTenantSlug !== 'master'" type="info" variant="tonal" class="mb-6 cursor-pointer text-center rounded-lg" @click="returnToWorkspace">
@@ -46,7 +46,7 @@ export const DEFAULT_LOGIN_TEMPLATE = `
               </v-alert>
 
               <v-form @submit.prevent="handleLogin" ref="form" class="pt-2 pt-sm-0">
-                <v-text-field v-model="username" :label="$t('common.username')" prepend-inner-icon="mdi-account-outline" variant="outlined" :color="color" bg-color="white" class="mb-3" rounded="lg" required :disabled="loading"></v-text-field>
+                <v-text-field v-model="username" :label="$t('common.username')" prepend-inner-icon="mdi-account-outline" variant="outlined" :color="color" class="mb-3" rounded="lg" required :disabled="loading"></v-text-field>
 
                 <!-- Animasyon için @focus ve @blur eventleri eklendi -->
                 <v-text-field 
@@ -60,14 +60,13 @@ export const DEFAULT_LOGIN_TEMPLATE = `
                   @blur="isPasswordFocused = false"
                   variant="outlined" 
                   :color="color" 
-                  bg-color="white" 
                   class="mb-8" 
                   rounded="lg" 
                   required 
                   :disabled="loading"
                 ></v-text-field>
 
-                <v-btn type="submit" :color="color || '#1976D2'" size="x-large" block class="rounded-lg text-none font-weight-medium mb-2" elevation="0" :loading="loading">
+                <v-btn type="submit" :color="color" size="x-large" block class="rounded-lg text-none font-weight-medium mb-2" elevation="0" :loading="loading">
                   {{ $t('common.login') }}
                 </v-btn>
               </v-form>
@@ -199,7 +198,7 @@ export const DEFAULT_LOGIN_STYLE = `
 @media (min-width: 600px) {
   .login-card {
     box-shadow: 0px 8px 24px rgba(0, 0, 0, 0.06) !important;
-    background-color: #ffffff !important;
+    background-color: rgb(var(--v-theme-surface)) !important;
     border-radius: 16px !important;
     padding: 16px !important;
   }
@@ -314,7 +313,10 @@ export const DEFAULT_LOGIN_SCRIPT = `
 
       if (data && data.success) {
         user.value = data.user;
-        const redirectUrl = route.query.redirect;
+        let redirectUrl = route.query.redirect;
+        if (redirectUrl && (redirectUrl === '/login' || String(redirectUrl).startsWith('/login?'))) {
+          redirectUrl = '';
+        }
         const targetPage = redirectUrl || data.user.home_page || '/';
         window.location.href = targetPage;
       }
@@ -439,11 +441,11 @@ export const DEFAULT_LAYOUT_TEMPLATE = `
     </div>
   </v-app-bar>
 
-  <v-main class="bg-grey-lighten-4">
+  <v-main class="bg-background">
     <slot />
   </v-main>
 
-  <v-footer v-if="user" app border class="bg-grey-darken-4 text-grey-lighten-1 px-3 d-flex justify-center align-center" :height="28" style="font-size: 12px;">
+  <v-footer v-if="user" app border class="bg-surface px-3 d-flex justify-center align-center" :height="28" style="font-size: 12px;">
     <div>Powered by Override Yazılım</div>
   </v-footer>
 </v-app>
@@ -670,7 +672,7 @@ export const DEFAULT_LANDING_TEMPLATE = `
     </v-container>
 
     <!-- Ziyaretçiler (Giriş Yapmamış) için Public Landing -->
-    <v-container v-else class="py-16 d-flex flex-column justify-center align-center h-100 text-center bg-grey-lighten-4" fluid style="min-height: calc(100vh - 100px);">
+    <v-container v-else class="py-16 d-flex flex-column justify-center align-center h-100 text-center bg-background" fluid style="min-height: calc(100vh - 100px);">
       <v-alert v-if="!tenantSlug && savedTenantSlug && savedTenantSlug !== 'master'" type="info" variant="tonal" class="mb-8 cursor-pointer text-center" @click="returnToWorkspace" style="max-width: 700px; width: 100%;">
         {{ $t('page.returnToWorkspace', { slug: savedTenantSlug }) }}
       </v-alert>
@@ -678,8 +680,8 @@ export const DEFAULT_LANDING_TEMPLATE = `
       <div v-if="globals?.APP_LOGO" v-html="globals.APP_LOGO" style="width: 120px; height: 120px; margin: 0 auto;" class="mb-6 text-primary"></div>
       <img v-else src="/logo.svg" style="width: 120px; height: 120px; margin: 0 auto;" class="mb-6" @error="($event.target).style.display = 'none'" />
 
-      <h1 class="text-h3 font-weight-black text-grey-darken-4 mb-4">{{ globals?.APP_NAME || $t('dashboard.landingTitle') }}</h1>
-      <p class="text-h6 text-grey-darken-1 mb-8" style="max-width: 700px; line-height: 1.6;">
+      <h1 class="text-h3 font-weight-black mb-4">{{ globals?.APP_NAME || $t('dashboard.landingTitle') }}</h1>
+      <p class="text-h6 text-medium-emphasis mb-8" style="max-width: 700px; line-height: 1.6;">
         {{ $t('dashboard.landingDesc') }}
       </p>
       <div class="d-flex gap-4 flex-wrap justify-center">
@@ -1003,11 +1005,11 @@ export const DEFAULT_PROFILE_SCRIPT = `
 export const DEFAULT_PROFILE_STYLE = ``;
 
 export const DEFAULT_ABOUT_TEMPLATE = `
-<div class="w-100 bg-white">
+<div class="w-100 bg-background">
   <!-- Hero Section -->
-  <v-container class="py-16 text-center" fluid style="background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);">
-    <h1 class="text-h2 font-weight-bold mb-4 text-grey-darken-4">{{ $t('about.heroTitle') }}</h1>
-    <p class="text-h6 text-grey-darken-2 mx-auto" style="max-width: 800px;">
+  <v-container class="py-16 text-center bg-surface-variant" fluid>
+    <h1 class="text-h2 font-weight-bold mb-4">{{ $t('about.heroTitle') }}</h1>
+    <p class="text-h6 text-medium-emphasis mx-auto" style="max-width: 800px;">
       {{ $t('about.heroDesc') }}
     </p>
   </v-container>
@@ -1049,47 +1051,4 @@ export const DEFAULT_ABOUT_SCRIPT = `
   return { t };
 `;
 
-export async function setupSystemPages(sql: any) {
-  try {
-    const pages = [
-      { type: 'login', title: 'Login', template: DEFAULT_LOGIN_TEMPLATE, script: DEFAULT_LOGIN_SCRIPT, style: DEFAULT_LOGIN_STYLE },
-      { type: 'layout', title: 'Layout', template: DEFAULT_LAYOUT_TEMPLATE, script: DEFAULT_LAYOUT_SCRIPT, style: DEFAULT_LAYOUT_STYLE },
-      { type: 'landing', title: 'Landing / Dashboard', template: DEFAULT_LANDING_TEMPLATE, script: DEFAULT_LANDING_SCRIPT, style: DEFAULT_LANDING_STYLE },
-      { type: 'profile', title: 'Profile Settings', template: DEFAULT_PROFILE_TEMPLATE, script: DEFAULT_PROFILE_SCRIPT, style: DEFAULT_PROFILE_STYLE },
-      { type: 'about', title: 'About', template: DEFAULT_ABOUT_TEMPLATE, script: DEFAULT_ABOUT_SCRIPT, style: '' }
-    ];
 
-    for (const p of pages) {
-      const pageRes = await sql`SELECT id FROM pages WHERE page_type = ${p.type} AND protected = 1 LIMIT 1`;
-      if (pageRes.length === 0) {
-        let routePattern = '';
-        let isPublic = 0;
-        let isDefaultLayout = 0;
-        if (p.type === 'login') {
-          routePattern = '/login';
-          isPublic = 1;
-        } else if (p.type === 'landing') {
-          routePattern = '/';
-          isPublic = 1;
-        } else if (p.type === 'layout') {
-          routePattern = 'sys_layout';
-          isDefaultLayout = 1;
-          isPublic = 1; 
-        } else if (p.type === 'profile') {
-          routePattern = '/profile';
-          isPublic = 0;
-        } else if (p.type === 'about') {
-          routePattern = '/about';
-          isPublic = 1;
-        }
-
-        await sql`
-          INSERT INTO pages (title, route_pattern, page_type, template_string, script_content, style_content, is_public, protected, is_default_layout, priority)
-          VALUES (${p.title}, ${routePattern}, ${p.type}, ${p.template}, ${p.script}, ${p.style}, ${isPublic}, 1, ${isDefaultLayout}, 999)
-        `;
-      }
-    }
-  } catch (err) {
-    console.error('Error in setupSystemPages:', err);
-  }
-}

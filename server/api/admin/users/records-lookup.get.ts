@@ -2,8 +2,7 @@ import { useDB } from '../../../utils/db';
 
 export default defineEventHandler(async (event) => {
   const user = event.context.user;
-  if (!user) throw createError({ statusCode: 401, message: 'errors.loginRequired' });
-  if (!user.is_admin) throw createError({ statusCode: 403, message: 'errors.forbiddenAdminOnly' });
+
 
   const sql = useDB(event.context.tenantSlug);
 

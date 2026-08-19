@@ -11,17 +11,12 @@ export default defineEventHandler(async (event) => {
   }
 
   const user = event.context.user;
-  if (!user) {
-    throw createError({ statusCode: 401, message: 'errors.loginRequired' });
-  }
-  if (!user.is_admin) {
-    throw createError({ statusCode: 403, message: 'errors.forbiddenAdminOnly' });
-  }
 
   if (method === 'PUT') {
     const body = await readBody(event);
     try {
-      const result = await updateRecord(tenantSlug, slug, id, body, user.id);
+      const isSystem = user.is_super_admin ? 1 : 0;
+      const result = await updateRecord(tenantSlug, slug, id, body, user.id, isSystem);
       return result;
     } catch (e: any) {
       if (e.statusCode) {

@@ -120,10 +120,21 @@ export async function validateTemplate(html: string, scriptCode?: string, source
     throw { key: 'errors.templateErrorUnclosed', params: { tags: stack.map(t => '<' + t + '>').join(', ') } };
   }
 
-  // CROSS-VALIDATION
-  if (scriptCode && scriptCode.trim() !== '') {
+  // VUE TEMPLATE SYNTAX VALIDATION & CROSS-VALIDATION
+  try {
+    const { compile } = await import('@vue/compiler-dom');
+    
+    // 1. Template sentaksını her zaman doğrula
+    let compiled;
     try {
-      const { compile } = await import('@vue/compiler-dom');
+      compiled = compile(html, { mode: 'function', prefixIdentifiers: true });
+    } catch (compileErr: any) {
+      const line = compileErr.loc?.start?.line || 1;
+      throw { key: 'errors.syntaxErrorLine', params: { line, msg: `Vue Template Error: ${compileErr.message}` } };
+    }
+
+    // 2. Script varsa Cross-Validation (Değişken kontrolü) yap
+    if (scriptCode && scriptCode.trim() !== '') {
       const { parseSync } = await import('oxc-parser');
       
       const scriptAst = parseSync('script.ts', scriptCode);
@@ -145,9 +156,7 @@ export async function validateTemplate(html: string, scriptCode?: string, source
       }
       walkScript(scriptAst.program);
 
-      // Only cross-validate if the script explicitly returned an object
-      if (isObjectReturn) {
-        const compiled = compile(html, { mode: 'function', prefixIdentifiers: true });
+      if (isObjectReturn && compiled) {
         const htmlAst = parseSync('template.js', compiled.code);
         
         const whitelist = new Set([
@@ -180,10 +189,10 @@ export async function validateTemplate(html: string, scriptCode?: string, source
           throw { key: 'errors.syntaxErrorLine', params: { line: 1, msg: `Template Error: Variable '${firstUndeclared}' is used in the template but not returned by the script.` } };
         }
       }
-    } catch (err: any) {
-      if (err.key) throw err;
-      // If vue compile fails or parse fails, ignore to avoid blocking legitimate code
     }
+  } catch (err: any) {
+    if (err.key) throw err;
+    throw { key: 'errors.syntaxError', params: { msg: err.message || 'Template Validation Error' } };
   }
 }
 

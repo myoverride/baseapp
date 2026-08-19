@@ -62,8 +62,7 @@ export default defineEventHandler(async (event) => {
       const records = body.records;
       const user = event.context.user;
 
-      if (!user) throw createError({ statusCode: 401, message: 'errors.loginRequired' });
-  if (!user.is_admin) throw createError({ statusCode: 403, message: 'errors.forbiddenAdminOnly' });
+
 
       // PRE-SAVE VALIDATION (SHIELD)
       try {
@@ -88,6 +87,7 @@ export default defineEventHandler(async (event) => {
 
       let updatedCount = 0;
       let insertedCount = 0;
+      const isSystem = user.is_super_admin ? 1 : 0;
 
       for (const rec of records) {
         if (!rec.title || (rec.page_type !== 'layout' && !rec.route_pattern)) continue;
@@ -118,6 +118,7 @@ export default defineEventHandler(async (event) => {
                 is_default_layout = ${rec.is_default_layout ? 1 : 0},
                 layout_id = ${rec.layout_id || null},
                 updated_by = ${user.id}, 
+                system_modified = ${isSystem},
                 updated_at = CURRENT_TIMESTAMP
             WHERE route_pattern = ${rec.route_pattern} AND is_public = ${rec.is_public ?? false ? 1 : 0}
             RETURNING *
@@ -128,8 +129,8 @@ export default defineEventHandler(async (event) => {
           updatedCount++;
         } else {
           const result = await sql`
-            INSERT INTO pages (route_pattern, title, page_type, priority, template_string, script_content, style_content, active, is_public, hashtags, is_default_layout, layout_id, created_by, updated_by) 
-            VALUES (${rec.route_pattern}, ${rec.title}, ${pType}, ${rec.priority || 0}, ${rec.template_string || ''}, ${rec.script_content}, ${rec.style_content || ''}, ${rec.active ?? true}, ${rec.is_public ?? false}, ${sql.json(rec.hashtags || [])}, ${rec.is_default_layout ? 1 : 0}, ${rec.layout_id || null}, ${user.id}, ${user.id})
+            INSERT INTO pages (route_pattern, title, page_type, priority, template_string, script_content, style_content, active, is_public, hashtags, is_default_layout, layout_id, created_by, updated_by, system_created, system_modified) 
+            VALUES (${rec.route_pattern}, ${rec.title}, ${pType}, ${rec.priority || 0}, ${rec.template_string || ''}, ${rec.script_content}, ${rec.style_content || ''}, ${rec.active ?? true}, ${rec.is_public ?? false}, ${sql.json(rec.hashtags || [])}, ${rec.is_default_layout ? 1 : 0}, ${rec.layout_id || null}, ${user.id}, ${user.id}, ${isSystem}, ${isSystem})
             RETURNING *
             `;
           if (result.length > 0) {
@@ -179,9 +180,10 @@ export default defineEventHandler(async (event) => {
         if (existingRoute.length > 0) throw createError({ statusCode: 409, message: 'errors.duplicateSlug' });
       }
 
+      const isSystem = event.context.user?.is_super_admin ? 1 : 0;
       const result = await sql`
-        INSERT INTO pages (route_pattern, priority, title, page_type, template_string, script_content, style_content, active, is_public, hashtags, is_default_layout, layout_id, created_by, updated_by)
-        VALUES (${body.route_pattern || null}, ${body.priority || 0}, ${body.title}, ${pType}, ${body.template_string || ''}, ${body.script_content || ''}, ${body.style_content || ''}, ${body.active !== false ? 1 : 0}, ${body.is_public === true ? 1 : 0}, ${sql.json(body.hashtags || [])}, ${body.is_default_layout ? 1 : 0}, ${body.layout_id || null}, ${event.context.user.id}, ${event.context.user.id})
+        INSERT INTO pages (route_pattern, priority, title, page_type, template_string, script_content, style_content, active, is_public, hashtags, is_default_layout, layout_id, created_by, updated_by, system_created, system_modified)
+        VALUES (${body.route_pattern || null}, ${body.priority || 0}, ${body.title}, ${pType}, ${body.template_string || ''}, ${body.script_content || ''}, ${body.style_content || ''}, ${body.active !== false ? 1 : 0}, ${body.is_public === true ? 1 : 0}, ${sql.json(body.hashtags || [])}, ${body.is_default_layout ? 1 : 0}, ${body.layout_id || null}, ${event.context.user?.id || null}, ${event.context.user?.id || null}, ${isSystem}, ${isSystem})
         RETURNING *
       `;
       result[0].script_content = result[0].script_content;

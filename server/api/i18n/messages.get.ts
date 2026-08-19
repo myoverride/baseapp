@@ -15,29 +15,25 @@ export default defineEventHandler(async (event) => {
 
     const extractMessages = (rows: any[]) => {
       for (const r of rows) {
-        if (!r.translations) continue;
-        try {
-          const transObj = typeof r.translations === 'string' ? JSON.parse(r.translations) : r.translations;
-          for (const [key, value] of Object.entries(transObj)) {
-            messages[key] = value as string;
-          }
-
-        } catch (e) {
-          console.error(`Error parsing JSON:`, e);
+        if (r.key && r.value !== undefined) {
+           messages[r.key] = r.value;
         }
       }
     };
 
     // 1. Fetch from master first
     const masterSql = useDB('master');
-    const masterTranslations = await masterSql`SELECT translations FROM languages WHERE code = ${locale}`;
+    const masterTranslations = await masterSql.unsafe('SELECT key, value FROM translations WHERE language_code = $1', [locale]);
     extractMessages(masterTranslations);
 
     // 2. Fetch from tenant to override
     if (tenantSlug !== 'master') {
       const tenantSql = useDB(tenantSlug);
-      const tenantTranslations = await tenantSql`SELECT translations FROM languages WHERE code = ${locale}`;
-      extractMessages(tenantTranslations);
+      // Ensure we don't crash if tenant hasn't fully migrated yet, but normally table exists
+      try {
+        const tenantTranslations = await tenantSql.unsafe('SELECT key, value FROM translations WHERE language_code = $1', [locale]);
+        extractMessages(tenantTranslations);
+      } catch (e) { }
     }
 
     // Construct nested object from flat keys (e.g. 'login.button.submit' -> { login: { button: { submit: '...' } } })

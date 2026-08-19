@@ -199,7 +199,6 @@ const columns = computed(() => [
   { title: t('field.customDomain'), key: 'custom_domain', sortable: true, filterable: true, type: 'string' },
   { title: t('common.status'), key: 'status', slot: true },
   { title: t('field.hashtags'), key: 'hashtags', sortable: false, filterable: true, slot: true },
-  { title: t('table.createdAt'), key: 'created_at', sortable: true, slot: true },
   { title: t('common.info'), key: 'info', sortable: false, slot: true }
 ]);
 
@@ -259,7 +258,7 @@ const saveItem = async (payload: any) => {
     if ($toast) $toast.success(dialogMode.value === 'edit' ? t('message.updated') : t('message.added'));
     crudTable.value?.loadItems();
   } catch (e: any) {
-        const errPayload = err?.data || e?.data;
+        const errPayload = e?.data;
     const isArr = Array.isArray(errPayload?.data);
     const errData = isArr ? errPayload.data[0] : (errPayload?.data || {});
     const errMsg = isArr ? errPayload.data[0].message : (errPayload?.message || 'errors.operationFailed');
@@ -274,10 +273,10 @@ const handleDelete = async (item: any) => {
     await $fetch(`/api/admin/tenants/${item.id}`, { 
       method: 'DELETE'
     });
-    if ($toast) $toast.warning(t('message.deleted'));
+    if ($toast) $toast.success(t('message.deleted'));
     crudTable.value?.loadItems();
   } catch (e: any) {
-        const errPayload = err?.data || e?.data;
+        const errPayload = e?.data;
     const isArr = Array.isArray(errPayload?.data);
     const errData = isArr ? errPayload.data[0] : (errPayload?.data || {});
     const errMsg = isArr ? errPayload.data[0].message : (errPayload?.message || 'errors.operationFailed');

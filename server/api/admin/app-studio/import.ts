@@ -82,9 +82,32 @@ export default defineEventHandler(async (event) => {
         }
       }
     }
+    
+    if (c.pages) {
+      for (const p of c.pages) {
+        if (p.script_content) {
+          try {
+            await validateJS(p.script_content, 'Page Script: ' + p.title);
+          } catch(e: any) {
+            throw new Error(`Geçersiz JS Kodu (Sayfa: ${p.title}) - ${e.params?.msg || e.message}`);
+          }
+        }
+        if (p.template_string) {
+          try {
+            const { validateTemplate } = await import('../../../utils/codeValidator');
+            await validateTemplate(p.template_string, p.script_content, 'Page Template: ' + p.title);
+          } catch(e: any) {
+            throw new Error(`Geçersiz Template Kodu (Sayfa: ${p.title}) - ${e.params?.msg || e.message}`);
+          }
+        }
+      }
+    }
 
     // MASSIVE TRANSACTION (SYNC)
     db.transaction(() => {
+      const userId = event.context.user?.id || null;
+      const isSystem = event.context.user?.is_super_admin ? 1 : 0;
+      
       const upsertTable = (tableName: string, items: any[], uniqueKey: string) => {
         if (!items || items.length === 0) return;
         results.imported[tableName] = 0;
@@ -111,29 +134,52 @@ export default defineEventHandler(async (event) => {
           const dataToSet = { ...item };
           delete dataToSet.id;
           delete dataToSet.created_at;
+          delete dataToSet.protected;
+
+          let transToInsert = null;
+          if (tableName === 'languages' && dataToSet.translations !== undefined) {
+             transToInsert = dataToSet.translations;
+             delete dataToSet.translations;
+          }
+
+          dataToSet.updated_by = userId;
+          dataToSet.system_modified = isSystem;
 
           if (existing) {
             const id = existing.id;
             const setParts = [];
             const params = [];
             for (const [k, v] of Object.entries(dataToSet)) {
-              if (tableName === 'languages' && k === 'translations') {
-                const merged = { ...(typeof existing.translations === 'string' ? JSON.parse(existing.translations) : (existing.translations || {})), ...(typeof v === 'string' ? JSON.parse(v) : (v || {})) };
-                setParts.push(`${k} = ?`);
-                params.push(JSON.stringify(merged));
-              } else {
-                setParts.push(`${k} = ?`);
-                params.push(typeof v === 'object' && v !== null ? JSON.stringify(v) : v);
-              }
+              setParts.push(`${k} = ?`);
+              params.push(typeof v === 'object' && v !== null ? JSON.stringify(v) : v);
             }
             params.push(id);
             db.prepare(`UPDATE ${tableName} SET ${setParts.join(', ')} WHERE id = ?`).run(...params);
           } else {
+            dataToSet.created_by = userId;
+            dataToSet.system_created = dataToSet.system_created !== undefined ? dataToSet.system_created : isSystem;
+
             const cols = Object.keys(dataToSet);
             const vals = Object.values(dataToSet).map(v => typeof v === 'object' && v !== null ? JSON.stringify(v) : v);
             const placeholders = cols.map(() => '?').join(', ');
             db.prepare(`INSERT INTO ${tableName} (${cols.join(', ')}) VALUES (${placeholders})`).run(...vals);
           }
+          
+          if (tableName === 'languages' && transToInsert) {
+             const parsedTrans = typeof transToInsert === 'string' ? JSON.parse(transToInsert) : transToInsert;
+             if (Object.keys(parsedTrans).length > 0) {
+                 const stmtInsertTrans = db.prepare(`
+                    INSERT INTO translations (language_code, key, value, created_by, updated_by, system_created, system_modified)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    ON CONFLICT(language_code, key) DO UPDATE SET
+                    value = excluded.value, updated_by = excluded.updated_by, system_modified = excluded.system_modified, updated_at = CURRENT_TIMESTAMP
+                 `);
+                 for (const [tKey, tVal] of Object.entries(parsedTrans)) {
+                     stmtInsertTrans.run(item.code, tKey, String(tVal), userId, userId, isSystem, isSystem);
+                 }
+             }
+          }
+          
           results.imported[tableName]++;
         }
       };
@@ -157,6 +203,7 @@ export default defineEventHandler(async (event) => {
             const targetRes = db.prepare(`SELECT id FROM entities WHERE slug = ?`).get(fieldDef.targetEntitySlug) as any;
             if (targetRes) {
               fieldDef.targetEntityId = targetRes.id;
+              delete fieldDef.targetEntitySlug;
               schemaUpdated = true;
             }
           }
@@ -216,12 +263,11 @@ export default defineEventHandler(async (event) => {
         };
 
         const stmtCheckRecord = db.prepare(`SELECT id, created_at, updated_at FROM records WHERE entity_id = ? AND created_at = ?`);
-        const stmtInsertRecord = db.prepare(`INSERT INTO records (entity_id, hashtags, created_at, updated_at, created_by, updated_by) VALUES (?, ?, ?, ?, ?, ?) RETURNING id`);
-        const stmtUpdateRecord = db.prepare(`UPDATE records SET hashtags = ?, updated_at = ?, updated_by = ? WHERE id = ?`);
+        const stmtInsertRecord = db.prepare(`INSERT INTO records (entity_id, hashtags, created_at, updated_at, created_by, updated_by, system_created, system_modified) VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`);
+        const stmtUpdateRecord = db.prepare(`UPDATE records SET hashtags = ?, updated_at = ?, updated_by = ?, system_modified = ? WHERE id = ?`);
         const stmtDeleteFields = db.prepare(`DELETE FROM record_fields WHERE record_id = ?`);
         const stmtInsertField = db.prepare(`INSERT INTO record_fields (record_id, key, val_str, val_num, val_bool) VALUES (?, ?, ?, ?, ?)`);
-        const stmtResolveRel = db.prepare(`SELECT record_id FROM record_fields rf JOIN records r ON r.id = rf.record_id WHERE r.entity_id = ? AND rf.key = ? AND rf.val_str = ? LIMIT 1`);
-        const userId = event.context.user?.id || null;
+        const stmtResolveRel = db.prepare(`SELECT record_id FROM record_fields rf JOIN records r ON r.id = rf.record_id WHERE r.entity_id = ? AND rf.key = ? AND (rf.val_str = ? OR rf.val_num = ?) LIMIT 1`);
 
         for (const rec of c.records) {
           incrementProgress();
@@ -249,10 +295,11 @@ export default defineEventHandler(async (event) => {
           let recId = existingRecs ? existingRecs.id : null;
 
           if (!recId) {
-            const res = stmtInsertRecord.get(entity.id, JSON.stringify(rec.hashtags || []), rec.created_at, rec.updated_at, userId, userId) as any;
+            const recSystemCreated = rec.system_created !== undefined ? rec.system_created : isSystem;
+            const res = stmtInsertRecord.get(entity.id, JSON.stringify(rec.hashtags || []), rec.created_at, rec.updated_at, userId, userId, recSystemCreated, isSystem) as any;
             recId = res.id;
           } else {
-            stmtUpdateRecord.run(JSON.stringify(rec.hashtags || []), rec.updated_at, userId, recId);
+            stmtUpdateRecord.run(JSON.stringify(rec.hashtags || []), rec.updated_at, userId, isSystem, recId);
             stmtDeleteFields.run(recId);
           }
 
@@ -271,7 +318,8 @@ export default defineEventHandler(async (event) => {
                   const targetKey = entitySchemaCache.get(fieldDef.targetEntityId);
                   
                   if (targetKey) {
-                     const relRes = stmtResolveRel.get(fieldDef.targetEntityId, targetKey, String(fVal)) as any;
+                     const numericVal = !isNaN(Number(fVal)) ? Number(fVal) : null;
+                     const relRes = stmtResolveRel.get(fieldDef.targetEntityId, targetKey, String(fVal), numericVal) as any;
                      if (relRes) valNum = relRes.record_id;
                      else valNum = Number(fVal);
                   } else {

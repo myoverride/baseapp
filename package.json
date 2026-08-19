@@ -20,8 +20,6 @@
     "aedes": "^0.51.3",
     "bcryptjs": "^3.0.3",
     "better-sqlite3": "^12.11.1",
-    "busboy": "^1.6.0",
-    "c12": "^2.0.1",
     "chart.js": "^4.5.1",
     "crossws": "^0.4.6",
     "duckdb": "^1.4.4",

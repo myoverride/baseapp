@@ -1,4 +1,4 @@
-const CACHE_NAME = 'iiot-cache-v5';
+const CACHE_NAME = 'iiot-cache-v7';
 const ASSETS_TO_CACHE = [
   '/',
   '/manifest.json',
@@ -10,7 +10,17 @@ self.addEventListener('install', (event) => {
   self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(ASSETS_TO_CACHE);
+      return Promise.all(
+        ASSETS_TO_CACHE.map((url) => {
+          return fetch(url).then((response) => {
+            if (response.ok) {
+              return cache.put(url, response);
+            }
+          }).catch((err) => {
+            console.warn('SW Install: Failed to cache', url, err);
+          });
+        })
+      );
     })
   );
 });
@@ -54,7 +64,15 @@ self.addEventListener('fetch', (event) => {
   // Network First for HTML
   if (event.request.mode === 'navigate') {
     event.respondWith(
-      fetch(event.request).catch(() => {
+      fetch(event.request).then((networkResponse) => {
+        if (networkResponse && networkResponse.status === 200) {
+          const responseToCache = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put('/', responseToCache);
+          });
+        }
+        return networkResponse;
+      }).catch(() => {
         return caches.match('/');
       })
     );

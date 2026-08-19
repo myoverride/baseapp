@@ -4,12 +4,6 @@ import { buildGenericFilter } from '../../../utils/queryBuilder';
 
 export default defineEventHandler(async (event) => {
   const user = event.context.user;
-  if (!user) {
-    throw createError({ statusCode: 401, message: 'errors.loginRequired' });
-  }
-  if (!user.is_admin && !user.is_super_admin) {
-    throw createError({ statusCode: 403, message: 'errors.forbiddenAdminOnly' });
-  }
   const method = getMethod(event);
   const sql = useDB(event.context.tenantSlug);
 
@@ -83,32 +77,33 @@ export default defineEventHandler(async (event) => {
       }
 
       let importedCount = 0;
+      const isSystem = user.is_super_admin ? 1 : 0;
       for (const rec of body.records) {
         if (!rec.name) continue;
         const existing = await sql.unsafe('SELECT id FROM endpoints WHERE name = ?', [rec.name]);
         const hashtagsStr = typeof rec.hashtags === 'string' ? rec.hashtags : JSON.stringify(rec.hashtags || []);
-        
+
         if (existing.length > 0) {
           // Update
           await sql.unsafe(`
-            UPDATE endpoints SET type = ?, route_pattern = ?, code = ?, priority = ?, active = ?, is_public = ?, hashtags = ?, updated_by = ? WHERE id = ?
+            UPDATE endpoints SET type = ?, route_pattern = ?, code = ?, priority = ?, active = ?, is_public = ?, hashtags = ?, updated_by = ?, system_modified = ? WHERE id = ?
           `, [
             rec.type, rec.route_pattern, rec.code, rec.priority || 0,
-            rec.active ? 1 : 0, rec.is_public ? 1 : 0, hashtagsStr, user.id, existing[0].id
+            rec.active ? 1 : 0, rec.is_public ? 1 : 0, hashtagsStr, user.id, isSystem, existing[0].id
           ]);
         } else {
           // Insert
           await sql.unsafe(`
-            INSERT INTO endpoints (name, type, route_pattern, code, priority, active, is_public, hashtags, created_by, updated_by)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO endpoints (name, type, route_pattern, code, priority, active, is_public, hashtags, created_by, updated_by, system_created, system_modified)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
           `, [
             rec.name, rec.type, rec.route_pattern, rec.code, rec.priority || 0,
-            rec.active ? 1 : 0, rec.is_public ? 1 : 0, hashtagsStr, user.id, user.id
+            rec.active ? 1 : 0, rec.is_public ? 1 : 0, hashtagsStr, user.id, user.id, isSystem, isSystem
           ]);
         }
         importedCount++;
       }
-      
+
       import('../../../utils/history').then(m => m.saveHistory(event.context.tenantSlug, 'endpoints', 'import', { count: importedCount })).catch(console.error);
       import('../../../utils/endpointManager').then(m => m.invalidateEndpointCache(event.context.tenantSlug)).catch(console.error);
       return { success: true, message: tEvent(event, 'message.success') };
@@ -132,14 +127,15 @@ export default defineEventHandler(async (event) => {
     }
 
     const hashtagsStr = JSON.stringify(body.hashtags || []);
+    const isSystem = user.is_super_admin ? 1 : 0;
     
     const insertRes = await sql.unsafe(`
-      INSERT INTO endpoints (name, type, route_pattern, code, priority, active, is_public, hashtags, created_by, updated_by)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO endpoints (name, type, route_pattern, code, priority, active, is_public, hashtags, created_by, updated_by, system_created, system_modified)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       RETURNING *
     `, [
       body.name, body.type, body.route_pattern, body.code, body.priority || 0,
-      body.active ? 1 : 0, body.is_public ? 1 : 0, hashtagsStr, user.id, user.id
+      body.active ? 1 : 0, body.is_public ? 1 : 0, hashtagsStr, user.id, user.id, isSystem, isSystem
     ]);
 
     if (insertRes.length > 0) {

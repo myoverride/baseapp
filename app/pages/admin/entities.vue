@@ -12,7 +12,7 @@
       @edit="openEditDialog" @delete="handleDelete" @loaded="onCrudTableLoaded">
       <template #toolbarActions>
         <v-btn icon="mdi-creation" variant="text" :loading="generateAllLoading" @click="generateAllApiUi" class="mr-2"
-          title="Tümünü Oluştur (API & UI)" color="deep-purple"></v-btn>
+          title="Tümünü Oluştur (API & UI)"></v-btn>
         <v-btn icon="mdi-download" variant="text" :loading="jsonExportLoading" @click="exportJSON" class="mr-2"
           :title="$t('action.exportFormat', { format: 'JSON' })"></v-btn>
         <v-btn icon="mdi-upload" variant="text" :loading="jsonImportLoading" @click="triggerJSONImport" class="mr-2"
@@ -79,8 +79,8 @@
 
       </v-toolbar>
       <ErDiagramEditor :entities="entitiesList" @entity-update="handleErEntityUpdate"
-        @entity-create="handleErEntityCreate" @entity-delete="handleErEntityDelete" 
-        @edit-entity="openEditDialog" @create-entity="openCreateDialog" />
+        @entity-create="handleErEntityCreate" @entity-delete="handleErEntityDelete" @edit-entity="openEditDialog"
+        @create-entity="openCreateDialog" />
     </v-card>
 
     <!-- ItemDialog Entegrasyonu -->
@@ -95,10 +95,8 @@
           </v-col>
           <v-col cols="12" sm="6" class="pb-0">
             <v-text-field v-model="formData.slug" :label="$t('field.slug')" variant="outlined" density="comfortable"
-              class="font-weight-bold" :hint="$t('field.slugHint')"
-              :disabled="dialogMode === 'edit'"
-              @blur="formData.slug = normalizeSlug(formData.slug)"
-              :rules="[
+              class="font-weight-bold" :hint="$t('field.slugHint')" :disabled="dialogMode === 'edit'"
+              @blur="formData.slug = normalizeSlug(formData.slug)" :rules="[
                 (v: any) => !!v || $t('validation.required'),
                 (v: any) => /^[a-z0-9_]+$/.test(v) || t('validation.alphanumericOnly'),
                 (v: any) => !['api', 'admin', 'auth', 'users', 'tenant', 'system', 'webhook', 'records', 'login', 'logout', 'dashboard'].includes(v) || t('validation.reservedWord')
@@ -106,8 +104,7 @@
           </v-col>
           <v-col cols="12" sm="12" class="pb-0">
             <v-combobox v-model="formData.hashtags" :label="$t('field.hashtags')" variant="outlined" multiple chips
-              density="comfortable" class="mb-2" :hint="$t('field.hashtagsHint')"
-              persistent-hint></v-combobox>
+              density="comfortable" class="mb-2" :hint="$t('field.hashtagsHint')" persistent-hint></v-combobox>
           </v-col>
         </v-row>
 
@@ -119,14 +116,15 @@
         </div>
 
         <v-card v-for="(field, index) in (formData.fields as any[])" :key="index"
-          class="mb-4 pa-4 border bg-white rounded-lg flex-shrink-0 shadow-sm" elevation="0">
-          
+          class="mb-4 pa-4 border rounded-lg flex-shrink-0 shadow-sm" elevation="0">
+
           <!-- Field Header & Actions -->
           <div class="d-flex justify-space-between align-center mb-3 pb-2 border-b">
             <div class="text-subtitle-1 font-weight-bold opacity-70 d-flex align-center">
               <v-icon size="small" color="primary" class="mr-2">mdi-form-textbox</v-icon>
               {{ $t('common.fieldName') }} #{{ index + 1 }}
-              <v-chip v-if="field.name" size="x-small" class="ml-2 font-weight-bold" color="primary" variant="tonal">{{ field.name }}</v-chip>
+              <v-chip v-if="field.name" size="x-small" class="ml-2 font-weight-bold" color="primary" variant="tonal">{{
+                field.name }}</v-chip>
             </div>
             <div>
               <v-btn icon="mdi-arrow-up" color="primary" variant="text" size="small" :disabled="index === 0"
@@ -134,8 +132,8 @@
               <v-btn icon="mdi-arrow-down" color="primary" variant="text" size="small"
                 :disabled="index === formData.fields.length - 1" @click="moveFieldDown(formData, index)"
                 :title="$t('action.moveDown')"></v-btn>
-              <v-btn icon="mdi-delete" color="error" variant="text" size="small" class="ml-1" @click="removeField(formData, index)"
-                :title="$t('action.deleteField')"></v-btn>
+              <v-btn icon="mdi-delete" color="error" variant="text" size="small" class="ml-1"
+                @click="removeField(formData, index)" :title="$t('action.deleteField')"></v-btn>
             </div>
           </div>
 
@@ -147,51 +145,53 @@
 
             <v-col cols="12" md="4" class="pb-1">
               <v-text-field v-model="field.name" :label="$t('field.slug')" variant="outlined" density="compact"
-                hide-details bg-color="white"
-                :disabled="!field.isNew"
-                @blur="field.name = normalizeSlug(field.name)"
-                :rules="[
+                hide-details :disabled="!field.isNew" @blur="field.name = normalizeSlug(field.name)" :rules="[
                   (v: any) => !!v || t('validation.enterFieldName'),
                   (v: any) => /^[a-z0-9_]+$/.test(v) || t('validation.alphanumericOnly'),
                   (v: any) => !['api', 'admin', 'auth', 'users', 'tenant', 'system', 'webhook', 'records', 'login', 'logout', 'dashboard'].includes(v) || t('validation.reservedWord')
                 ]"></v-text-field>
             </v-col>
-            
+
             <v-col cols="12" md="4" class="pb-1">
               <v-select v-model="field.type"
                 :items="['string', 'number', 'boolean', 'date', 'datetime', 'time', 'array', 'json', 'uuid', 'enum', 'relation', 'password']"
-                :label="$t('field.dataType')" variant="outlined" density="compact" hide-details bg-color="white"
+                :label="$t('field.dataType')" variant="outlined" density="compact" hide-details
                 @update:model-value="() => { field.rulesList = []; if (field.type !== 'relation') { field.onDelete = 'restrict'; field.targetEntityId = null; } else { enforceRelationPolicy(field); } }"></v-select>
-              
+
               <!-- Relation Extra Fields -->
               <template v-if="field.type === 'relation'">
-                <v-autocomplete v-model="field.targetEntityId" :items="localizedEntitiesList"
-                  item-title="displayName" item-value="id" :label="$t('common.target')" variant="outlined"
-                  density="compact" bg-color="white" class="mt-3" hide-details
-                  :rules="[(v: any) => !!v || $t('validation.required')]"></v-autocomplete>
-                <v-select v-model="field.onDelete"
-                  :items="getRelationOnDeleteOptions(field)" item-title="title" item-value="value"
-                  :label="$t('field.onDelete')" variant="outlined" density="compact"
-                  bg-color="white" class="mt-3" hide-details
+                <v-autocomplete v-model="field.targetEntityId" :items="localizedEntitiesList" item-title="displayName"
+                  item-value="id" :label="$t('common.target')" variant="outlined" density="compact" class="mt-3"
+                  hide-details :rules="[(v: any) => !!v || $t('validation.required')]"></v-autocomplete>
+                <v-select v-model="field.onDelete" :items="getRelationOnDeleteOptions(field)" item-title="title"
+                  item-value="value" :label="$t('field.onDelete')" variant="outlined" density="compact" class="mt-3"
+                  hide-details
                   :hint="field.required && field.onDelete === 'restrict' ? t('validation.noSetNullIfRequired') : ''"
                   persistent-hint></v-select>
               </template>
-              
+
               <!-- Enum Extra Fields -->
               <div v-if="field.type === 'enum'" class="mt-3 border rounded pa-3 bg-surface">
                 <div class="d-flex justify-space-between align-center mb-2">
-                  <span class="text-caption font-weight-bold opacity-70">{{ $t('common.optionsPressEnterToAdd') }}</span>
-                  <v-btn size="x-small" :color="color" variant="tonal" prepend-icon="mdi-plus" @click="field.options.push('')">{{ $t('action.add') }}</v-btn>
+                  <span class="text-caption font-weight-bold opacity-70">{{ $t('common.optionsPressEnterToAdd')
+                  }}</span>
+                  <v-btn size="x-small" :color="color" variant="tonal" prepend-icon="mdi-plus"
+                    @click="field.options.push('')">{{
+                      $t('action.add') }}</v-btn>
                 </div>
                 <div v-for="(opt, optIdx) in field.options" :key="optIdx" class="d-flex align-start mb-2">
                   <div class="flex-grow-1">
-                    <I18nTextField v-model="field.options[optIdx]" :placeholder="`${$t('common.option')} ${Number(optIdx) + 1}`" />
+                    <I18nTextField v-model="field.options[optIdx]"
+                      :placeholder="`${$t('common.option')} ${Number(optIdx) + 1}`" />
                   </div>
-                  <v-btn icon="mdi-delete" color="red" variant="text" size="small" class="mt-1 ml-1" @click="field.options.splice(optIdx, 1)"></v-btn>
+                  <v-btn icon="mdi-delete" color="red" variant="text" size="small" class="mt-1 ml-1"
+                    @click="field.options.splice(optIdx, 1)"></v-btn>
                 </div>
-                <div v-if="field.options.length === 0" class="text-caption text-error mt-1">{{ t('common.addAtLeastOneOption') }}</div>
+                <div v-if="field.options.length === 0" class="text-caption text-error mt-1">{{
+                  t('common.addAtLeastOneOption') }}
+                </div>
               </div>
-              
+
               <!-- Password Extra Fields -->
               <v-select v-if="field.type === 'password'" v-model="field.hashAlgorithm" :items="[
                 { title: $t('common.plainText'), value: 'plain' },
@@ -212,12 +212,15 @@
               <v-switch v-model="field.unique" :label="$t('field.unique')" color="deep-purple" hide-details
                 density="compact"></v-switch>
               <v-switch v-model="field.isPrimary" :label="$t('field.primaryName')" color="teal" hide-details
-                density="compact" @change="handlePrimaryChange(formData, index)" :title="$t('field.primaryNameHint')"></v-switch>
+                density="compact" @change="handlePrimaryChange(formData, index)"
+                :title="$t('field.primaryNameHint')"></v-switch>
               <v-switch v-model="field.showInTable" :label="$t('common.showInTable')" color="info" hide-details
                 density="compact" :title="$t('field.showInTableHint')"></v-switch>
             </div>
-            <v-btn size="small" color="blue-grey" variant="tonal" prepend-icon="mdi-format-list-checks" @click="addRule(field)">
-              {{ $t('action.addValidationRule') }} <span v-if="field.rulesList.length > 0" class="ml-1">({{ field.rulesList.length }})</span>
+            <v-btn size="small" color="blue-grey" variant="tonal" prepend-icon="mdi-format-list-checks"
+              @click="addRule(field)">
+              {{ $t('action.addValidationRule') }} <span v-if="field.rulesList.length > 0" class="ml-1">({{
+                field.rulesList.length }})</span>
             </v-btn>
           </div>
 
@@ -234,7 +237,8 @@
                     item-value="value" :label="$t('field.ruleType')" density="compact" hide-details="auto"
                     variant="outlined" bg-color="white" @update:model-value="rule.value = null"></v-select>
                 </v-col>
-                <v-col cols="12" :md="requiresValue(rule.type) ? 3 : 0" class="px-1 mb-2 mb-md-0" v-if="requiresValue(rule.type)">
+                <v-col cols="12" :md="requiresValue(rule.type) ? 3 : 0" class="px-1 mb-2 mb-md-0"
+                  v-if="requiresValue(rule.type)">
                   <v-text-field v-model="rule.value" :label="$t('common.value')" :type="getValueInputType(rule.type)"
                     :placeholder="getValuePlaceholder(rule.type)" :hint="getValueHint(rule.type)" persistent-hint
                     density="compact" hide-details="auto" variant="outlined" bg-color="white"></v-text-field>
@@ -269,29 +273,31 @@
         </v-toolbar>
         <v-card-text class="pt-4">
           <div class="mb-4 text-body-1 font-weight-medium">
-            <span class="text-primary">{{ $localize(generatorEntity?.name) }}</span> {{ $t('entity.selectModulesToGenerate') }}:
+            <span class="text-primary">{{ $localize(generatorEntity?.name) }}</span> {{
+              $t('entity.selectModulesToGenerate')
+            }}:
           </div>
 
           <v-row>
             <v-col cols="12" sm="6" class="py-1">
-              <v-checkbox v-model="generatorOptions.apiList" :label="$t('field.generatorApiList')" color="deep-purple" hide-details
-                density="compact"></v-checkbox>
-            </v-col>
-            <v-col cols="12" sm="6" class="py-1">
-              <v-checkbox v-model="generatorOptions.apiSingle" :label="$t('field.generatorApiSingle')" color="deep-purple" hide-details
-                density="compact"></v-checkbox>
-            </v-col>
-            <v-col cols="12" sm="6" class="py-1">
-              <v-checkbox v-model="generatorOptions.apiCreate" :label="$t('field.generatorApiCreate')" color="deep-purple"
+              <v-checkbox v-model="generatorOptions.apiList" :label="$t('field.generatorApiList')" color="deep-purple"
                 hide-details density="compact"></v-checkbox>
             </v-col>
             <v-col cols="12" sm="6" class="py-1">
-              <v-checkbox v-model="generatorOptions.apiUpdate" :label="$t('field.generatorApiUpdate')" color="deep-purple"
-                hide-details density="compact"></v-checkbox>
+              <v-checkbox v-model="generatorOptions.apiSingle" :label="$t('field.generatorApiSingle')"
+                color="deep-purple" hide-details density="compact"></v-checkbox>
             </v-col>
             <v-col cols="12" sm="6" class="py-1">
-              <v-checkbox v-model="generatorOptions.apiDelete" :label="$t('field.generatorApiDelete')" color="deep-purple"
-                hide-details density="compact"></v-checkbox>
+              <v-checkbox v-model="generatorOptions.apiCreate" :label="$t('field.generatorApiCreate')"
+                color="deep-purple" hide-details density="compact"></v-checkbox>
+            </v-col>
+            <v-col cols="12" sm="6" class="py-1">
+              <v-checkbox v-model="generatorOptions.apiUpdate" :label="$t('field.generatorApiUpdate')"
+                color="deep-purple" hide-details density="compact"></v-checkbox>
+            </v-col>
+            <v-col cols="12" sm="6" class="py-1">
+              <v-checkbox v-model="generatorOptions.apiDelete" :label="$t('field.generatorApiDelete')"
+                color="deep-purple" hide-details density="compact"></v-checkbox>
             </v-col>
             <v-col cols="12" sm="6" class="py-1">
               <v-checkbox v-model="generatorOptions.apiBulk" :label="$t('field.generatorApiBulk')" color="deep-purple"
@@ -305,14 +311,14 @@
 
           <v-divider class="my-4"></v-divider>
 
-          <v-combobox v-model="generatorHashtags" :label="$t('field.permissionHashtags')" variant="outlined" multiple chips
-            density="comfortable" :hint="$t('field.permissionHashtagsHint')"
-            persistent-hint></v-combobox>
+          <v-combobox v-model="generatorHashtags" :label="$t('field.permissionHashtags')" variant="outlined" multiple
+            chips density="comfortable" :hint="$t('field.permissionHashtagsHint')" persistent-hint></v-combobox>
         </v-card-text>
         <v-card-actions class="pa-4 pt-0">
           <v-spacer></v-spacer>
           <v-btn variant="text" color="primary" @click="generatorDialog = false">İptal</v-btn>
-          <v-btn variant="flat" color="deep-purple" @click="generateApiUi" :loading="generatorLoading">{{ $t('action.generate') }}</v-btn>
+          <v-btn variant="flat" color="deep-purple" @click="generateApiUi" :loading="generatorLoading">{{
+            $t('action.generate') }}</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -465,7 +471,7 @@ const handleErEntityUpdate = async (entity: any) => {
     if ($toast) $toast.success(t('message.entityUpdated', { name: t('entity.entity') }));
     crudTable.value?.loadItems();
   } catch (e: any) {
-        const errPayload = err?.data || e?.data;
+    const errPayload = e?.data;
     const isArr = Array.isArray(errPayload?.data);
     const errData = isArr ? errPayload.data[0] : (errPayload?.data || {});
     const errMsg = isArr ? errPayload.data[0].message : (errPayload?.message || 'errors.operationFailed');
@@ -482,7 +488,7 @@ const handleErEntityCreate = async (data: any) => {
     if ($toast) $toast.success(t('message.entityCreated', { name: t('entity.entity') }));
     crudTable.value?.loadItems();
   } catch (e: any) {
-        const errPayload = err?.data || e?.data;
+    const errPayload = e?.data;
     const isArr = Array.isArray(errPayload?.data);
     const errData = isArr ? errPayload.data[0] : (errPayload?.data || {});
     const errMsg = isArr ? errPayload.data[0].message : (errPayload?.message || 'errors.operationFailed');
@@ -493,10 +499,10 @@ const handleErEntityCreate = async (data: any) => {
 const handleErEntityDelete = async (entity: any) => {
   try {
     await $fetch(`/api/admin/entities/${entity.id}`, { method: 'DELETE' });
-    if ($toast) $toast.success(t('message.entityDeleted', { name: t('entity.entity') }));
+    if ($toast) $toast.success(t('message.deleted'));
     crudTable.value?.loadItems();
   } catch (e: any) {
-        const errPayload = err?.data || e?.data;
+    const errPayload = e?.data;
     const isArr = Array.isArray(errPayload?.data);
     const errData = isArr ? errPayload.data[0] : (errPayload?.data || {});
     const errMsg = isArr ? errPayload.data[0].message : (errPayload?.message || 'errors.operationFailed');
@@ -804,7 +810,7 @@ const saveItem = async (payload: any) => {
     crudTable.value?.loadItems(); // Tabloyu yenile
     crudTable.value?.loadItems(); // ER diyagramını güncellemek için listeyi yenile
   } catch (e: any) {
-        const errPayload = err?.data || e?.data;
+    const errPayload = e?.data;
     const isArr = Array.isArray(errPayload?.data);
     const errData = isArr ? errPayload.data[0] : (errPayload?.data || {});
     const errMsg = isArr ? errPayload.data[0].message : (errPayload?.message || 'errors.operationFailed');
@@ -816,11 +822,11 @@ const handleDelete = async (item: any) => {
   if (!confirm(t('confirm.delete', { name: item.name }))) return;
   try {
     await $fetch(`/api/admin/entities/${item.id}`, { method: 'DELETE' });
-    if ($toast) $toast.success(t('message.entityDeleted', { name: t('entity.entity') }));
+    if ($toast) $toast.success(t('message.deleted'));
     crudTable.value?.loadItems();
     crudTable.value?.loadItems(); // ER diyagramını güncellemek için listeyi yenile
   } catch (e: any) {
-        const errPayload = err?.data || e?.data;
+    const errPayload = e?.data;
     const isArr = Array.isArray(errPayload?.data);
     const errData = isArr ? errPayload.data[0] : (errPayload?.data || {});
     const errMsg = isArr ? errPayload.data[0].message : (errPayload?.message || 'errors.operationFailed');
