@@ -1841,13 +1841,12 @@ const productName = $localize(product.name);
 
                         <!-- Çevrimdışı Mod Koruması kaldırıldı -->
 
-                        <h3 class="text-h6 mt-4 mb-2">11.5 Sayfa Tiplerini (Layout, Login) Ezme Yeteneği</h3>
+                        <h3 class="text-h6 mt-4 mb-2">11.5 Sayfa Tipleri (Regular, Layout, Component)</h3>
                         <p class="text-body-2 mb-2">
                             Custom Pages bölümünde sayfa oluştururken <code>page_type</code> parametresini değiştirebilirsiniz:
                             <br>- <code>regular</code>: Sistemin varsayılan (Admin) menü ve Navbar'ına (Layout) sahip standart sayfalardır.
-                            <br>- <code>landing</code>: Sistemin varsayılan menülerinden bağımsız, genellikle dışarıya açık tanıtım veya anasayfa için kullanılan tiptir.
-                            <br>- <code>login</code>: Varsayılan giriş ekranını kaldırır, kendi tasarımınızı giriş ekranı yapar.
                             <br>- <code>layout</code>: Nuxt'un standart sol menü ve navbar yapısını tamamen siler, <code>&lt;slot /&gt;</code> ekleyerek tüm sitenin iskelet tasarımını baştan yazmanıza imkan tanır.
+                            <br>- <code>component</code>: Sayfa olarak çağrılmazlar, diğer sayfaların veya layout'ların içinde dinamik olarak kullanılabilen alt bileşenlerdir.
                         </p>
 
                         <h3 class="text-h6 mt-4 mb-2">11.6 Süper Admin İçin "Tenant Switcher"</h3>

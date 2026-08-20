@@ -1,8 +1,0 @@
-{
-  "name": "Makas Register Customer",
-  "route_pattern": "/api/custom/makas-register-customer",
-  "type": "http",
-  "is_public": 1,
-  "active": 1,
-  "hashtags": "[\"#makas\"]"
-}

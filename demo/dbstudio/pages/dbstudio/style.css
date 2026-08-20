@@ -1,0 +1,11 @@
+.font-monospace textarea {
+  font-family: 'Courier New', Courier, monospace !important;
+  color: #ffa726 !important;
+  line-height: 1.5;
+}
+.sql-editor textarea {
+  padding: 16px !important;
+}
+.border-top {
+  border-top: 1px solid rgba(255,255,255,0.1);
+}

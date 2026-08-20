@@ -1,0 +1,96 @@
+<v-container fluid class="pa-4 h-100 bg-grey-lighten-4" style="min-height: 100vh;">
+  <!-- Gizli Dosya Seçici -->
+  <input type="file" ref="fileInput" style="display: none" @change="onFileSelected" multiple>
+
+  <div class="d-flex justify-space-between align-center mb-4">
+    <h2 class="text-h5 font-weight-bold text-primary d-flex align-center">
+      <v-icon class="mr-2">mdi-folder-network</v-icon> {{ $t('customPage.winscp.title') }}
+    </h2>
+    <div class="d-flex align-center">
+      <v-btn color="success" prepend-icon="mdi-upload" @click="fileInput.click()" :loading="uploading" class="mr-3">{{ $t('customPage.winscp.uploadFile') }}</v-btn>
+      <v-btn color="primary" prepend-icon="mdi-folder-plus" @click="promptNewFolder">{{ $t('customPage.winscp.newFolder') }}</v-btn>
+    </div>
+  </div>
+
+  <v-card class="elevation-2 rounded-xl mb-4 overflow-hidden">
+    <div class="d-flex align-center pa-3 bg-white border-bottom">
+      <v-btn icon="mdi-arrow-up" variant="text" color="primary" @click="goUp" :disabled="currentDir === parentDir" :title="$t('customPage.winscp.parentDir')"></v-btn>
+      <v-text-field
+        v-model="currentDirInput"
+        @keyup.enter="loadDir(currentDirInput)"
+        density="compact"
+        hide-details
+        variant="outlined"
+        class="mx-3"
+        prepend-inner-icon="mdi-folder-open"
+      ></v-text-field>
+      <v-btn icon="mdi-refresh" variant="text" color="primary" @click="loadDir(currentDir)" :title="$t('customPage.winscp.refresh')"></v-btn>
+    </div>
+
+    <v-table hover density="comfortable">
+      <thead class="bg-grey-lighten-3">
+        <tr>
+          <th style="width: 60px;">{{ $t('customPage.winscp.type') }}</th>
+          <th class="font-weight-bold text-subtitle-2">{{ $t('customPage.winscp.name') }}</th>
+          <th class="font-weight-bold text-subtitle-2">{{ $t('customPage.winscp.size') }}</th>
+          <th class="font-weight-bold text-subtitle-2">{{ $t('customPage.winscp.modified') }}</th>
+          <th class="text-right font-weight-bold text-subtitle-2">{{ $t('customPage.winscp.actions') }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr v-for="item in files" :key="item.name" class="cursor-pointer" @click="item.isDirectory ? loadDir(resolvePath(item.name)) : openEditor(item)">
+          <td class="text-center">
+            <v-icon :color="item.isDirectory ? 'amber-darken-1' : 'blue-grey'" size="large">
+              {{ item.isDirectory ? 'mdi-folder' : 'mdi-file-document-outline' }}
+            </v-icon>
+          </td>
+          <td class="font-weight-medium text-blue-grey-darken-3">{{ item.name }}</td>
+          <td class="text-caption text-grey-darken-1">{{ item.isDirectory ? '-' : formatSize(item.size) }}</td>
+          <td class="text-caption text-grey-darken-1">{{ formatDate(item.mtime) }}</td>
+          
+          <!-- İŞLEM BUTONLARI -->
+          <td class="text-right" style="white-space: nowrap;">
+            <v-btn v-if="!item.isDirectory" icon="mdi-pencil" variant="text" color="success" size="small" @click.stop="openEditor(item)" :title="$t('customPage.winscp.editAsText')"></v-btn>
+            <v-btn v-if="!item.isDirectory" icon="mdi-download" variant="text" color="info" size="small" @click.stop="downloadItem(item)" :title="$t('customPage.winscp.download')"></v-btn>
+            <v-btn icon="mdi-delete" variant="text" color="error" size="small" @click.stop="deleteItem(item)" :title="$t('customPage.winscp.deleteFromServer')"></v-btn>
+          </td>
+        </tr>
+        <tr v-if="files.length === 0 && !loading">
+          <td colspan="5" class="text-center text-grey py-8">
+            <v-icon size="48" class="mb-2">mdi-folder-open-outline</v-icon><br>
+            {{ $t('customPage.winscp.emptyFolder') }}
+          </td>
+        </tr>
+      </tbody>
+    </v-table>
+    <v-progress-linear v-if="loading || uploading" indeterminate color="primary"></v-progress-linear>
+  </v-card>
+
+  <!-- Dosya Düzenleme (Text Editor) Modalı -->
+  <v-dialog v-model="editDialog" max-width="1200" persistent>
+    <v-card class="rounded-xl">
+      <v-card-title class="bg-blue-grey-darken-4 text-white d-flex justify-space-between align-center py-3">
+        <span><v-icon left class="mr-2">mdi-file-edit</v-icon> {{ editingFileName }}</span>
+        <v-btn icon="mdi-close" variant="text" color="white" @click="editDialog = false"></v-btn>
+      </v-card-title>
+      <v-card-text class="pa-0">
+        <v-textarea
+          v-model="editingContent"
+          auto-grow
+          hide-details
+          variant="solo"
+          class="font-monospace custom-editor"
+          style="min-height: 500px;"
+          bg-color="#1e1e1e"
+          base-color="transparent"
+        ></v-textarea>
+      </v-card-text>
+      <v-card-actions class="pa-4 bg-grey-lighten-4 border-top">
+        <span class="text-caption text-grey">{{ editingFilePath }}</span>
+        <v-spacer></v-spacer>
+        <v-btn variant="text" @click="editDialog = false" class="mr-2">{{ $t('common.cancel') }}</v-btn>
+        <v-btn color="success" variant="flat" prepend-icon="mdi-content-save" @click="saveFile" :loading="saving">{{ $t('common.save') }}</v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
+</v-container>

@@ -1,0 +1,12 @@
+[
+  {
+    "name": "Makas Müşteri",
+    "allowed_tags": "[\"#makas\"]",
+    "hashtags": "[\"#makas\"]"
+  },
+  {
+    "name": "Makas Yönetici",
+    "allowed_tags": "[\"#makas\"]",
+    "hashtags": "[\"#makas\"]"
+  }
+]

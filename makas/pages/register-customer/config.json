@@ -1,9 +1,0 @@
-{
-  "title": "Müşteri Kayıt",
-  "page_type": "regular",
-  "route_pattern": "/register-customer",
-  "priority": 1,
-  "is_public": 1,
-  "active": 1,
-  "hashtags": "[\"#makas\"]"
-}

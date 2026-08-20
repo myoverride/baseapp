@@ -1,0 +1,50 @@
+<v-container fluid class="pa-0 ma-0 fill-height" style="overflow: hidden; background: #000;">
+  <!-- Yükseklik %100 yapıldı ve overflow eklendi -->
+  <div id="three-canvas-container" style="width: 100%; height: 100%; position: absolute; top:0; left:0; overflow: hidden;"></div>
+  
+  <div v-if="!inLobby" style="position: fixed; top: 55vh; left: 50vw; transform: translate(-50%, -50%); pointer-events: none; z-index: 99999;">
+    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 24px; height: 4px; background: rgba(0, 255, 255, 0.9); box-shadow: 0 0 4px black; border-radius: 2px;"></div>
+    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 4px; height: 24px; background: rgba(0, 255, 255, 0.9); box-shadow: 0 0 4px black; border-radius: 2px;"></div>
+  </div>
+
+  <div v-if="!inLobby" style="position: absolute; top: 16px; left: 16px; color: white; background: rgba(0,0,0,0.6); padding: 15px; border-radius: 8px; z-index: 10; pointer-events: none;">
+    <h3 class="text-h6 text-cyan mb-2">Paintball Arena</h3>
+    <p v-if="!isLocked" class="text-warning font-weight-bold animate-pulse">OYUNA GİRMEK İÇİN EKRANA TIKLAYIN</p>
+    <p v-else class="text-success mb-2">Fare kilitlendi. (Çıkmak için ESC)</p>
+    <p class="mb-1"><v-icon size="small" color="white" class="mr-1">mdi-keyboard-outline</v-icon>WASD: Yürü | Fare: Nişan | Sol Tık: Ateş</p>
+    <p class="mb-1 text-yellow"><v-icon size="small" color="yellow" class="mr-1">mdi-account-group</v-icon>Odada Toplam <b>{{playerCount}}</b> Oyuncu Var</p>
+    <v-divider class="my-2" color="grey"></v-divider>
+    <div class="d-flex align-center gap-4">
+       <h2 class="text-h4" :class="myHp > 30 ? 'text-green' : 'text-red'"><v-icon size="large">mdi-heart</v-icon> {{myHp}}</h2>
+       <h2 class="text-h4" :class="isReloading ? 'text-orange animate-pulse' : 'text-cyan'"><v-icon size="large">mdi-ammunition</v-icon> {{isReloading ? 'YÜKLENİYOR...' : myAmmo + '/30'}}</h2>
+    </div>
+    <h3 class="text-h5 text-yellow mt-2"><v-icon>mdi-star</v-icon> Skor: {{myScore}}</h3>
+  </div>
+
+  <div v-if="!inLobby" style="position: absolute; top: 16px; right: 16px; color: white; background: rgba(0,0,0,0.6); padding: 15px; border-radius: 8px; z-index: 10; pointer-events: none; min-width: 250px;">
+     <h4 class="text-h6 text-white mb-2">Liderlik Tablosu</h4>
+     <div v-for="p in scoreboard" :key="p.id" class="d-flex justify-space-between mb-1">
+        <span :style="{color: p.color}" class="font-weight-bold">{{p.id}}</span>
+        <span class="font-weight-bold">{{p.score}} Puan</span>
+     </div>
+  </div>
+
+  <div v-if="showDeath" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,0,0,0.5); z-index: 20; display: flex; align-items: center; justify-content: center; pointer-events: none;">
+    <h1 class="text-h2 text-white font-weight-bold" style="text-shadow: 2px 2px 10px #000;">VURULDUN!</h1>
+  </div>
+
+  <!-- LOBBY -->
+  <div v-if="inLobby" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 50; display: flex; align-items: center; justify-content: center;">
+    <v-card width="450" theme="dark" class="pa-6 rounded-xl elevation-24" style="background: rgba(30,30,30,0.9); border: 2px solid cyan;">
+      <h2 class="text-h3 text-center text-cyan font-weight-bold mb-6">METAVERSE FPS</h2>
+      <v-text-field v-model="myId" label="Oyuncu Adı (Nickname)" variant="outlined" class="mb-4"></v-text-field>
+      <p class="text-subtitle-1 mb-2 text-center text-grey">Karakter ve Mermi Rengini Seç:</p>
+      <div class="d-flex justify-center mb-6">
+        <input type="color" v-model="myColor" style="width: 100px; height: 50px; cursor: pointer; border: none; background: none;" />
+      </div>
+      <v-btn block color="cyan-accent-4" size="x-large" class="text-black font-weight-bold" @click="joinGame" :disabled="!myId">
+         <v-icon left>mdi-crosshairs-gps</v-icon> ARENAYA GİR
+      </v-btn>
+    </v-card>
+  </div>
+</v-container>

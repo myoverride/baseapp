@@ -1,0 +1,8 @@
+{
+  "route_pattern": "meet/:id",
+  "priority": 0,
+  "active": 1,
+  "is_public": 1,
+  "title": "Meeting Room",
+  "hashtags": "[\"#meet\"]"
+}

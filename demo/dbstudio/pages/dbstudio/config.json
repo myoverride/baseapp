@@ -1,0 +1,14 @@
+{
+  "id": 4,
+  "route_pattern": "dbstudio",
+  "title": "{\"tr\":\"Veritabani Studyosu\",\"en\":\"Database Studio\",\"ar\":\"استوديو قاعدة البيانات\"}",
+  "page_type": "regular",
+  "active": 1,
+  "is_public": 0,
+  "created_at": "2026-07-01 14:18:46",
+  "updated_at": "2026-07-01 14:50:47",
+  "created_by": null,
+  "updated_by": null,
+  "hashtags": "[\"#dbstudio\"]",
+  "priority": 0
+}

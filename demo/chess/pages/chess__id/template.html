@@ -1,0 +1,82 @@
+<v-container class="fill-height bg-grey-darken-4 pa-0" fluid>
+  <v-row class="fill-height ma-0" justify="center" align="center">
+    <v-col cols="12" md="8" class="d-flex flex-column align-center pa-4">
+      <div class="text-h5 mb-2 text-white">Oda: {{ roomName }}</div>
+      
+      <div class="mb-4 d-flex align-center flex-wrap" style="gap: 10px;">
+        <v-btn-toggle v-model="myColor" mandatory color="primary" variant="outlined" density="compact">
+          <v-btn value="w">Beyaz</v-btn>
+          <v-btn value="b">Siyah</v-btn>
+          <v-btn value="spectator">İzleyici</v-btn>
+        </v-btn-toggle>
+
+        <v-btn icon="mdi-rotate-3d-variant" color="info" variant="tonal" density="comfortable" @click="flipBoard" title="Tahtayı Çevir"></v-btn>
+        
+        <v-chip class="ml-2 font-weight-bold" :color="gameStatusColor">{{ gameStatusText }}</v-chip>
+      </div>
+
+      <div class="chessboard-container" style="border: 4px solid #222; border-radius: 4px; box-shadow: 0 4px 10px rgba(0,0,0,0.5);">
+        <div v-for="(row, rIndex) in displayBoard" :key="rIndex" style="display: flex;">
+          <div v-for="(square, cIndex) in row" :key="cIndex"
+               @click="onSquareClick(rIndex, cIndex)"
+               :style="{
+                 width: squareSize + 'px',
+                 height: squareSize + 'px',
+                 display: 'flex',
+                 justifyContent: 'center',
+                 alignItems: 'center',
+                 fontSize: (squareSize * 0.75) + 'px',
+                 cursor: (myColor === 'w' || myColor === 'b') ? 'pointer' : 'default',
+                 backgroundColor: getSquareColor(rIndex, cIndex),
+                 userSelect: 'none'
+               }">
+            <span v-if="square" :style="{ color: square.color === 'w' ? '#fff' : '#000', textShadow: square.color === 'w' ? '0 0 3px #000' : '0 0 2px #fff', transform: 'scale(1.2)' }">
+              {{ getPieceUnicode(square) }}
+            </span>
+          </div>
+        </div>
+      </div>
+      
+      <v-btn class="mt-6" color="error" variant="outlined" @click="goLobby">Lobisine Dön</v-btn>
+    </v-col>
+
+    <v-col cols="12" md="4" class="bg-grey-darken-3 d-flex flex-column pa-0" style="border-left: 1px solid #444; height: 100vh;">
+      <div class="pa-2">
+        <div class="text-subtitle-2 text-grey-lighten-1 mb-1">Yenilen Taşlar</div>
+        <div class="d-flex align-center" style="min-height: 28px;">
+          <v-chip size="x-small" color="white" variant="outlined" class="mr-2">Beyaz</v-chip>
+          <span v-for="(p, i) in capturedByWhite" :key="'w'+i" style="font-size: 1.2rem; color: #000; text-shadow: 0 0 2px #fff;" class="mx-1">{{ getPieceUnicode({type: p}) }}</span>
+        </div>
+        <div class="d-flex align-center mt-1" style="min-height: 28px;">
+          <v-chip size="x-small" color="black" variant="flat" class="mr-2 border">Siyah</v-chip>
+          <span v-for="(p, i) in capturedByBlack" :key="'b'+i" style="font-size: 1.2rem; color: #fff; text-shadow: 0 0 3px #000;" class="mx-1">{{ getPieceUnicode({type: p}) }}</span>
+        </div>
+      </div>
+      <v-divider></v-divider>
+
+      <v-card-title class="text-white py-2">Sohbet & Log</v-card-title>
+      <v-divider></v-divider>
+      <v-card-text class="flex-grow-1" style="overflow-y: auto;" ref="chatBox">
+        <div v-for="msg in messages" :key="msg.ts" class="mb-2 text-body-2 text-white">
+          <strong :class="msg.sender === 'Sistem' ? 'text-warning' : 'text-primary'">{{ msg.sender }}:</strong> <span>{{ msg.text }}</span>
+        </div>
+      </v-card-text>
+      <v-card-actions class="pa-2">
+        <v-text-field v-model="chatInput" density="compact" hide-details variant="solo" placeholder="Mesaj yaz..." @keyup.enter="sendChat"></v-text-field>
+        <v-btn icon="mdi-send" color="primary" @click="sendChat"></v-btn>
+      </v-card-actions>
+    </v-col>
+  </v-row>
+
+  <v-dialog v-model="showPromotionDialog" max-width="300" persistent>
+    <v-card class="bg-grey-darken-3">
+      <v-card-title class="text-center text-white pb-0">Terfi Seçimi</v-card-title>
+      <v-card-text class="d-flex justify-space-around py-4">
+        <v-btn icon size="large" color="grey-lighten-2" @click="confirmPromotion('q')"><span style="font-size: 28px; color: #000;">♛</span></v-btn>
+        <v-btn icon size="large" color="grey-lighten-2" @click="confirmPromotion('r')"><span style="font-size: 28px; color: #000;">♜</span></v-btn>
+        <v-btn icon size="large" color="grey-lighten-2" @click="confirmPromotion('b')"><span style="font-size: 28px; color: #000;">♝</span></v-btn>
+        <v-btn icon size="large" color="grey-lighten-2" @click="confirmPromotion('n')"><span style="font-size: 28px; color: #000;">♞</span></v-btn>
+      </v-card-text>
+    </v-card>
+  </v-dialog>
+</v-container>

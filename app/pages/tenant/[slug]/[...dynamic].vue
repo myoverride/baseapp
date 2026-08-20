@@ -36,7 +36,7 @@ const pageData = ref<any>(null);
 const error = ref<string | null>(null);
 
 useHead({
-  title: () => pageData.value?.title || (error.value ? t('common.error') || 'Hata' : t('common.loading'))
+  title: () => pageData.value?.title || (error.value ? t('common.error') : t('common.loading'))
 });
 
 onMounted(async () => {

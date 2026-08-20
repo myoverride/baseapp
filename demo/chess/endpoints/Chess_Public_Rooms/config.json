@@ -1,0 +1,6 @@
+{
+  "name": "Chess Public Rooms",
+  "route_pattern": "/api/custom/chess/rooms/public",
+  "type": "http",
+  "is_public": 1
+}

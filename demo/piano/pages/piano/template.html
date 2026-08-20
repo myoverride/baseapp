@@ -1,0 +1,240 @@
+
+<v-container fluid class="pa-0 d-flex flex-column bg-grey-darken-4 position-relative" style="height: calc(100vh - 64px); overflow-y: auto;">
+  
+  <!-- Autoplay Kalkanı (Başlangıç Ekranı) -->
+  <div v-if="!started" class="d-flex flex-column align-center justify-center h-100 w-100 position-absolute bg-black" style="z-index: 2000; opacity: 0.98; top: 0; left: 0;">
+      <h1 class="text-h3 text-white mb-4 font-weight-bold">DAW Studio Hazır</h1>
+      <p class="text-h6 text-grey-lighten-1 mb-8 text-center" style="max-width: 600px;">Tarayıcı güvenlik kuralları (Autoplay Policy) gereği, ses motorunu (Tone.js) başlatmak için manuel onay vermeniz gerekmektedir.</p>
+      <v-btn color="orange-accent-3" size="x-large" @click="startEngine" elevation="8" :loading="loading">
+        <v-icon start>mdi-power</v-icon> Sistemi Başlat
+      </v-btn>
+      <span v-if="loading" class="mt-4 text-orange-lighten-2">Kütüphaneler Yükleniyor... (Biraz sürebilir)</span>
+  </div>
+
+  <!-- Üst Araç Çubuğu 1: Temel Kontroller -->
+  <v-toolbar color="grey-darken-4" density="compact" elevation="2" style="flex-shrink: 0;">
+    <v-icon start class="ml-2 text-orange-accent-3">mdi-piano</v-icon>
+    <v-toolbar-title class="text-body-1 font-weight-bold text-white">DAW Studio Synthesizer</v-toolbar-title>
+    
+    <v-spacer></v-spacer>
+
+    <!-- Harita Modu Butonu -->
+    <v-btn 
+      :variant="isMapMode ? 'flat' : 'outlined'" 
+      :color="isMapMode ? 'red-accent-3' : 'grey-lighten-1'" 
+      size="small" 
+      class="mr-6"
+      @click="toggleMapMode"
+    >
+      <v-icon start>{{ isMapMode ? 'mdi-keyboard-off' : 'mdi-keyboard' }}</v-icon>
+      {{ isMapMode ? 'Haritalama Açık (Çıkmak için Tıkla)' : 'Tuş Haritalama Modu' }}
+    </v-btn>
+    
+    <div class="d-flex align-center mr-6" :style="{ opacity: isMapMode ? 0.3 : 1, pointerEvents: isMapMode ? 'none' : 'auto' }">
+      <span class="text-caption mr-2 text-grey-lighten-1">Q Tuşu Oktavı:</span>
+      <v-select
+        v-model="baseOctave"
+        :items="[3, 4, 5, 6]"
+        density="compact"
+        hide-details
+        variant="outlined"
+        style="width: 90px"
+        bg-color="grey-darken-3"
+      ></v-select>
+    </div>
+
+    <div class="d-flex align-center mr-4" :style="{ opacity: isMapMode ? 0.3 : 1, pointerEvents: isMapMode ? 'none' : 'auto' }">
+      <span class="text-caption mr-2 text-grey-lighten-1">Enstrüman:</span>
+      <v-select
+        v-model="selectedInstrument"
+        :items="instruments"
+        item-title="title"
+        item-value="value"
+        density="compact"
+        hide-details
+        variant="outlined"
+        style="width: 220px"
+        bg-color="grey-darken-3"
+      ></v-select>
+    </div>
+  </v-toolbar>
+
+  <!-- Üst Araç Çubuğu 2: Efektler ve Transpose -->
+  <v-toolbar color="grey-darken-4" density="compact" elevation="2" style="flex-shrink: 0; border-top: 1px solid #222;">
+    
+    <div class="d-flex align-center ml-4 mr-8" :style="{ opacity: isMapMode ? 0.3 : 1, pointerEvents: isMapMode ? 'none' : 'auto' }">
+      <span class="text-caption mr-3 text-grey-lighten-1">Transpose (Transpoze):</span>
+      <v-btn icon="mdi-minus" size="x-small" variant="text" color="grey-lighten-1" @click="transpose--"></v-btn>
+      <span class="text-body-2 mx-2 text-white font-weight-bold" style="min-width: 24px; text-align: center;">
+        {{ transpose > 0 ? '+' + transpose : transpose }}
+      </span>
+      <v-btn icon="mdi-plus" size="x-small" variant="text" color="grey-lighten-1" @click="transpose++"></v-btn>
+    </div>
+
+    <v-divider vertical class="mx-4"></v-divider>
+
+    <div class="d-flex align-center mr-6" :style="{ opacity: isMapMode ? 0.3 : 1, pointerEvents: isMapMode ? 'none' : 'auto', width: '200px' }">
+      <span class="text-caption mr-2 text-grey-lighten-1">Yankı (Release):</span>
+      <v-slider
+        v-model="releaseTime"
+        :min="0.05"
+        :max="2"
+        :step="0.05"
+        density="compact"
+        hide-details
+        color="orange-accent-3"
+      ></v-slider>
+      <span class="text-caption ml-2 text-grey-lighten-1" style="min-width: 30px">{{ releaseTime }}s</span>
+    </div>
+
+    <div class="d-flex align-center mr-6" :style="{ opacity: isMapMode ? 0.3 : 1, pointerEvents: isMapMode ? 'none' : 'auto', width: '200px' }">
+      <span class="text-caption mr-2 text-grey-lighten-1">Reverb (Stüdyo):</span>
+      <v-slider
+        v-model="reverbMix"
+        :min="0"
+        :max="1"
+        :step="0.05"
+        density="compact"
+        hide-details
+        color="cyan-accent-3"
+      ></v-slider>
+    </div>
+
+    <div class="d-flex align-center mr-6" :style="{ opacity: isMapMode ? 0.3 : 1, pointerEvents: isMapMode ? 'none' : 'auto', width: '200px' }">
+      <span class="text-caption mr-2 text-grey-lighten-1">Echo (Gecikme):</span>
+      <v-slider
+        v-model="echoMix"
+        :min="0"
+        :max="1"
+        :step="0.05"
+        density="compact"
+        hide-details
+        color="purple-accent-3"
+      ></v-slider>
+    </div>
+
+  </v-toolbar>
+
+  <!-- Ana Sahne -->
+  <div class="flex-grow-1 d-flex flex-column align-center pa-4" style="background: radial-gradient(circle, #333 0%, #111 100%); min-height: max-content;">
+    
+    <div class="text-center mb-4">
+      <h2 class="text-h4 text-white font-weight-light mb-1">Profesyonel Çift Katlı Klavye</h2>
+      <p v-if="!isMapMode" class="text-grey-lighten-1">Bilgisayar klavyenizi gerçek bir stüdyo piyanoları gibi kullanın.</p>
+      <p v-else class="text-red-accent-3 font-weight-bold bg-red-darken-4 pa-1 rounded">Haritalama Modu Aktif! Değiştirmek istediğiniz piyano tuşuna tıklayın, ardından klavyenizden bir harfe basın.</p>
+      
+      <div class="d-flex justify-center gap-4 mt-2">
+        <v-chip size="small" color="orange-darken-3">Üst Klavye (İnce Sesler)</v-chip>
+        <v-chip size="small" color="blue-darken-3">Alt Klavye (Kalın Sesler)</v-chip>
+        <v-btn v-if="isMapMode" variant="tonal" color="white" size="x-small" @click="resetMapping">Varsayılana Sıfırla</v-btn>
+      </div>
+    </div>
+
+    <!-- ÜST KLAVYE (Upper) -->
+    <div class="position-relative mb-6" style="width: 100%; max-width: 1200px; height: 220px; background: #000; padding: 15px 10px 10px 10px; border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.8);">
+      <div class="position-absolute bg-orange-darken-4" style="top: 0; left: 0; width: 100%; height: 6px; border-top-left-radius: 10px; border-top-right-radius: 10px;"></div>
+
+      <div class="d-flex w-100 h-100 position-relative">
+        <!-- Beyaz Tuşlar -->
+        <div 
+          v-for="key in upperKeys.w" 
+          :key="key.id"
+          class="flex-grow-1 border mx-1 position-relative d-flex flex-column justify-end align-center pb-2"
+          :style="{
+            backgroundColor: getKeyColor(key, 'white'),
+            borderRadius: '0 0 5px 5px',
+            boxShadow: activeKeys[key.key] ? 'inset 0 0 10px rgba(0,0,0,0.5)' : '0 5px 10px rgba(0,0,0,0.2)',
+            transform: activeKeys[key.key] ? 'translateY(2px)' : 'none',
+            transition: 'all 0.05s',
+            cursor: 'pointer'
+          }"
+          @mousedown="handleMouseClick(key)"
+          @mouseup="stopKey(key)"
+          @mouseleave="stopKey(key)"
+        >
+          <span class="text-h6 font-weight-bold" :style="{ color: isMapMode ? '#000' : '#999', pointerEvents: 'none' }">{{ key.key.toUpperCase() }}</span>
+          <span class="text-caption font-weight-bold" style="color: #bbb; pointer-events: none;">{{ key.label }}</span>
+        </div>
+
+        <!-- Siyah Tuşlar -->
+        <div
+          v-for="key in upperKeys.b"
+          :key="key.id"
+          class="position-absolute d-flex flex-column justify-end align-center pb-2"
+          :style="{
+            backgroundColor: getKeyColor(key, 'black'),
+            width: '6%',
+            height: '65%',
+            left: `calc(${(key.after + 1) * (100 / upperKeys.w.length)}% - 3%)`,
+            top: 0,
+            borderRadius: '0 0 4px 4px',
+            boxShadow: activeKeys[key.key] ? 'none' : '2px 5px 5px rgba(0,0,0,0.5), inset 0 -2px 5px rgba(255,255,255,0.2)',
+            transform: activeKeys[key.key] ? 'translateY(1px)' : 'none',
+            transition: 'all 0.05s',
+            zIndex: 10,
+            cursor: 'pointer'
+          }"
+          @mousedown="handleMouseClick(key)"
+          @mouseup="stopKey(key)"
+          @mouseleave="stopKey(key)"
+        >
+          <span class="text-body-2 font-weight-bold" :style="{ color: isMapMode ? '#fff' : '#888', pointerEvents: 'none' }">{{ key.key.toUpperCase() }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ALT KLAVYE (Lower) -->
+    <div class="position-relative" style="width: calc(100% * 10 / 12); max-width: 1000px; height: 220px; background: #000; padding: 15px 10px 10px 10px; border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.8); align-self: flex-start; margin-left: auto; margin-right: auto;">
+      <div class="position-absolute bg-blue-darken-4" style="top: 0; left: 0; width: 100%; height: 6px; border-top-left-radius: 10px; border-top-right-radius: 10px;"></div>
+
+      <div class="d-flex w-100 h-100 position-relative">
+        <!-- Beyaz Tuşlar -->
+        <div 
+          v-for="key in lowerKeys.w" 
+          :key="key.id"
+          class="flex-grow-1 border mx-1 position-relative d-flex flex-column justify-end align-center pb-2"
+          :style="{
+            backgroundColor: getKeyColor(key, 'white'),
+            borderRadius: '0 0 5px 5px',
+            boxShadow: activeKeys[key.key] ? 'inset 0 0 10px rgba(0,0,0,0.5)' : '0 5px 10px rgba(0,0,0,0.2)',
+            transform: activeKeys[key.key] ? 'translateY(2px)' : 'none',
+            transition: 'all 0.05s',
+            cursor: 'pointer'
+          }"
+          @mousedown="handleMouseClick(key)"
+          @mouseup="stopKey(key)"
+          @mouseleave="stopKey(key)"
+        >
+          <span class="text-h6 font-weight-bold" :style="{ color: isMapMode ? '#000' : '#999', pointerEvents: 'none' }">{{ key.key.toUpperCase() }}</span>
+          <span class="text-caption font-weight-bold" style="color: #bbb; pointer-events: none;">{{ key.label }}</span>
+        </div>
+
+        <!-- Siyah Tuşlar -->
+        <div
+          v-for="key in lowerKeys.b"
+          :key="key.id"
+          class="position-absolute d-flex flex-column justify-end align-center pb-2"
+          :style="{
+            backgroundColor: getKeyColor(key, 'black'),
+            width: '7.2%',
+            height: '65%',
+            left: `calc(${(key.after + 1) * (100 / lowerKeys.w.length)}% - 3.6%)`,
+            top: 0,
+            borderRadius: '0 0 4px 4px',
+            boxShadow: activeKeys[key.key] ? 'none' : '2px 5px 5px rgba(0,0,0,0.5), inset 0 -2px 5px rgba(255,255,255,0.2)',
+            transform: activeKeys[key.key] ? 'translateY(1px)' : 'none',
+            transition: 'all 0.05s',
+            zIndex: 10,
+            cursor: 'pointer'
+          }"
+          @mousedown="handleMouseClick(key)"
+          @mouseup="stopKey(key)"
+          @mouseleave="stopKey(key)"
+        >
+          <span class="text-body-2 font-weight-bold" :style="{ color: isMapMode ? '#fff' : '#888', pointerEvents: 'none' }">{{ key.key.toUpperCase() }}</span>
+        </div>
+      </div>
+    </div>
+    
+  </div>
+</v-container>

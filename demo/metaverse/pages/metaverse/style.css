@@ -1,0 +1,8 @@
+#three-canvas-container canvas {
+  display: block;
+  outline: none;
+}
+/* Ekstra güvenlik için global kaydırmayı kapatmak istersen: */
+:global(body) {
+  overflow: hidden;
+}

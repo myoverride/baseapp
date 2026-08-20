@@ -1,6 +1,0 @@
-{
-  "name": "Hizmet",
-  "slug": "service",
-  "schema": "{\"name\":{\"label\":\"{\\\"tr\\\":\\\"Ad\\\",\\\"en\\\":\\\"Name\\\"}\",\"type\":\"string\",\"rules\":{\"required\":true,\"unique\":false},\"isPrimary\":true,\"showInTable\":true,\"_order\":0},\"estimated_time\":{\"label\":\"{\\\"tr\\\":\\\"Tahmini Süre (dak)\\\",\\\"en\\\":\\\"Estimated Time (min)\\\"}\",\"type\":\"number\",\"rules\":{\"required\":true,\"unique\":false,\"custom\":[{\"type\":\"step\",\"value\":\"5\",\"message\":\"{\\\"tr\\\":\\\"5'in katları olmalı!\\\",\\\"en\\\":\\\"Must be multiples of five!\\\"}\"}]},\"isPrimary\":false,\"showInTable\":true,\"_order\":1},\"personnel\":{\"label\":\"{\\\"tr\\\":\\\"Personel\\\",\\\"en\\\":\\\"Personnel\\\"}\",\"type\":\"relation\",\"rules\":{\"required\":true,\"unique\":false},\"targetEntitySlug\":\"personnel\",\"onDelete\":\"restrict\",\"isPrimary\":false,\"showInTable\":true,\"_order\":2},\"active\":{\"label\":\"{\\\"tr\\\":\\\"Aktif\\\",\\\"en\\\":\\\"Active\\\"}\",\"type\":\"boolean\",\"rules\":{\"required\":false,\"unique\":false},\"isPrimary\":false,\"showInTable\":true,\"_order\":3}}",
-  "hashtags": "[\"#makas\"]"
-}

@@ -41,6 +41,9 @@ export default defineEventHandler(async (event) => {
 
       let newRoutePattern = body.route_pattern;
       let newPageType = body.page_type || 'regular';
+      if (!['regular', 'layout', 'component'].includes(newPageType)) {
+        newPageType = 'regular';
+      }
 
       if (existing.protected === 1 || existing.protected === true) {
         newRoutePattern = existing.route_pattern;

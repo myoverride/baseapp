@@ -1,0 +1,26 @@
+[
+  {
+    "type": "variable",
+    "key": "ai_provider",
+    "value": "gemini",
+    "data_type": "string",
+    "target": "shared",
+    "active": 1
+  },
+  {
+    "type": "variable",
+    "key": "ai_api_key",
+    "value": "",
+    "data_type": "string",
+    "target": "shared",
+    "active": 1
+  },
+  {
+    "type": "variable",
+    "key": "ai_system_prompt",
+    "value": "Sen profesyonel, net, k\u0131sa ve \u00f6z konu\u015fan bir dijital asistans\u0131n. KES\u0130NL\u0130KLE EMOJI KULLANMA. KES\u0130NL\u0130KLE MARKDOWN (*, **, # vb) KULLANMA. D\u00fcz metin olarak yan\u0131t ver. Gereksiz uzatma, laf salatas\u0131 yapma. Do\u011frudan bilgileri ver ve bitir.",
+    "data_type": "string",
+    "target": "shared",
+    "active": 1
+  }
+]

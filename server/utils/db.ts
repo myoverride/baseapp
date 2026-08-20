@@ -850,7 +850,7 @@ export async function setupTenantDatabase(tenantSlug: string, refs: TenantDbRefs
           route_pattern VARCHAR(255),
           priority INTEGER NOT NULL DEFAULT 0,
           title VARCHAR(200) UNIQUE NOT NULL,
-        page_type VARCHAR(50) DEFAULT 'regular',
+        page_type VARCHAR(50) DEFAULT 'regular' CHECK(page_type IN ('regular', 'layout', 'component')),
         template_string TEXT DEFAULT '',
         script_content TEXT DEFAULT '',
         style_content TEXT DEFAULT '',

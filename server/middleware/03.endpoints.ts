@@ -117,7 +117,7 @@ export default defineEventHandler(async (event) => {
         ep.code as string, 
         sandboxPayload, 
         ep.id.toString(), 
-        { tenantSlug: event.context.tenantSlug, userId: event.context.user?.id }
+        { tenantSlug: event.context.tenantSlug, userId: event.context.user?.id, isSuperAdmin: event.context.user?.is_super_admin }
       );
 
       // Middleware isteği engellemek istiyorsa

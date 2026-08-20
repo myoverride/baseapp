@@ -1,0 +1,66 @@
+<v-container fluid class="pa-4 h-100 bg-grey-darken-4" style="min-height: 100vh; display: flex; flex-direction: column;">
+  <div class="d-flex justify-space-between align-center mb-4">
+    <h2 class="text-h5 font-weight-bold text-warning font-monospace">
+      <v-icon color="warning" class="mr-2">mdi-database-edit</v-icon>
+      {{ $t('customPage.dbstudio.title') }}
+    </h2>
+    <v-chip color="error" variant="flat">
+      <v-icon left class="mr-1">mdi-alert-octagon</v-icon> {{ $t('customPage.dbstudio.warning') }}
+    </v-chip>
+  </div>
+
+  <v-card class="bg-black border rounded-lg mb-4" style="border-color: #ffa726 !important;">
+    <v-card-text class="pa-0">
+      <v-textarea
+        v-model="query"
+        @keydown.ctrl.enter="runQuery"
+        auto-grow
+        hide-details
+        variant="solo"
+        class="font-monospace sql-editor"
+        bg-color="#111111"
+        base-color="transparent"
+        :placeholder="$t('customPage.dbstudio.placeholder')"
+      ></v-textarea>
+    </v-card-text>
+    <v-card-actions class="bg-grey-darken-4 pa-2 border-top d-flex justify-space-between">
+      <span class="text-caption text-grey ml-2">{{ $t('customPage.dbstudio.shortcut') }}</span>
+      <v-btn color="warning" variant="flat" prepend-icon="mdi-play" @click="runQuery" :loading="loading">{{ $t('customPage.dbstudio.runQuery') }}</v-btn>
+    </v-card-actions>
+  </v-card>
+
+  <v-card v-if="errorMsg" class="bg-red-darken-4 text-white pa-4 mb-4 rounded-lg font-monospace">
+    <v-icon left>mdi-alert</v-icon> {{ errorMsg }}
+  </v-card>
+
+  <v-card class="flex-grow-1 bg-white rounded-lg overflow-hidden" v-if="results && results.length > 0">
+    <div style="overflow-x: auto; max-height: calc(100vh - 350px);">
+      <v-table density="compact" hover class="text-caption">
+        <thead class="bg-grey-lighten-2">
+          <tr>
+            <th v-for="col in columns" :key="col" class="font-weight-bold text-blue-grey-darken-4">
+              {{ col }}
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="(row, i) in results" :key="i">
+            <td v-for="col in columns" :key="col" style="max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+              {{ typeof row[col] === 'object' ? JSON.stringify(row[col]) : row[col] }}
+            </td>
+          </tr>
+        </tbody>
+      </v-table>
+    </div>
+    <div class="pa-2 bg-grey-lighten-4 text-caption text-right text-grey-darken-1">
+      {{ $t('customPage.dbstudio.totalRows', { count: results.length }) }}
+    </div>
+  </v-card>
+
+  <v-card class="flex-grow-1 bg-black rounded-lg d-flex align-center justify-center" v-else-if="!loading && successMsg">
+    <div class="text-success font-monospace">
+      <v-icon size="large" class="mb-2">mdi-check-circle</v-icon><br>
+      {{ $t(successMsg) }}
+    </div>
+  </v-card>
+</v-container>

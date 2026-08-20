@@ -1,0 +1,132 @@
+{
+  "id": 15,
+  "name": "Signage Slide",
+  "slug": "signage_slide",
+  "schema": {
+    "screen_id": {
+      "type": "number",
+      "rules": {
+        "required": false
+      },
+      "label": "screen_id",
+      "isPrimary": false,
+      "showInTable": true,
+      "_order": 0
+    },
+    "title": {
+      "type": "string",
+      "rules": {
+        "required": true
+      },
+      "label": "title",
+      "isPrimary": false,
+      "showInTable": true,
+      "_order": 1
+    },
+    "media_type": {
+      "type": "string",
+      "rules": {
+        "required": true
+      },
+      "label": "media_type",
+      "isPrimary": false,
+      "showInTable": true,
+      "_order": 2
+    },
+    "media_url": {
+      "type": "string",
+      "rules": {
+        "required": false
+      },
+      "label": "media_url",
+      "isPrimary": false,
+      "showInTable": true,
+      "_order": 3
+    },
+    "audio_url": {
+      "type": "string",
+      "rules": {
+        "required": false
+      },
+      "label": "audio_url",
+      "isPrimary": false,
+      "showInTable": true,
+      "_order": 4
+    },
+    "banner_text": {
+      "type": "string",
+      "rules": {
+        "required": false
+      },
+      "label": "banner_text",
+      "isPrimary": false,
+      "showInTable": true,
+      "_order": 5
+    },
+    "text_content": {
+      "type": "text",
+      "rules": {
+        "required": false
+      },
+      "label": "text_content",
+      "isPrimary": false,
+      "showInTable": true,
+      "_order": 6
+    },
+    "bg_color": {
+      "type": "string",
+      "rules": {
+        "required": false
+      },
+      "label": "bg_color",
+      "isPrimary": false,
+      "showInTable": true,
+      "_order": 7
+    },
+    "text_color": {
+      "type": "string",
+      "rules": {
+        "required": false
+      },
+      "label": "text_color",
+      "isPrimary": false,
+      "showInTable": true,
+      "_order": 8
+    },
+    "duration": {
+      "type": "number",
+      "rules": {
+        "required": true
+      },
+      "label": "duration",
+      "isPrimary": false,
+      "showInTable": true,
+      "_order": 9
+    },
+    "order_index": {
+      "type": "number",
+      "rules": {
+        "required": true
+      },
+      "label": "order_index",
+      "isPrimary": false,
+      "showInTable": true,
+      "_order": 10
+    },
+    "is_active": {
+      "type": "boolean",
+      "rules": {
+        "required": true
+      },
+      "label": "is_active",
+      "isPrimary": false,
+      "showInTable": true,
+      "_order": 11
+    }
+  },
+  "created_at": "2026-07-04 12:20:14",
+  "updated_at": "2026-07-09 07:44:41",
+  "created_by": null,
+  "updated_by": null,
+  "hashtags": "[\"#signage\"]"
+}

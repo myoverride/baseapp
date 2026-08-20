@@ -1,7 +1,7 @@
 <template>
   <NuxtLoadingIndicator color="#1976D2" :height="4" />
   <div v-if="isOffline" style="background-color: #fb8c00; color: white; text-align: center; font-weight: bold; padding: 4px; z-index: 9999; position: relative; width: 100%;">
-    ⚠️ {{ $t('common.offlineMode') || 'Çevrimdışı Çalışıyorsunuz' }}
+    ⚠️ {{ $t('common.offlineMode') }}
   </div>
   <NuxtLayout>
     <NuxtPage />

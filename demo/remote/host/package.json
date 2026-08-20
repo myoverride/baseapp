@@ -1,0 +1,15 @@
+{
+  "name": "remote-host",
+  "version": "1.0.0",
+  "description": "Remote Desktop Host Application",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "dependencies": {
+    "@nut-tree-fork/nut-js": "^4.2.6"
+  },
+  "devDependencies": {
+    "electron": "^30.0.0"
+  }
+}

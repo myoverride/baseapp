@@ -1,0 +1,47 @@
+    .orb-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 350px;
+    }
+
+    .ai-orb {
+        width: 180px;
+        height: 180px;
+        border-radius: 50%;
+        background: radial-gradient(circle at 30% 30%, #00d2ff 0%, #3a7bd5 100%);
+        box-shadow: 0 0 50px #00d2ff, inset 0 0 40px rgba(255, 255, 255, 0.6);
+        animation: breathe 4s ease-in-out infinite;
+        cursor: pointer;
+        transition: transform 0.3s;
+    }
+
+    .ai-orb.speaking {
+        animation: speak 0.6s infinite alternate;
+    }
+
+    @keyframes breathe {
+
+        0%,
+        100% {
+            transform: scale(1);
+            box-shadow: 0 0 50px #00d2ff;
+        }
+
+        50% {
+            transform: scale(1.08);
+            box-shadow: 0 0 80px #00d2ff, 0 0 20px #fff;
+        }
+    }
+
+    @keyframes speak {
+        0% {
+            transform: scale(1) scaleY(1);
+            box-shadow: 0 0 50px #00d2ff;
+        }
+
+        100% {
+            transform: scale(1.15) scaleY(0.95);
+            box-shadow: 0 0 100px #00d2ff, 0 0 40px #fff;
+        }
+    }

@@ -1,0 +1,40 @@
+{
+  "name": "Müşteri",
+  "slug": "customer",
+  "schema": {
+    "full_name": {
+      "label": "{\"tr\":\"Tam Ad\",\"en\":\"Full Name\"}",
+      "type": "string",
+      "rules": {
+        "required": true,
+        "unique": false
+      },
+      "isPrimary": true,
+      "showInTable": true,
+      "_order": 0
+    },
+    "contact": {
+      "label": "{\"tr\":\"İletişim\",\"en\":\"Contact\"}",
+      "type": "string",
+      "rules": {
+        "required": true,
+        "unique": true
+      },
+      "isPrimary": false,
+      "showInTable": true,
+      "_order": 1
+    },
+    "gender": {
+      "label": "{\"tr\":\"Kadın Mı?\",\"en\":\"Is Female?\"}",
+      "type": "boolean",
+      "rules": {
+        "required": true,
+        "unique": false
+      },
+      "isPrimary": false,
+      "showInTable": true,
+      "_order": 2
+    }
+  },
+  "hashtags": "[\"#makas\"]"
+}

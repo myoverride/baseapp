@@ -1,0 +1,22 @@
+.font-monospace {
+  font-family: 'Courier New', Courier, monospace !important;
+}
+.v-field__input {
+  color: #00ff00 !important;
+}
+.v-field__input::placeholder {
+  color: rgba(0, 255, 0, 0.4) !important;
+}
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #111;
+}
+::-webkit-scrollbar-thumb {
+  background: #333;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #4caf50;
+}

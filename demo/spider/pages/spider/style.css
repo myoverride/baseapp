@@ -1,0 +1,54 @@
+    .solitaire-column {
+       transition: background 0.3s;
+    }
+    .solitaire-column:hover {
+       background: rgba(255,255,255,0.05);
+    }
+    .foundation-slot {
+        width: 80px; height: 115px; 
+        border-radius: 6px; 
+        border: 2px dashed rgba(255,255,255,0.3);
+    }
+    .solitaire-card {
+        width: 100%; aspect-ratio: 5/7; min-height: 115px;
+        position: absolute;
+        border-radius: 6px;
+        background-color: white;
+        border: 1px solid #ccc;
+        user-select: none;
+        cursor: grab;
+        display: flex;
+        flex-direction: column;
+        color: black;
+    }
+    .solitaire-card:hover {
+        background-color: rgb(111, 194, 233);
+    }
+    .solitaire-card.dragging {
+        opacity: 0.5;rgb(255, 255, 255)  rgb(243, 240, 88) rgb(231, 230, 129) rgb(231, 230, 133);
+        border: 2px solid #2196f3;
+    }
+    .solitaire-card.face-down {
+        background-color: #1a237e;
+        border: 2px solid #fff;
+        cursor: default;
+    }
+    .card-back-pattern {
+        width: 100%; height: 100%;
+        background-image: repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255,255,255,0.1) 10px, rgba(255,255,255,0.1) 20px);
+    }
+    .solitaire-card.red-suit { color: #d32f2f; }
+    
+    .card-top-left { position: absolute; top: 4px; left: 4px; text-align: center; line-height: 1.1; }
+    .card-bottom-right { position: absolute; bottom: 4px; right: 4px; text-align: center; line-height: 1.1; transform: rotate(180deg); }
+    .card-rank { font-size: 22px; font-weight: 900; }
+    .card-suit { font-size: 26px; }
+    .card-center-suit { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 55px; opacity: 0.8; }
+    
+    @keyframes pulse {
+        0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 235, 59, 0.7); }
+        50% { transform: scale(1.05); box-shadow: 0 0 20px 10px rgba(255, 235, 59, 0); }
+        100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 235, 59, 0); }
+    }
+    .hint-source { animation: pulse 1s infinite; z-index: 50 !important; border: 3px solid #ffeb3b !important; }
+    .hint-target { border: 3px dashed #ffeb3b !important; background-color: rgba(255, 235, 59, 0.2) !important; }

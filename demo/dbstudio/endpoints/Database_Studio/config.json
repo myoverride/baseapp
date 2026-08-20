@@ -1,0 +1,14 @@
+{
+  "id": 4,
+  "name": "Database Studio",
+  "route_pattern": "/api/dbstudio",
+  "priority": 0,
+  "active": 1,
+  "is_public": 0,
+  "created_at": "2026-07-01 14:18:46",
+  "updated_at": "2026-07-03 14:23:19",
+  "created_by": null,
+  "updated_by": null,
+  "hashtags": "[\"#dbstudio\"]",
+  "type": "http"
+}

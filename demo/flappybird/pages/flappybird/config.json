@@ -1,0 +1,15 @@
+{
+  "id": 42,
+  "route_pattern": "flappybird",
+  "title": "Flappy Bird",
+  "page_type": "regular",
+  "style_content": "",
+  "active": 1,
+  "is_public": 1,
+  "created_at": "2026-07-04 11:03:15",
+  "updated_at": "2026-07-04 11:04:17",
+  "created_by": 1,
+  "updated_by": 1,
+  "hashtags": "[\"#flappybird\"]",
+  "priority": 0
+}

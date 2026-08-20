@@ -1,0 +1,8 @@
+.font-monospace {
+  font-family: 'Courier New', Courier, monospace !important;
+}
+
+.sys-card {
+  border-color: #29b6f6 !important;
+  transition: transform 0.2s, box-shadow 0.2s;
+}

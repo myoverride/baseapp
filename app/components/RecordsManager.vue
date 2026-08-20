@@ -290,7 +290,7 @@ const entity = computed(() => (initialData.value as any)?.entity || null);
 useHead({ title: () => {
   const eName = entity.value?.name;
   const locName = eName ? $localize(typeof eName === 'string' ? eName : JSON.stringify(eName)) : (slug.value.charAt(0).toUpperCase() + slug.value.slice(1));
-  return `${locName} ${t('menu.records') || 'Records'}`;
+  return `${locName} ${t('menu.records')}`;
 } })
 
 const sortedSchemaEntries = computed(() => {
@@ -322,7 +322,7 @@ const columns = computed(() => {
     }
   }
   
-  cols.push({ title: t('field.hashtags') || 'Hashtags', key: 'hashtags', sortable: false, filterable: true, type: 'string', slot: true });
+  cols.push({ title: t('field.hashtags'), key: 'hashtags', sortable: false, filterable: true, type: 'string', slot: true });
   if (props.enableRowInfo) {
     cols.push({ title: t('common.info'), key: 'info', sortable: false, filterable: false, slot: true, width: '60px', align: 'center' as const });
   }

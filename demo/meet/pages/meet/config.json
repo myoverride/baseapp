@@ -1,0 +1,8 @@
+{
+  "route_pattern": "meet",
+  "priority": 0,
+  "active": 1,
+  "is_public": 1,
+  "title": "Toplantı Odaları",
+  "hashtags": "[\"#meet\"]"
+}

@@ -1,0 +1,14 @@
+{
+  "id": 1,
+  "name": "winSCP",
+  "route_pattern": "/api/winscp",
+  "priority": 0,
+  "active": 1,
+  "is_public": 0,
+  "created_at": "2026-07-01 14:18:46",
+  "updated_at": "2026-07-03 12:31:43",
+  "created_by": null,
+  "updated_by": null,
+  "hashtags": "[\"#scp\"]",
+  "type": "http"
+}

@@ -1,0 +1,117 @@
+<v-container fluid class="fill-height bg-black pa-0 d-flex flex-column" style="overflow: hidden;">
+    <!-- Auth Dialog -->
+  <v-dialog :model-value="!isAuthorized" persistent max-width="400">
+    <v-card class="pa-4 bg-grey-darken-3">
+      <v-card-title class="text-center">Odaya Giriş</v-card-title>
+      <v-card-text class="mt-4">
+        <v-text-field v-model="inputName" label="Adınız Soyadınız" variant="outlined" class="mb-4" hide-details></v-text-field>
+        <v-text-field v-if="requirePassword" v-model="inputPassword" label="Oda Şifresi" type="password" variant="outlined" hide-details @keyup.enter="checkAuth"></v-text-field>
+      </v-card-text>
+      <v-card-actions class="justify-center mt-2">
+        <v-btn color="primary" @click="checkAuth" :loading="loadingAuth" size="large" block variant="flat">Katıl</v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
+
+  <!-- Main Video Area -->
+  <div v-if="isAuthorized" class="flex-grow-1 d-flex flex-row" style="min-height: 0; width: 100%;">
+    <!-- Video Grid -->
+    <div class="flex-grow-1 pa-2 d-flex flex-wrap align-content-start justify-center" style="gap: 16px; overflow-y: auto;">
+      <!-- Local Video -->
+      <v-card color="grey-darken-3" class="rounded-lg" style="min-width: 300px; flex: 1 1 300px; max-width: 600px;">
+        <video id="video_local" ref="localVideo" autoplay muted playsinline style="width: 100%; display: block; border-radius: 8px; transform: scaleX(-1); cursor: pointer;" @dblclick="makeFullscreen('video_local')"></video>
+        <v-card-title class="text-caption pa-2 d-flex justify-space-between align-center" style="position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.5);">
+          <span>Siz ({{ userName }})</span>
+          <v-btn icon="mdi-fullscreen" size="x-small" variant="text" @click="makeFullscreen('video_local')"></v-btn>
+        </v-card-title>
+      </v-card>
+      
+      <!-- Screen Share (Local) -->
+      <v-card v-if="isScreenSharing" color="grey-darken-3" class="rounded-lg" style="min-width: 300px; flex: 1 1 300px; max-width: 600px;">
+        <video id="video_local_screen" ref="localScreenVideo" autoplay muted playsinline style="width: 100%; display: block; border-radius: 8px; cursor: pointer;" @dblclick="makeFullscreen('video_local_screen')"></video>
+        <v-card-title class="text-caption pa-2 d-flex justify-space-between align-center" style="position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.5);">
+          <span>Sizin Ekranınız</span>
+          <v-btn icon="mdi-fullscreen" size="x-small" variant="text" @click="makeFullscreen('video_local_screen')"></v-btn>
+        </v-card-title>
+      </v-card>
+
+      <!-- Remote Videos -->
+      <template v-for="(peer, peerId) in peers" :key="peerId">
+        <v-card v-if="peer.hasVideo" color="grey-darken-3" class="rounded-lg" style="min-width: 300px; flex: 1 1 300px; max-width: 600px;">
+          <video :id="'video_' + peerId" autoplay playsinline style="width: 100%; display: block; border-radius: 8px; cursor: pointer;" @dblclick="makeFullscreen('video_' + peerId)"></video>
+          <v-card-title class="text-caption pa-2 d-flex justify-space-between align-center" style="position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.5);">
+            <span>{{ peer.name }}</span>
+            <div>
+              <v-btn v-if="isOwner" icon="mdi-account-remove" size="x-small" color="error" variant="text" class="mr-1" @click="kickPeer(peerId)" title="Odadan At"></v-btn>
+              <v-btn icon="mdi-fullscreen" size="x-small" variant="text" @click="makeFullscreen('video_' + peerId)"></v-btn>
+            </div>
+          </v-card-title>
+        </v-card>
+        
+        <v-card v-if="peer.hasScreen" color="grey-darken-3" class="rounded-lg" style="min-width: 300px; flex: 1 1 300px; max-width: 600px;">
+          <video :id="'screen_' + peerId" autoplay playsinline style="width: 100%; display: block; border-radius: 8px; cursor: pointer;" @dblclick="makeFullscreen('screen_' + peerId)"></video>
+          <v-card-title class="text-caption pa-2 d-flex justify-space-between align-center" style="position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.5);">
+            <span>{{ peer.name }} (Ekran)</span>
+            <div>
+              <v-btn v-if="isOwner" icon="mdi-account-remove" size="x-small" color="error" variant="text" class="mr-1" @click="kickPeer(peerId)" title="Odadan At"></v-btn>
+              <v-btn icon="mdi-fullscreen" size="x-small" variant="text" @click="makeFullscreen('screen_' + peerId)"></v-btn>
+            </div>
+          </v-card-title>
+        </v-card>
+      </template>
+    </div>
+
+    <!-- Chat Sidebar -->
+    <div v-show="showChat" class="bg-grey-darken-4 d-flex flex-column" style="width: 350px; border-left: 1px solid #333; transition: width 0.3s ease;">
+      <v-card-title class="d-flex justify-space-between align-center pa-4">
+        Sohbet
+        <v-btn icon="mdi-close" variant="text" size="small" @click="showChat = false"></v-btn>
+      </v-card-title>
+      <v-divider></v-divider>
+      <v-card-text class="flex-grow-1 px-4 py-2" style="overflow-y: auto;" ref="chatBox">
+        <div v-if="loadingChat" class="text-center py-4"><v-progress-circular indeterminate></v-progress-circular></div>
+        <div v-for="msg in messages" :key="msg.ts" class="mb-3 text-body-2" style="line-height: 1.4;">
+          <div><strong :class="msg.sender === userName ? 'text-success' : 'text-primary'">{{ msg.sender }}</strong> <span class="text-grey text-caption ml-2">{{ new Date(msg.ts).toLocaleTimeString() }}</span></div>
+          <div class="mt-1">{{ msg.text }}</div>
+        </div>
+      </v-card-text>
+      <div class="pa-4 bg-grey-darken-4">
+        <v-text-field v-model="chatInput" density="compact" hide-details variant="outlined" placeholder="Mesaj yaz..." @keyup.enter="sendChat">
+          <template v-slot:append-inner>
+            <v-btn icon="mdi-send" variant="text" size="small" color="primary" @click="sendChat" :disabled="!chatInput.trim()"></v-btn>
+          </template>
+        </v-text-field>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom Control Bar (Google Meet Style) -->
+  <div v-if="isAuthorized" class="bg-grey-darken-4 pa-3 d-flex justify-space-between align-center" style="height: 80px; z-index: 10; width: 100%;">
+    <div style="width: 200px;" class="text-subtitle-1 px-4 text-truncate">
+      {{ roomData ? roomData.name : 'Oda' }}
+    </div>
+    
+    <div class="d-flex justify-center" style="gap: 12px;">
+      <v-btn icon size="large" :color="isMicMuted ? 'error' : 'grey-darken-2'" @click="toggleMic">
+        <v-icon>{{ isMicMuted ? 'mdi-microphone-off' : 'mdi-microphone' }}</v-icon>
+      </v-btn>
+      <v-btn icon size="large" :color="isCameraOff ? 'error' : 'grey-darken-2'" @click="toggleCamera">
+        <v-icon>{{ isCameraOff ? 'mdi-video-off' : 'mdi-video' }}</v-icon>
+      </v-btn>
+      <v-btn icon size="large" :color="isScreenSharing ? 'info' : 'grey-darken-2'" @click="toggleScreenShare">
+        <v-icon>{{ isScreenSharing ? 'mdi-monitor-share' : 'mdi-monitor-share' }}</v-icon>
+      </v-btn>
+      <v-btn icon size="large" color="error" @click="leaveRoom" class="ml-4" title="Aramadan Ayrıl">
+        <v-icon>mdi-phone-hangup</v-icon>
+      </v-btn>
+    </div>
+    
+    <div style="width: 200px;" class="d-flex justify-end px-4">
+      <v-btn icon size="large" :color="showChat ? 'primary' : 'grey-darken-2'" @click="showChat = !showChat">
+        <v-badge :content="unreadMessages" :model-value="unreadMessages > 0 && !showChat" color="error">
+          <v-icon>mdi-message-text</v-icon>
+        </v-badge>
+      </v-btn>
+    </div>
+  </div>
+</v-container>

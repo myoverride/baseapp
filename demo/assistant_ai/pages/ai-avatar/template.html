@@ -1,0 +1,41 @@
+<v-container fluid class="bg-grey-lighten-4 fill-height pa-4 d-flex flex-column align-center justify-center"
+  style="background: radial-gradient(circle at center, #1a1a2e 0%, #16213e 100%);">
+  <!-- 3D AI Orb -->
+  <div class="orb-container" @click="toggleSpeech">
+    <div class="ai-orb" :class="{ speaking: isSpeaking }"></div>
+  </div>
+
+  <!-- Durum Mesajı -->
+  <div class="text-center mt-6" style="max-width: 600px;">
+    <h2 class="text-h4 font-weight-bold text-white mb-2">Dijital Asistanınız</h2>
+
+    <div v-if="loadingReport" class="d-flex align-center justify-center text-white">
+      <v-progress-circular indeterminate size="24" class="mr-2" color="cyan"></v-progress-circular>
+      Brifing Hazırlanıyor, lütfen bekleyin...
+    </div>
+
+    <div v-else-if="!todayReport" class="text-grey-lighten-1">
+      <p>Bugün için hazırlanmış bir sabah brifingi bulunmuyor.</p>
+      <v-btn color="cyan" variant="flat" class="mt-4 rounded-pill font-weight-bold" @click="generateReport">
+        <v-icon icon="mdi-brain" class="mr-2"></v-icon> Günü Başlat (Brifing Üret)
+      </v-btn>
+    </div>
+
+    <div v-else>
+      <v-card color="rgba(255,255,255,0.1)" class="rounded-xl text-white pa-4 elevation-0"
+        style="backdrop-filter: blur(10px);">
+        <div class="d-flex justify-space-between align-center mb-4">
+          <div class="text-subtitle-1 font-weight-bold text-cyan">{{ todayReport.date }} Raporu</div>
+          <v-chip size="small" :color="todayReport.is_read ? 'success' : 'warning'">{{ todayReport.is_read ? 'Okundu' : 'Yeni' }}</v-chip>
+        </div>
+        <div class="text-body-1 text-left"
+          style="max-height: 200px; overflow-y: auto; white-space: pre-wrap; font-size: 1.1rem; line-height: 1.6;">
+          {{ todayReport.report_text }}
+        </div>
+        <v-btn color="cyan" variant="flat" class="mt-4 w-100 rounded-pill font-weight-bold" @click="toggleSpeech">
+          <v-icon :icon="isSpeaking ? 'mdi-stop' : 'mdi-play'" class="mr-2"></v-icon> {{ isSpeaking ? 'Durdur' : 'Sesli Oku' }}
+        </v-btn>
+      </v-card>
+    </div>
+  </div>
+</v-container>

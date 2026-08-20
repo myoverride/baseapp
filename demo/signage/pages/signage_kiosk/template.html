@@ -1,0 +1,64 @@
+<div style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: #000; overflow: hidden; z-index: 999999;">
+  
+  <!-- SCREEN SELECTOR (Shown if no screen is selected) -->
+  <div v-if="!targetScreenId" class="d-flex w-100 h-100 justify-center align-center flex-column text-white pa-4">
+      <v-icon size="64" class="mb-4 text-primary">mdi-monitor-dashboard</v-icon>
+      <div class="text-h4 mb-6 font-weight-bold">Lütfen Bu Cihazı Tanımlayın</div>
+      <div class="text-subtitle-1 mb-6 text-grey">Bu TV'nin hangi ekran olduğunu seçin. Cihaz hafızaya kaydedilecektir.</div>
+      
+      <v-row class="w-100" style="max-width: 800px;">
+          <v-col v-for="screen in screens" :key="screen.id" cols="12" md="6">
+              <v-card color="grey-darken-4" class="elevation-4 cursor-pointer" hover @click="selectScreen(screen.id)">
+                  <v-card-title class="text-h6"><v-icon start>mdi-monitor</v-icon> {{ screen.name }}</v-card-title>
+                  <v-card-subtitle>{{ screen.location || 'Konum yok' }}</v-card-subtitle>
+              </v-card>
+          </v-col>
+          <v-col cols="12">
+              <v-card color="blue-darken-4" class="elevation-4 cursor-pointer" hover @click="selectScreen('all')">
+                  <v-card-title class="text-h6 text-center"><v-icon start>mdi-monitor-multiple</v-icon> Genel Yayın (Tümü)</v-card-title>
+              </v-card>
+          </v-col>
+      </v-row>
+  </div>
+
+  <!-- PLAYER -->
+  <div v-else-if="currentSlide" class="w-100 h-100 position-relative">
+      
+      <audio ref="bgAudio" :src="currentSlide.audio_url" loop preload="auto" v-show="false"></audio>
+
+      <template v-if="currentSlide.media_type === 'image'">
+          <img :src="currentSlide.media_url" class="w-100 h-100" style="object-fit: contain; display: block;" />
+      </template>
+
+      <template v-else-if="currentSlide.media_type === 'video'">
+          <video ref="bgVideo" :src="currentSlide.media_url" class="w-100 h-100" style="object-fit: contain; display: block;" autoplay muted loop></video>
+      </template>
+
+      <template v-else-if="currentSlide.media_type === 'text'">
+          <div class="w-100 h-100 d-flex justify-center align-center pa-12 text-center" :style="{ backgroundColor: currentSlide.bg_color || '#D32F2F', color: currentSlide.text_color || '#FFFFFF' }">
+              <span class="font-weight-bold" style="font-size: 8vw; line-height: 1.2;">{{ currentSlide.text_content }}</span>
+          </div>
+      </template>
+
+      <template v-else-if="currentSlide.media_type === 'iframe'">
+          <iframe :src="currentSlide.media_url" class="w-100 h-100 border-0" sandbox="allow-scripts allow-same-origin"></iframe>
+      </template>
+
+      <div v-if="currentSlide.banner_text" class="position-absolute w-100 d-flex align-center" style="bottom: 0; left: 0; height: 100px; background-color: rgba(0,0,0,0.85); z-index: 10;">
+         <marquee class="text-white font-weight-bold" style="font-size: 60px; font-family: sans-serif;">{{ currentSlide.banner_text }}</marquee>
+      </div>
+
+      <div class="position-absolute w-100" style="bottom: 0; left: 0; height: 10px; background-color: rgba(255,255,255,0.2); z-index: 11;">
+          <div class="h-100 bg-error" :style="{ width: progressPercentage + '%', transition: 'width 0.1s linear' }"></div>
+      </div>
+      
+      <v-btn icon="mdi-cog" size="small" color="black" variant="flat" class="position-absolute opacity-30" style="top: 10px; right: 10px; z-index: 99;" @click="resetScreen"></v-btn>
+  </div>
+  
+  <div v-else-if="targetScreenId" class="d-flex w-100 h-100 justify-center align-center flex-column text-white">
+      <v-icon size="64" class="mb-4 text-grey">mdi-monitor-off</v-icon>
+      <div class="text-h5">Bu ekrana atanmış yayın bulunamadı.</div>
+      <v-btn class="mt-4" color="primary" @click="startAudioContext">Sesi Etkinleştir</v-btn>
+      <v-btn class="mt-2" color="grey" variant="text" @click="resetScreen">Cihazı Değiştir</v-btn>
+  </div>
+</div>

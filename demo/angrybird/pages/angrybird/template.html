@@ -1,0 +1,35 @@
+<v-container class="fill-height bg-light-blue-lighten-4 pa-0" fluid style="position: relative;">
+  <!-- Arka Plan Süslemeleri (Bulutlar) -->
+  <div style="position: absolute; top: 10%; left: 10%; opacity: 0.5; font-size: 60px;">☁️</div>
+  <div style="position: absolute; top: 25%; left: 50%; opacity: 0.3; font-size: 80px;">☁️</div>
+  <div style="position: absolute; top: 15%; left: 80%; opacity: 0.4; font-size: 50px;">☁️</div>
+
+  <div class="d-flex justify-space-between align-center px-6 py-3 w-100 bg-light-blue-darken-3 text-white" style="position: absolute; top: 0; z-index: 10;">
+    <div class="text-h5 font-weight-bold">Angry Birds <span class="text-body-2 text-white-50">(Kuş: {{ birdCount }})</span></div>
+    <div class="text-h5 font-weight-bold text-yellow">Skor: {{ score }}</div>
+    <div>
+      <v-btn color="error" class="mr-2" @click="resetLevel">Yeniden Başla</v-btn>
+      <v-btn color="grey-darken-3" @click="goHome">Ana Sayfa</v-btn>
+    </div>
+  </div>
+  
+  <div ref="canvasContainer" class="w-100 h-100 overflow-hidden d-flex justify-center align-center pt-16" style="background: linear-gradient(to bottom, #87CEEB 0%, #E0F6FF 100%);">
+    <!-- Matter.js render will be injected here -->
+  </div>
+  
+  <v-overlay :model-value="gameOver" class="align-center justify-center">
+    <v-card class="pa-6 text-center" color="white" elevation="10" min-width="350">
+      <v-card-title class="text-h4 text-success mb-2 font-weight-bold">Tebrikler! 🎉</v-card-title>
+      <v-card-text class="text-h6 mb-4">Tüm domuzları hakladın.<br/>Toplam Skor: {{ score }}</v-card-text>
+      <v-btn color="primary" size="large" block @click="resetLevel">Sonraki Bölüm (Tekrar)</v-btn>
+    </v-card>
+  </v-overlay>
+
+  <v-overlay :model-value="outOfBirds" class="align-center justify-center">
+    <v-card class="pa-6 text-center" color="white" elevation="10" min-width="350">
+      <v-card-title class="text-h4 text-error mb-2 font-weight-bold">Başarısız! 😢</v-card-title>
+      <v-card-text class="text-h6 mb-4">Kuşların tükendi.<br/>Skor: {{ score }}</v-card-text>
+      <v-btn color="primary" size="large" block @click="resetLevel">Tekrar Dene</v-btn>
+    </v-card>
+  </v-overlay>
+</v-container>

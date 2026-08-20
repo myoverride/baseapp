@@ -1,0 +1,106 @@
+
+<v-container fluid class="pa-0 d-flex flex-column overflow-hidden bg-white" style="height: calc(100vh - 80px);">
+  <v-toolbar color="green-darken-4" density="compact" elevation="2" style="flex-shrink: 0;">
+    <v-icon start class="ml-2 text-white">mdi-microsoft-excel</v-icon>
+    <v-toolbar-title class="text-body-1 font-weight-bold text-white">Web E-Tablo</v-toolbar-title>
+    <v-spacer></v-spacer>
+    
+    <v-btn variant="text" color="white" @click="fileInput.click()">
+      <v-icon start>mdi-folder-open</v-icon> Dosya Aç
+    </v-btn>
+    <input type="file" ref="fileInput" style="display: none" accept=".xlsx, .xls, .csv" @change="handleFileUpload" />
+    
+    <v-btn variant="text" color="white" @click="exportExcel">
+      <v-icon start>mdi-download</v-icon> Excel İndir
+    </v-btn>
+  </v-toolbar>
+
+  <div class="d-flex align-center bg-grey-lighten-3 px-2 py-1 border-b" style="flex-shrink: 0;">
+    <div style="width: 140px;" class="mr-2">
+      <v-select
+        v-model="dataType"
+        :items="['Genel', 'Sayı', 'Para Birimi', 'Yüzde', 'Tarih']"
+        density="compact"
+        hide-details
+        variant="outlined"
+        bg-color="white"
+        @update:modelValue="applyDataType"
+      ></v-select>
+    </div>
+    <v-divider vertical class="mx-2"></v-divider>
+    
+    <v-btn size="small" variant="text" icon="mdi-format-bold" @click="applyFormat('font-weight', 'bold')" title="Kalın"></v-btn>
+    <v-btn size="small" variant="text" icon="mdi-format-italic" @click="applyFormat('font-style', 'italic')" title="İtalik"></v-btn>
+    <v-btn size="small" variant="text" icon="mdi-format-underline" @click="applyFormat('text-decoration', 'underline')" title="Altı Çizili"></v-btn>
+    <v-divider vertical class="mx-2"></v-divider>
+    <v-btn size="small" variant="text" icon="mdi-format-align-left" @click="applyFormat('text-align', 'left')" title="Sola Hizala"></v-btn>
+    <v-btn size="small" variant="text" icon="mdi-format-align-center" @click="applyFormat('text-align', 'center')" title="Ortala"></v-btn>
+    <v-btn size="small" variant="text" icon="mdi-format-align-right" @click="applyFormat('text-align', 'right')" title="Sağa Hizala"></v-btn>
+    <v-divider vertical class="mx-2"></v-divider>
+    <div style="width: 100px;" class="mr-2">
+      <v-select
+        v-model="fontSize"
+        :items="['10px', '12px', '14px', '16px', '18px', '24px']"
+        density="compact"
+        hide-details
+        variant="outlined"
+        bg-color="white"
+        @update:modelValue="applyFormat('font-size', $event)"
+      ></v-select>
+    </div>
+  </div>
+
+  <div class="d-flex align-center bg-white px-2 py-1 border-b" style="flex-shrink: 0;">
+    <div class="bg-grey-lighten-4 border rounded px-2 py-1 mr-2 text-caption font-weight-bold" style="min-width: 50px; text-align: center;">
+      {{ selectedCellName || 'A1' }}
+    </div>
+    <v-icon color="grey-darken-1" class="mr-2">mdi-function</v-icon>
+    <input 
+      id="formula-input"
+      type="text" 
+      v-model="formulaValue" 
+      @input="onFormulaChange" 
+      @focus="onFormulaFocus"
+      @keydown.enter="applyFormula"
+      class="flex-grow-1 bg-white border rounded px-2 py-1 text-body-2"
+      style="outline: none; border-color: #ccc !important;"
+      placeholder="Hücre seçin veya formül yazın ( Örn: =A1+B2 )"
+    />
+  </div>
+
+  <div class="flex-grow-1 position-relative" style="min-height: 0;">
+    <div v-if="loading" class="d-flex align-center justify-center h-100 w-100 position-absolute bg-white" style="z-index: 1000;">
+        <v-progress-circular indeterminate color="green"></v-progress-circular>
+        <span class="ml-3">Excel Motoru Yükleniyor...</span>
+    </div>
+    <div 
+      v-for="(sheet, index) in sheets" 
+      :key="index" 
+      v-show="activeTabIndex === index"
+      :id="'sheet-' + index"
+      class="w-100 h-100" 
+      style="overflow: auto;">
+    </div>
+  </div>
+
+  <div class="bg-grey-lighten-4 border-t" style="flex-shrink: 0;">
+    <v-tabs v-model="activeTabIndex" density="compact" color="green-darken-3">
+      <v-tab v-for="(sheet, index) in sheets" :key="index" :value="index">
+        <span v-if="editingSheetIndex !== index" @dblclick="startEditingSheet(index)">{{ sheet.name }}</span>
+        <input 
+          v-else 
+          type="text" 
+          v-model="sheet.name" 
+          @blur="stopEditingSheet(index)" 
+          @keydown.enter="stopEditingSheet(index)"
+          class="bg-white border text-caption px-1"
+          style="width: 80px; outline: none; color: black;"
+          autofocus
+        />
+      </v-tab>
+      <v-btn variant="text" size="small" class="mt-1 ml-2" icon @click="addNewSheet">
+        <v-icon>mdi-plus</v-icon>
+      </v-btn>
+    </v-tabs>
+  </div>
+</v-container>

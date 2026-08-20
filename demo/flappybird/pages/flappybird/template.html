@@ -1,0 +1,36 @@
+<v-container class="fill-height bg-grey-darken-4 pa-0" fluid @mousedown="jump" @keydown.space.prevent="jump" tabindex="0" ref="containerRef">
+  <!-- Top Bar -->
+  <div class="d-flex justify-space-between align-center px-6 py-3 w-100 bg-grey-darken-3 text-white" style="position: absolute; top: 0; z-index: 10;">
+    <div class="text-h5 font-weight-bold text-yellow">Flappy Bird</div>
+    <div class="d-flex align-center" style="gap: 20px;">
+      <div class="text-h6 font-weight-bold">Skor: {{ score }}</div>
+      <div class="text-body-1 text-white-50">En Yüksek: {{ highScore }}</div>
+    </div>
+    <div>
+      <v-btn color="grey-darken-1" @click.stop="goHome">Ana Sayfa</v-btn>
+    </div>
+  </div>
+  
+  <div class="w-100 h-100 overflow-hidden d-flex justify-center align-center pt-16" style="background-color: #222;">
+    <!-- Canvas container with responsive scaling -->
+    <div style="position: relative; max-width: 100%; max-height: 100%; aspect-ratio: 400/600; box-shadow: 0 10px 30px rgba(0,0,0,0.8); border-radius: 8px; overflow: hidden;">
+        
+        <canvas ref="canvasRef" width="400" height="600" style="display: block; width: 100%; height: 100%; object-fit: contain; cursor: pointer;"></canvas>
+        
+        <!-- UI Overlays -->
+        <div v-if="gameState === 'ready'" class="position-absolute d-flex flex-column justify-center align-center w-100 h-100" style="top: 0; left: 0; background: rgba(0,0,0,0.4); pointer-events: none;">
+            <div class="text-h3 text-white font-weight-bold mb-4" style="text-shadow: 2px 2px 0 #000;">Flappy Bird</div>
+            <div class="text-h5 text-white font-weight-bold" style="text-shadow: 1px 1px 0 #000;">Başlamak için Tıkla</div>
+            <div class="text-body-1 text-white mt-2">veya BOŞLUK (Space) tuşuna bas</div>
+        </div>
+
+        <div v-if="gameState === 'gameover'" class="position-absolute d-flex flex-column justify-center align-center w-100 h-100" style="top: 0; left: 0; background: rgba(0,0,0,0.6); pointer-events: none;">
+            <div class="text-h2 text-error font-weight-bold mb-2" style="text-shadow: 2px 2px 0 #fff;">YANDIN!</div>
+            <div class="text-h4 text-white mb-2 font-weight-bold">Skor: {{ score }}</div>
+            <div class="text-h6 text-yellow mb-6">En Yüksek: {{ highScore }}</div>
+            <v-btn color="primary" size="x-large" elevation="8" style="pointer-events: auto;" @click.stop="jump">TEKRAR OYNA</v-btn>
+        </div>
+
+    </div>
+  </div>
+</v-container>

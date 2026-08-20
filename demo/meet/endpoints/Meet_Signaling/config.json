@@ -1,0 +1,13 @@
+{
+  "id": 3,
+  "name": "Meet Signaling",
+  "route_pattern": "/meet",
+  "priority": 0,
+  "is_public": 1,
+  "hashtags": "[]",
+  "created_at": "2026-07-09 14:00:26",
+  "updated_at": "2026-07-09 14:00:26",
+  "created_by": null,
+  "updated_by": null,
+  "type": "ws"
+}

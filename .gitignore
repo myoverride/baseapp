@@ -20,6 +20,7 @@ Thumbs.db
 *.db-shm
 *.db-wal
 *.duckdb
+*.exe
 *.duckdb.wal
 /data/
 /db/

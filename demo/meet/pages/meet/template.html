@@ -1,0 +1,38 @@
+<v-container>
+  <v-row>
+    <v-col cols="12" md="8">
+      <v-card title="Aktif Toplantı Odaları">
+        <v-list>
+          <v-list-item v-for="room in rooms" :key="room.id" :title="room.name" :subtitle="new Date(room.created_at).toLocaleString()">
+            <template v-slot:append>
+              <v-icon v-if="room.password" size="small" class="mr-2" color="warning" title="Şifreli">mdi-lock</v-icon>
+              <v-chip size="small" class="mr-2" :color="room.status === 'active' ? 'success' : 'grey'">{{ room.status }}</v-chip>
+              <v-btn color="primary" size="small" @click="joinRoom(room)" :disabled="room.status !== 'active'">Katıl</v-btn>
+            </template>
+          </v-list-item>
+          <v-list-item v-if="rooms.length === 0">
+            <v-list-item-title class="text-grey">Henüz aktif bir oda bulunmuyor.</v-list-item-title>
+          </v-list-item>
+        </v-list>
+      </v-card>
+    </v-col>
+    <v-col cols="12" md="4">
+      <v-card title="Yeni Oda Oluştur">
+        <v-card-text>
+          <v-text-field v-model="newRoomName" label="Oda Adı" @keyup.enter="createRoom"></v-text-field>
+          <v-text-field v-model="newRoomPassword" label="Şifre (İsteğe Bağlı)" type="password" @keyup.enter="createRoom"></v-text-field>
+          <v-btn color="success" block @click="createRoom" :loading="loading">Oluştur</v-btn>
+        </v-card-text>
+      </v-card>
+    </v-col>
+  </v-row>
+  <v-dialog v-model="showJoinDialog" max-width="400">
+    <v-card title="Toplantıya Katıl">
+      <v-card-text>
+        <v-text-field v-model="userName" label="Adınız Soyadınız" @keyup.enter="confirmJoin"></v-text-field>
+        <v-text-field v-if="selectedRoom && selectedRoom.password" v-model="joinPassword" label="Oda Şifresi" type="password" @keyup.enter="confirmJoin"></v-text-field>
+        <v-btn color="primary" block @click="confirmJoin">Odaya Gir</v-btn>
+      </v-card-text>
+    </v-card>
+  </v-dialog>
+</v-container>

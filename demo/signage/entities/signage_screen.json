@@ -1,0 +1,42 @@
+{
+  "id": 72,
+  "name": "Signage Screen",
+  "slug": "signage_screen",
+  "schema": {
+    "name": {
+      "type": "string",
+      "rules": {
+        "required": true
+      },
+      "label": "name",
+      "isPrimary": false,
+      "showInTable": true,
+      "_order": 0
+    },
+    "location": {
+      "type": "string",
+      "rules": {
+        "required": false
+      },
+      "label": "location",
+      "isPrimary": false,
+      "showInTable": true,
+      "_order": 1
+    },
+    "resolution": {
+      "type": "string",
+      "rules": {
+        "required": false
+      },
+      "label": "resolution",
+      "isPrimary": false,
+      "showInTable": true,
+      "_order": 2
+    }
+  },
+  "created_at": "2026-07-09 07:44:41",
+  "updated_at": "2026-07-09 07:44:41",
+  "created_by": null,
+  "updated_by": null,
+  "hashtags": "[\"#signage\"]"
+}

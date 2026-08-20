@@ -39,7 +39,7 @@
       </template>
 
       <template v-slot:item.route_pattern="{ item }">
-        <v-chip v-if="['landing', 'regular', 'component'].includes(String(item.page_type || 'regular'))" size="small"
+        <v-chip v-if="['regular', 'component'].includes(String(item.page_type || 'regular'))" size="small"
           label variant="tonal" color="teal" class="font-weight-bold">
           {{ item.route_pattern }}
         </v-chip>
@@ -61,7 +61,7 @@
       <template v-slot:rowActions="{ item }">
         <v-btn icon="mdi-download-circle-outline" size="small" color="blue" variant="text"
           @click="exportSingleJSON(item)" :title="$t('action.exportFormat', { format: '(Single)' })" />
-        <v-btn v-if="['landing', 'regular'].includes(String(item.page_type || 'regular'))" icon="mdi-open-in-new"
+        <v-btn v-if="['regular'].includes(String(item.page_type || 'regular'))" icon="mdi-open-in-new"
           size="small" color="blue" variant="text"
           :href="String(item.route_pattern || '').startsWith('/') ? String(item.route_pattern || '') : '/' + item.route_pattern"
           target="_blank" :title="$t('action.openPage')"></v-btn>

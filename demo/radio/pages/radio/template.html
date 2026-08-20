@@ -1,0 +1,67 @@
+<v-container fluid class="fill-height bg-grey-darken-4 pa-0">
+  <v-row class="fill-height ma-0 justify-center align-center"
+    style="background: linear-gradient(135deg, #1e1e1e 0%, #000000 100%);">
+    <v-col cols="12" md="6" class="d-flex flex-column align-center">
+      <v-card color="grey-darken-4" width="100%" max-width="450" class="pa-8 text-center rounded-xl elevation-24"
+        style="border: 1px solid #333;">
+        <div class="position-relative d-inline-block mb-6">
+          <v-icon size="120" :color="isLive ? 'error' : 'grey'" :class="isLive ? 'pulse-anim' : ''">mdi-radio</v-icon>
+          <v-badge v-if="isLive" color="error" content="CANLI" class="position-absolute"
+            style="top: 0; right: -20px;"></v-badge>
+        </div>
+
+        <h1 class="text-h3 font-weight-black mb-2 text-white">{{ isLive ? 'YAYINDA' : 'YAYIN YOK' }}</h1>
+        <p class="text-grey-lighten-1 mb-8 text-body-1">
+          {{ isLive ? 'Şu anda canlı yayını dinliyorsunuz.' : 'Şu anda aktif bir yayın bulunmuyor. Lütfen bekleyin...'
+          }}
+        </p>
+
+        <v-btn v-if="isLive && !isPlaying" size="x-large" color="primary" rounded="pill" elevation="8"
+          @click="startPlayback">
+          <v-icon start>mdi-play-circle</v-icon> Dinlemeye Başla
+        </v-btn>
+
+        <div v-if="isLive && isPlaying" class="d-flex align-center justify-center text-success">
+          <v-icon class="mr-2">mdi-volume-high</v-icon>
+          <span>Sesi alıyorsunuz...</span>
+        </div>
+
+        <!-- Hidden Audio Element -->
+        <audio id="radioAudio" autoplay></audio>
+      </v-card>
+    </v-col>
+
+    <v-col cols="12" md="4" class="d-flex flex-column pa-4" style="height: 80vh;">
+      <v-card class="d-flex flex-column h-100 rounded-xl elevation-10 bg-grey-darken-4" style="border: 1px solid #333;">
+        <v-card-title class="bg-primary text-white py-3 text-center font-weight-bold">
+          <v-icon start>mdi-chat-processing</v-icon> Canlı Sohbet
+        </v-card-title>
+
+        <v-card-text class="flex-grow-1 pa-4" style="overflow-y: auto;" ref="chatBox">
+          <div v-if="!userNameSet" class="text-center mt-10">
+            <p class="text-grey mb-4">Sohbete katılmak için bir isim belirleyin</p>
+            <v-text-field v-model="tempName" label="Adınız/Rumuzunuz" variant="outlined" density="compact"
+              @keyup.enter="saveName"></v-text-field>
+            <v-btn color="primary" @click="saveName">Sohbete Katıl</v-btn>
+          </div>
+          <div v-else>
+            <div v-for="msg in messages" :key="msg.ts" class="mb-3 bg-grey-darken-3 pa-3 rounded-lg">
+              <strong :class="msg.isHost ? 'text-warning' : 'text-info'">{{ msg.sender }}</strong>
+              <v-chip v-if="msg.isHost" size="x-small" color="warning" class="ml-2" variant="flat">Yayıncı</v-chip>
+              <div class="mt-1 text-body-2">{{ msg.text }}</div>
+            </div>
+          </div>
+        </v-card-text>
+
+        <v-card-actions class="pa-3 bg-black" v-if="userNameSet">
+          <v-text-field v-model="chatInput" density="compact" hide-details variant="solo-filled"
+            bg-color="grey-darken-3" placeholder="Mesaj yaz..." @keyup.enter="sendChat">
+            <template v-slot:append-inner>
+              <v-btn icon="mdi-send" color="primary" size="small" variant="text" @click="sendChat"></v-btn>
+            </template>
+          </v-text-field>
+        </v-card-actions>
+      </v-card>
+    </v-col>
+  </v-row>
+</v-container>

@@ -1,0 +1,53 @@
+{
+  "name": "Kapalı Zaman",
+  "slug": "off_time",
+  "schema": {
+    "personnel": {
+      "label": "{\"tr\":\"Personel\",\"en\":\"Personnel\"}",
+      "type": "relation",
+      "rules": {
+        "required": true,
+        "unique": false
+      },
+      "targetEntitySlug": "personnel",
+      "onDelete": "cascade",
+      "isPrimary": true,
+      "showInTable": true,
+      "_order": 0
+    },
+    "start_time": {
+      "label": "{\"tr\":\"Başlama Zamanı\",\"en\":\"Start Time\"}",
+      "type": "datetime",
+      "rules": {
+        "required": true,
+        "unique": false
+      },
+      "isPrimary": false,
+      "showInTable": true,
+      "_order": 1
+    },
+    "end_time": {
+      "label": "{\"tr\":\"Bitiş Zamanı\",\"en\":\"End Time\"}",
+      "type": "datetime",
+      "rules": {
+        "required": true,
+        "unique": false
+      },
+      "isPrimary": false,
+      "showInTable": true,
+      "_order": 2
+    },
+    "description": {
+      "label": "{\"tr\":\"Açıklama\",\"en\":\"Description\"}",
+      "type": "string",
+      "rules": {
+        "required": false,
+        "unique": false
+      },
+      "isPrimary": false,
+      "showInTable": true,
+      "_order": 3
+    }
+  },
+  "hashtags": "[\"#makas\"]"
+}

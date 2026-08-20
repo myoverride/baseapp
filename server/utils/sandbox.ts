@@ -414,6 +414,23 @@ export function runCustomCode(tenantSlug: string, scriptCode: string, payload: a
             const val = (recordManager as any)[prop];
             if (typeof val === 'function') {
               wrapper[prop] = async (...args: any[]) => {
+                // Audit Log Security Patch: Kodu yazanın parametreleri YOK SAYILIR. İşlemi yapan gerçek user'ın ID'si ve isSuperAdmin yetkisi (varsa) force edilir.
+                const sysUserId = contextParams?.userId ?? contextParams?.user?.id ?? null;
+                const sysIsSuperAdmin = contextParams?.isSuperAdmin ?? contextParams?.user?.is_super_admin ?? false;
+                const sysIsSystem = sysIsSuperAdmin ? 1 : 0;
+
+                if (['createRecord', 'updateRecord'].includes(prop)) {
+                  // val(tenantSlug, slug, body_or_id, userId, isSystem) -> argüman dizilimini koru, son iki argümanı ez
+                  // args[0] = slug, args[1] = id/body, args[2] = body/userId
+                  if (prop === 'createRecord') return val(tenantSlug, args[0], args[1], sysUserId, sysIsSystem);
+                  if (prop === 'updateRecord') return val(tenantSlug, args[0], args[1], args[2], sysUserId, sysIsSystem);
+                }
+                
+                if (prop === 'bulkImportRecords') {
+                  // val(tenantSlug, slug, records, userId, isSystem)
+                  return val(tenantSlug, args[0], args[1], sysUserId, sysIsSystem);
+                }
+
                 return val(tenantSlug, ...args);
               };
             } else {

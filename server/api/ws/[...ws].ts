@@ -183,7 +183,11 @@ export default defineWebSocketHandler({
       if (router) {
         const match = router.lookup(normalizeWsPath(endpointPath));
         if (match && match.payload) {
-          matchedEps.push(match.payload);
+          if (Array.isArray(match.payload)) {
+            matchedEps.push(...match.payload);
+          } else {
+            matchedEps.push(match.payload);
+          }
           // Extract params (excluding 'payload' key)
           for (const key of Object.keys(match)) {
              if (key !== 'payload') routeParams[key] = (match as any)[key];

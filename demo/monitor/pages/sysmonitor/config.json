@@ -1,0 +1,14 @@
+{
+  "id": 3,
+  "route_pattern": "sysmonitor",
+  "title": "{\"tr\":\"Sistem Izleyici\",\"en\":\"System Monitor\",\"ar\":\"مراقب النظام\"}",
+  "page_type": "regular",
+  "active": 1,
+  "is_public": 0,
+  "created_at": "2026-07-01 14:18:46",
+  "updated_at": "2026-07-01 14:52:56",
+  "created_by": null,
+  "updated_by": null,
+  "hashtags": "[\"#monitor\"]",
+  "priority": 0
+}

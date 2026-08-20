@@ -1,0 +1,163 @@
+<v-container fluid class="pa-6">
+  <div class="d-flex justify-space-between align-center mb-6">
+    <div class="text-h4 font-weight-bold">Dijital Tabela (CMS V2)</div>
+    <div>
+       <v-btn color="success" size="large" class="mr-3" @click="publishChanges" :loading="publishing" prepend-icon="mdi-broadcast">Tüm Ekranlara Yayınla</v-btn>
+    </div>
+  </div>
+
+  <v-alert v-if="publishSuccess" type="success" class="mb-4" closable>Tüm Kiosk ekranları başarıyla güncellendi!</v-alert>
+
+  <v-tabs v-model="activeTab" color="primary" class="mb-4">
+    <v-tab value="screens"><v-icon start>mdi-monitor-multiple</v-icon> Ekranlar (Cihazlar)</v-tab>
+    <v-tab value="slides"><v-icon start>mdi-animation-play</v-icon> Slaytlar & İçerikler</v-tab>
+  </v-tabs>
+
+  <v-window v-model="activeTab">
+    
+    <!-- SCREENS TAB -->
+    <v-window-item value="screens">
+      <div class="d-flex justify-space-between align-center mb-4 mt-2">
+         <div class="text-h6">Kayıtlı Ekranlar</div>
+         <v-btn color="primary" @click="openScreenDialog(null)" prepend-icon="mdi-plus">Yeni Ekran Ekle</v-btn>
+      </div>
+      <v-row>
+        <v-col v-for="screen in screens" :key="screen.id" cols="12" md="4" lg="3">
+          <v-card class="elevation-3 h-100">
+            <v-card-title class="font-weight-bold"><v-icon start>mdi-monitor</v-icon> {{ screen.name }}</v-card-title>
+            <v-card-subtitle>Konum: {{ screen.location || 'Belirtilmedi' }} | Çözünürlük: {{ screen.resolution || 'Auto' }}</v-card-subtitle>
+            <v-card-text>
+                <v-chip color="info" size="small" class="mt-2">ID: {{ screen.id }}</v-chip>
+                <div class="mt-2 text-caption text-grey">URL: /signage_kiosk?screen={{ screen.id }}</div>
+            </v-card-text>
+            <v-divider></v-divider>
+            <v-card-actions class="bg-grey-lighten-4">
+                <v-btn color="primary" variant="text" @click="openScreenDialog(screen)">Düzenle</v-btn>
+                <v-spacer></v-spacer>
+                <v-btn color="error" variant="text" @click="deleteScreen(screen.id)">Sil</v-btn>
+            </v-card-actions>
+          </v-card>
+        </v-col>
+      </v-row>
+    </v-window-item>
+
+    <!-- SLIDES TAB -->
+    <v-window-item value="slides">
+      <v-row class="mb-4 mt-2 align-center">
+         <v-col cols="12" md="4">
+            <v-select v-model="selectedScreenFilter" :items="screenOptions" item-title="name" item-value="id" label="Ekrana Göre Filtrele" hide-details></v-select>
+         </v-col>
+         <v-col cols="12" md="8" class="text-right">
+            <v-btn color="primary" @click="openSlideDialog(null)" prepend-icon="mdi-plus">Yeni Slayt Ekle</v-btn>
+         </v-col>
+      </v-row>
+      
+      <v-row>
+        <v-col v-for="slide in filteredSlides" :key="slide.id" cols="12" md="4" lg="3">
+          <v-card class="elevation-3 h-100 d-flex flex-column" :class="{ 'opacity-60': !slide.is_active }">
+            
+            <div style="height: 150px; background-color: #eee; position: relative;" class="d-flex justify-center align-center overflow-hidden">
+                <template v-if="slide.media_type === 'image'">
+                    <img :src="slide.media_url" style="width: 100%; height: 100%; object-fit: cover;" />
+                </template>
+                <template v-else-if="slide.media_type === 'text'">
+                    <div class="w-100 h-100 d-flex justify-center align-center pa-2 text-center" :style="{ backgroundColor: slide.bg_color || '#D32F2F', color: slide.text_color || '#FFFFFF' }">
+                        <span class="text-h6" style="line-height: 1.2;">{{ slide.text_content }}</span>
+                    </div>
+                </template>
+                <template v-else-if="slide.media_type === 'iframe'">
+                    <v-icon size="60" color="grey">mdi-web</v-icon>
+                </template>
+                <template v-else-if="slide.media_type === 'video'">
+                    <v-icon size="60" color="grey">mdi-video</v-icon>
+                </template>
+                
+                <v-chip v-if="!slide.is_active" color="error" size="small" class="position-absolute" style="top: 8px; right: 8px;">Pasif</v-chip>
+                <v-chip color="black" size="small" class="position-absolute" style="bottom: 8px; right: 8px;">{{ slide.duration }} sn</v-chip>
+                <v-icon v-if="slide.audio_url" color="primary" size="small" class="position-absolute" style="bottom: 8px; left: 8px;">mdi-music</v-icon>
+                <v-icon v-if="slide.banner_text" color="warning" size="small" class="position-absolute" style="bottom: 8px; left: 32px;">mdi-format-text-variant</v-icon>
+            </div>
+
+            <v-card-title class="text-subtitle-1 font-weight-bold">{{ slide.title }}</v-card-title>
+            <v-card-subtitle>
+                Sıra: {{ slide.order_index }} | 
+                Ekran: {{ getScreenName(slide.screen_id) }}
+            </v-card-subtitle>
+            
+            <v-spacer></v-spacer>
+            
+            <v-card-actions class="bg-grey-lighten-4 mt-2">
+                <v-btn color="primary" variant="text" @click="openSlideDialog(slide)">Düzenle</v-btn>
+                <v-spacer></v-spacer>
+                <v-btn color="error" variant="text" @click="deleteSlide(slide.id)">Sil</v-btn>
+            </v-card-actions>
+          </v-card>
+        </v-col>
+      </v-row>
+    </v-window-item>
+  </v-window>
+
+  <!-- SCREEN DIALOG -->
+  <v-dialog v-model="screenDialog" max-width="500px">
+    <v-card>
+      <v-card-title><span class="text-h5">{{ editingScreenId ? 'Ekranı Düzenle' : 'Yeni Ekran Ekle' }}</span></v-card-title>
+      <v-card-text>
+        <v-container>
+          <v-row>
+            <v-col cols="12"><v-text-field v-model="screenForm.name" label="Ekran Adı (Örn: Lobi TV)" required></v-text-field></v-col>
+            <v-col cols="12"><v-text-field v-model="screenForm.location" label="Konum (Opsiyonel)"></v-text-field></v-col>
+            <v-col cols="12"><v-text-field v-model="screenForm.resolution" label="Çözünürlük (Örn: 1920x1080)"></v-text-field></v-col>
+          </v-row>
+        </v-container>
+      </v-card-text>
+      <v-card-actions>
+        <v-spacer></v-spacer>
+        <v-btn color="blue-darken-1" variant="text" @click="screenDialog = false">Kapat</v-btn>
+        <v-btn color="blue-darken-1" variant="text" @click="saveScreen">Kaydet</v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
+
+  <!-- SLIDE DIALOG -->
+  <v-dialog v-model="slideDialog" max-width="800px">
+    <v-card>
+      <v-card-title><span class="text-h5">{{ editingSlideId ? 'Slaytı Düzenle' : 'Yeni Slayt Ekle' }}</span></v-card-title>
+      <v-card-text>
+        <v-container>
+          <v-row>
+            <v-col cols="12" md="8"><v-text-field v-model="slideForm.title" label="Başlık" required></v-text-field></v-col>
+            <v-col cols="12" md="4"><v-select v-model="slideForm.screen_id" :items="screens" item-title="name" item-value="id" label="Hangi Ekran?" clearable></v-select></v-col>
+            
+            <v-col cols="6" md="4"><v-select v-model="slideForm.media_type" :items="['image', 'video', 'text', 'iframe']" label="Medya Tipi"></v-select></v-col>
+            <v-col cols="3" md="4"><v-text-field v-model.number="slideForm.duration" label="Süre (sn)" type="number"></v-text-field></v-col>
+            <v-col cols="3" md="4"><v-text-field v-model.number="slideForm.order_index" label="Sıra No" type="number"></v-text-field></v-col>
+
+            <v-divider class="w-100 my-2"></v-divider>
+            
+            <template v-if="slideForm.media_type === 'image' || slideForm.media_type === 'iframe' || slideForm.media_type === 'video'">
+                <v-col cols="12"><v-text-field v-model="slideForm.media_url" label="Medya URL (Resim/Video/Site Linki)"></v-text-field></v-col>
+            </template>
+            
+            <template v-if="slideForm.media_type === 'text'">
+                <v-col cols="12"><v-textarea v-model="slideForm.text_content" label="Metin İçeriği" rows="3"></v-textarea></v-col>
+                <v-col cols="6"><v-text-field v-model="slideForm.bg_color" label="Arka Plan Rengi (Örn: #D32F2F)"></v-text-field></v-col>
+                <v-col cols="6"><v-text-field v-model="slideForm.text_color" label="Yazı Rengi (Örn: #FFFFFF)"></v-text-field></v-col>
+            </template>
+
+            <v-divider class="w-100 my-2"></v-divider>
+
+            <v-col cols="12"><v-text-field v-model="slideForm.audio_url" label="Arka Plan Sesi (Audio MP3 URL) - Opsiyonel" prepend-icon="mdi-music"></v-text-field></v-col>
+            <v-col cols="12"><v-text-field v-model="slideForm.banner_text" label="Kayan Yazı (Banner/Marquee) - Opsiyonel" prepend-icon="mdi-format-text-variant"></v-text-field></v-col>
+
+            <v-col cols="12"><v-switch v-model="slideForm.is_active" color="success" label="Aktif (Yayında)"></v-switch></v-col>
+          </v-row>
+        </v-container>
+      </v-card-text>
+      <v-card-actions>
+        <v-spacer></v-spacer>
+        <v-btn color="blue-darken-1" variant="text" @click="slideDialog = false">Kapat</v-btn>
+        <v-btn color="blue-darken-1" variant="text" @click="saveSlide">Kaydet</v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
+</v-container>

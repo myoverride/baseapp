@@ -413,7 +413,7 @@ const columns = computed<any[]>(() => [
   { key: 'target', title: t('common.target'), sortable: true, width: '10%' },
   { key: 'active', title: t('common.active'), sortable: true, width: '7%', align: 'center' },
   { key: 'hashtags', title: t('field.hashtags'), sortable: false, width: '10%' },
-  { key: 'info', title: t('common.info') || 'Info', sortable: false, width: '5%', align: 'center' }
+  { key: 'info', title: t('common.info'), sortable: false, width: '5%', align: 'center' }
 ]);
 
 const openCreateDialog = () => {

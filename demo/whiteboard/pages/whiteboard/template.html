@@ -1,0 +1,84 @@
+<v-container fluid class="pa-0 position-relative" style="height: calc(100vh - 64px); background: #e0e0e0;">
+  <!-- LOBBY -->
+  <v-row v-if="!currentBoard" align="center" justify="center" class="fill-height ma-0 w-100">
+    <v-col cols="12" md="8" lg="6">
+      <v-card class="elevation-3 rounded-lg">
+        <v-toolbar color="primary" title="Çalışma Tahtaları (Lobi)"></v-toolbar>
+        <v-card-text class="pa-4">
+          <div class="d-flex mb-4">
+            <v-text-field
+              v-model="newBoardName"
+              label="Yeni Tahta Adı"
+              variant="outlined"
+              density="compact"
+              hide-details
+              class="mr-2"
+              @keyup.enter="createBoard"
+            ></v-text-field>
+            <v-btn color="success" @click="createBoard" :loading="loading" height="40">Oluştur</v-btn>
+          </div>
+          
+          <v-list lines="two" v-if="boards.length > 0">
+            <v-list-item
+              v-for="board in boards"
+              :key="board.id"
+              :title="board.name"
+              :subtitle="'Son Güncelleme: ' + new Date(board.updated_at).toLocaleString()"
+              class="border rounded mb-2"
+            >
+              <template v-slot:append>
+                <v-btn color="primary" variant="tonal" @click="joinBoard(board)">Katıl</v-btn>
+                <v-btn icon="mdi-delete" color="error" variant="text" size="small" class="ml-2" @click="deleteBoard(board.id)"></v-btn>
+              </template>
+            </v-list-item>
+          </v-list>
+          <div v-else class="text-center py-6 text-grey">Henüz hiç tahta oluşturulmamış. İlk tahtanızı oluşturun!</div>
+        </v-card-text>
+      </v-card>
+    </v-col>
+  </v-row>
+
+  <!-- WORKSPACE -->
+  <div v-if="currentBoard" class="d-flex flex-column w-100 h-100 position-relative">
+    <v-app-bar color="transparent" density="compact" flat style="position: absolute; top: 0; left: 0; right: 0; z-index: 10;">
+      <v-btn icon="mdi-arrow-left" variant="flat" color="white" class="elevation-2 ml-2" @click="leaveBoard" title="Lobiye Dön"></v-btn>
+      <v-chip color="white" variant="flat" class="elevation-2 ml-4 font-weight-bold d-none d-sm-flex">{{ currentBoard.name }}</v-chip>
+      <v-spacer></v-spacer>
+      <v-chip size="small" :color="wsConnected ? 'success' : 'error'" class="elevation-2 mr-2">{{ wsConnected ? 'Bağlı' : 'Koptu' }}</v-chip>
+    </v-app-bar>
+
+    <div class="flex-grow-1" style="position: relative; overflow: hidden;" id="canvasContainer">
+      <canvas id="fabricCanvas"></canvas>
+    </div>
+
+    <!-- FLOATING ACTIONS (Right) -->
+    <div style="position: absolute; right: 16px; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 8px; z-index: 1000;">
+      <v-btn icon="mdi-plus" color="primary" class="elevation-4" size="small" @click="zoomIn" title="Yakınlaştır"></v-btn>
+      <v-btn icon="mdi-minus" color="primary" class="elevation-4" size="small" @click="zoomOut" title="Uzaklaştır"></v-btn>
+      <v-btn icon="mdi-magnify-scan" color="primary" class="elevation-4" size="small" @click="zoomReset" title="Sıfırla"></v-btn>
+      <v-divider class="my-2 bg-transparent"></v-divider>
+      <v-btn icon="mdi-delete" :color="hasSelection ? 'error' : 'grey-lighten-2'" class="elevation-4" size="small" @click="deleteSelected" :disabled="!hasSelection" title="Sil"></v-btn>
+      <v-btn icon="mdi-refresh" color="error" variant="tonal" class="elevation-4" size="small" @click="clearBoard" title="Temizle"></v-btn>
+    </div>
+
+    <!-- FLOATING BOTTOM TOOLBAR -->
+    <v-card class="elevation-6 rounded-pill" style="position: absolute; bottom: 32px; left: 50%; transform: translateX(-50%); z-index: 1000; max-width: 95vw; overflow-x: auto; white-space: nowrap; display: flex; align-items: center; padding: 4px 8px;">
+      <v-btn-toggle v-model="activeTool" color="primary" mandatory density="compact" variant="text">
+        <v-btn value="select" icon="mdi-cursor-default" title="Seç/Taşı"></v-btn>
+        <v-btn value="pan" icon="mdi-hand-back-right" title="Kaydır (Pan)"></v-btn>
+        <v-btn value="draw" icon="mdi-pencil" title="Serbest Çizim"></v-btn>
+        <v-btn value="line" icon="mdi-vector-line" title="Çizgi"></v-btn>
+        <v-btn value="rect" icon="mdi-shape-rectangle-plus" title="Dikdörtgen"></v-btn>
+        <v-btn value="circle" icon="mdi-shape-circle-plus" title="Daire"></v-btn>
+        <v-btn value="triangle" icon="mdi-shape-polygon-plus" title="Üçgen"></v-btn>
+        <v-btn value="text" icon="mdi-format-text" title="Metin"></v-btn>
+      </v-btn-toggle>
+      
+      <v-divider vertical class="mx-2" style="height: 24px; align-self: center;"></v-divider>
+      
+      <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; margin-right: 8px;">
+        <input type="color" v-model="drawColor" style="width: 32px; height: 32px; border: none; cursor: pointer; border-radius: 50%; padding: 0; background: transparent;" title="Renk" @change="updateColor" />
+      </div>
+    </v-card>
+  </div>
+</v-container>

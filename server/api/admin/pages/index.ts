@@ -93,7 +93,7 @@ export default defineEventHandler(async (event) => {
         if (!rec.title || (rec.page_type !== 'layout' && !rec.route_pattern)) continue;
 
         let pType = rec.page_type;
-        if (!['landing', 'regular', 'system', 'layout', 'login', 'component'].includes(pType)) {
+        if (!['regular', 'layout', 'component'].includes(pType)) {
           pType = 'regular';
         }
 
@@ -145,7 +145,10 @@ export default defineEventHandler(async (event) => {
     }
 
 
-    const pType = body.page_type || 'regular';
+    let pType = body.page_type || 'regular';
+    if (!['regular', 'layout', 'component'].includes(pType)) {
+      pType = 'regular';
+    }
     if (!body.title || (pType !== 'layout' && !body.route_pattern)) {
       throw createError({ statusCode: 400, message: 'errors.validationFailed' });
     }
@@ -163,10 +166,6 @@ export default defineEventHandler(async (event) => {
     }
 
     try {
-      if (['login', 'landing'].includes(pType)) {
-        await sql`UPDATE pages SET page_type = 'regular' WHERE page_type = ${pType}`;
-      }
-
       if (pType === 'layout' && body.is_default_layout) {
         await sql`UPDATE pages SET is_default_layout = 0 WHERE page_type = 'layout'`;
       }

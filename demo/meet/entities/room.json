@@ -1,0 +1,61 @@
+{
+  "id": 3,
+  "name": "Room",
+  "slug": "room",
+  "schema": {
+    "name": {
+      "label": "Oda Adı",
+      "type": "string",
+      "rules": {
+        "required": true,
+        "unique": true
+      },
+      "isPrimary": true,
+      "showInTable": true,
+      "_order": 0
+    },
+    "status": {
+      "label": "Durum",
+      "type": "enum",
+      "rules": {
+        "required": true,
+        "unique": false
+      },
+      "options": [
+        "active",
+        "closed"
+      ],
+      "isPrimary": false,
+      "showInTable": true,
+      "_order": 1
+    },
+    "owner_id": {
+      "label": "Oda Sahibi",
+      "type": "string",
+      "rules": {
+        "required": false,
+        "unique": false
+      },
+      "isPrimary": false,
+      "showInTable": false,
+      "_order": 2
+    },
+    "password": {
+      "label": "Şifre",
+      "type": "password",
+      "rules": {
+        "required": false,
+        "unique": false
+      },
+      "isPrimary": false,
+      "showInTable": false,
+      "_order": 3,
+      "hashAlgorithm": "bcrypt"
+    }
+  },
+  "hashtags": "[\"#meet\"]",
+  "created_at": "2026-07-09 13:47:49",
+  "updated_at": "2026-07-07 07:55:54",
+  "created_by": null,
+  "updated_by": null
+}

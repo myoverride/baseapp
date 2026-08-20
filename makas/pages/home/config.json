@@ -1,9 +1,0 @@
-{
-  "title": "Makas Anasayfa",
-  "page_type": "regular",
-  "route_pattern": "/",
-  "priority": 0,
-  "is_public": 1,
-  "active": 1,
-  "hashtags": "[\"#makas\"]"
-}

@@ -1,0 +1,110 @@
+<v-container class="fill-height pa-0 d-flex flex-column" fluid style="background-color: #076324; height: 100vh; overflow: hidden;">
+  
+  <div class="d-flex justify-space-between align-center px-4 py-2 w-100 bg-black text-white" style="flex-shrink: 0; z-index: 100; box-shadow: 0 5px 15px rgba(0,0,0,0.5);">
+    <div class="text-h5 font-weight-bold">Spider Solitaire <span class="text-body-2 text-white-50">(4 Takım)</span></div>
+    <div class="d-flex align-center" style="gap: 15px;">
+      <div class="text-h6 text-yellow font-weight-bold">Hamle: {{ moves }}</div>
+      <div class="text-h6 text-green font-weight-bold">Tamamlanan: {{ completedSuits }}/8</div>
+    </div>
+    <div>
+      <v-btn color="primary" class="mr-2" @click="undo" :disabled="history.length === 0">Geri Al (Undo)</v-btn>
+      <v-btn color="error" class="mr-2" @click="startNewGame">Yeni Oyun</v-btn>
+      <v-btn color="grey-darken-3" @click="goHome">Çıkış</v-btn>
+    </div>
+  </div>
+
+  <v-overlay :model-value="won" class="align-center justify-center">
+    <v-card class="pa-6 text-center" color="white" elevation="10" min-width="350">
+      <div style="font-size: 60px;">🎉</div>
+      <v-card-title class="text-h4 text-success mb-2 font-weight-bold">Kazandın!</v-card-title>
+      <v-card-text class="text-h6 mb-4">Tüm serileri tamamladın.<br/>Toplam Hamle: {{ moves }}</v-card-text>
+      <v-btn color="primary" size="large" block @click="startNewGame">Yeni Oyun Başlat</v-btn>
+    </v-card>
+  </v-overlay>
+
+  <v-snackbar v-model="showError" color="error" timeout="3000" location="top">
+    {{ errorMessage }}
+  </v-snackbar>
+
+  <!-- Stock & Foundations Area (MOVED TO TOP) -->
+  <div class="d-flex justify-space-between align-start px-4 pt-4 pb-2 w-100" style="flex-shrink: 0; z-index: 90; min-height: 140px;">
+        
+        <!-- Stock (Deste) - Sol Tarafta, Sabit Boyutlu -->
+        <div class="position-relative" :class="{ 'hint-source': hintState && hintState.isStock }" style="cursor: pointer; width: 160px; height: 115px;" @click="dealFromStock">
+            <template v-if="stock.length > 0">
+                <div v-for="i in Math.ceil(stock.length / 10)" :key="'stock'+i" 
+                     class="solitaire-card face-down elevation-4"
+                     style="position: absolute; top: 0; transition: left 0.2s;"
+                     :style="{ zIndex: i, left: ((i-1) * 15) + 'px', width: '80px', height: '115px', minHeight: '115px' }">
+                     <div class="card-back-pattern"></div>
+                </div>
+            </template>
+            <template v-else>
+                <div class="foundation-slot d-flex justify-center align-center" style="position: absolute; left: 0; top: 0;">
+                    <v-icon size="30" color="rgba(255,255,255,0.2)">mdi-block-helper</v-icon>
+                </div>
+            </template>
+        </div>
+
+        <!-- Foundations (Biten seriler) - Sağ Tarafta -->
+        <div class="d-flex gap-2 justify-end" style="flex-grow: 1;">
+            <div v-for="i in 8" :key="'found'+i" 
+                 class="foundation-slot d-flex justify-center align-center position-relative">
+                 <template v-if="i <= completedSuits">
+                    <div class="solitaire-card face-up elevation-2 d-flex justify-center align-center" style="position: absolute; left: 0; top: 0; width: 100%; height: 100%; min-height: 100%;">
+                        <v-icon size="40" color="green">mdi-check-circle</v-icon>
+                    </div>
+                 </template>
+                 <template v-else>
+                     <v-icon size="30" color="rgba(255,255,255,0.2)">mdi-cards-outline</v-icon>
+                 </template>
+            </div>
+        </div>
+        
+  </div>
+
+  <v-divider class="bg-white opacity-20"></v-divider>
+  
+  <!-- Tableau Columns Area (MOVED TO BOTTOM) -->
+  <div class="d-flex justify-space-between px-4 py-4 w-100" style="flex-grow: 1; position: relative;" ref="tableauAreaRef">
+      <div v-for="(col, colIdx) in tableau" :key="'col'+colIdx" 
+           class="solitaire-column position-relative" :class="{ 'hint-target': hintState && hintState.targetCol === colIdx }"
+           style="width: 9%; height: 100%; border-radius: 8px; border: 2px solid rgba(255,255,255,0.1);"
+           @dragover.prevent
+           @drop="onDrop(colIdx)">
+           
+           <div v-if="col.length === 0" class="w-100 h-100 d-flex justify-center align-center opacity-30">
+              <v-icon size="40" color="white">mdi-cards-playing-outline</v-icon>
+           </div>
+           
+           <div v-for="(card, cardIdx) in col" :key="card.id"
+                class="solitaire-card elevation-4"
+                :class="{ 
+                   'face-down': !card.faceUp, 
+                   'red-suit': isRed(card.suit),
+                   'dragging': draggedInfo && draggedInfo.colIdx === colIdx && cardIdx >= draggedInfo.cardIdx,
+                   'hint-source': hintState && hintState.sourceCol === colIdx && cardIdx >= hintState.sourceCardIdx
+                }"
+                :style="{ top: getCardTop(colIdx, cardIdx), zIndex: cardIdx }"
+                :draggable="canDrag(colIdx, cardIdx)"
+                @dragstart="onDragStart($event, colIdx, cardIdx)">
+                
+                <template v-if="card.faceUp">
+                    <div class="card-top-left">
+                        <div class="card-rank">{{ getRankStr(card.rank) }}</div>
+                        <div class="card-suit">{{ card.suit }}</div>
+                    </div>
+                    <div class="card-center-suit">{{ card.suit }}</div>
+                    <div class="card-bottom-right">
+                        <div class="card-rank">{{ getRankStr(card.rank) }}</div>
+                        <div class="card-suit">{{ card.suit }}</div>
+                    </div>
+                </template>
+                <template v-else>
+                    <div class="card-back-pattern"></div>
+                </template>
+           </div>
+      </div>
+  </div>
+
+</v-container>

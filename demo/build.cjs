@@ -1,25 +1,38 @@
 const fs = require('fs');
 const path = require('path');
 
-const srcDir = __dirname;
-const outputFile = path.join(__dirname, '../xberber.json');
+if (process.argv.length < 3) {
+  console.error("Usage: node build.cjs <tag_name>");
+  process.exit(1);
+}
+
+let tag = process.argv[2];
+tag = tag.replace(/^#/, '');
+
+const srcDir = path.join(__dirname, tag);
+if (!fs.existsSync(srcDir)) {
+  console.error(`Error: Directory not found: ${srcDir}`);
+  process.exit(1);
+}
+
+const outputFile = path.join(__dirname, `${tag}.json`);
 
 const finalJson = {
   app_name: "",
   tag: "",
   export_date: "",
   components: {
-    roles: [],
-    pages: [],
-    entities: [],
-    endpoints: [],
-    records: [],
     globals: [],
+    roles: [],
+    users: [],
     languages: [],
     translation_keys: [],
+    entities: [],
+    records: [],
+    endpoints: [],
     workers: [],
-    users: [],
-    devices: []
+    devices: [],
+    pages: []
   }
 };
 
@@ -27,22 +40,16 @@ const finalJson = {
 const metaPath = path.join(srcDir, 'meta.json');
 if (fs.existsSync(metaPath)) {
   const meta = JSON.parse(fs.readFileSync(metaPath, 'utf-8'));
-  finalJson.app_name = meta.app_name;
-  finalJson.tag = meta.tag;
-  finalJson.export_date = meta.export_date;
+  finalJson.app_name = meta.app_name || '';
+  finalJson.tag = meta.tag || '';
+  finalJson.export_date = meta.export_date || new Date().toISOString();
+} else {
+  finalJson.app_name = tag.toUpperCase() + ' App';
+  finalJson.tag = '#' + tag;
+  finalJson.export_date = new Date().toISOString();
 }
 
-// Helper to read JSON files in a dir
-const readJsonDir = (dirPath) => {
-  if (!fs.existsSync(dirPath)) return [];
-  const files = fs.readdirSync(dirPath).filter(f => f.endsWith('.json'));
-  return files.map(f => JSON.parse(fs.readFileSync(path.join(dirPath, f), 'utf-8')));
-};
-
-// 2. Roles
-finalJson.components.roles = readJsonDir(path.join(srcDir, 'roles'));
-
-// 3. Pages
+// 2. Pages
 const pagesDir = path.join(srcDir, 'pages');
 if (fs.existsSync(pagesDir)) {
   const pageFolders = fs.readdirSync(pagesDir).filter(f => fs.statSync(path.join(pagesDir, f)).isDirectory());
@@ -66,20 +73,7 @@ if (fs.existsSync(pagesDir)) {
   });
 }
 
-// 4. Entities
-const entitiesDir = path.join(srcDir, 'entities');
-if (fs.existsSync(entitiesDir)) {
-    const files = fs.readdirSync(entitiesDir).filter(f => f.endsWith('.json'));
-    files.forEach(f => {
-        const entity = JSON.parse(fs.readFileSync(path.join(entitiesDir, f), 'utf-8'));
-        if (typeof entity.schema === 'object') {
-            entity.schema = JSON.stringify(entity.schema);
-        }
-        finalJson.components.entities.push(entity);
-    });
-}
-
-// 5. Endpoints
+// 3. Endpoints
 const endpointsDir = path.join(srcDir, 'endpoints');
 if (fs.existsSync(endpointsDir)) {
   const epFolders = fs.readdirSync(endpointsDir).filter(f => fs.statSync(path.join(endpointsDir, f)).isDirectory());
@@ -97,17 +91,45 @@ if (fs.existsSync(endpointsDir)) {
   });
 }
 
-// 6. Others
-const othersDir = path.join(srcDir, 'others');
-if (fs.existsSync(othersDir)) {
-  const others = ['records', 'globals', 'languages', 'translation_keys', 'workers', 'users', 'devices'];
-  others.forEach(key => {
-    const p = path.join(othersDir, `${key}.json`);
-    if (fs.existsSync(p)) {
-      finalJson.components[key] = JSON.parse(fs.readFileSync(p, 'utf-8'));
+// 4. Workers
+const workersDir = path.join(srcDir, 'workers');
+if (fs.existsSync(workersDir)) {
+  const wkFolders = fs.readdirSync(workersDir).filter(f => fs.statSync(path.join(workersDir, f)).isDirectory());
+  wkFolders.forEach(folder => {
+    const wkPath = path.join(workersDir, folder);
+    const configPath = path.join(wkPath, 'config.json');
+    if (fs.existsSync(configPath)) {
+      const wk = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
+      
+      const cPath = path.join(wkPath, 'code.js');
+      if (fs.existsSync(cPath)) wk.code = fs.readFileSync(cPath, 'utf-8');
+      
+      finalJson.components.workers.push(wk);
     }
   });
 }
 
+// 5. Entities
+const entitiesDir = path.join(srcDir, 'entities');
+if (fs.existsSync(entitiesDir)) {
+  const files = fs.readdirSync(entitiesDir).filter(f => f.endsWith('.json'));
+  files.forEach(f => {
+    const entity = JSON.parse(fs.readFileSync(path.join(entitiesDir, f), 'utf-8'));
+    if (typeof entity.schema === 'object') {
+      entity.schema = JSON.stringify(entity.schema);
+    }
+    finalJson.components.entities.push(entity);
+  });
+}
+
+// 6. Others
+const otherKeys = ['globals', 'roles', 'users', 'languages', 'translation_keys', 'records', 'devices'];
+otherKeys.forEach(key => {
+  const p = path.join(srcDir, `${key}.json`);
+  if (fs.existsSync(p)) {
+    finalJson.components[key] = JSON.parse(fs.readFileSync(p, 'utf-8'));
+  }
+});
+
 fs.writeFileSync(outputFile, JSON.stringify(finalJson, null, 2));
-console.log('Build complete. xberber.json generated.');
+console.log(`Build complete. ${tag}.json generated.`);

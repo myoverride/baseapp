@@ -1,0 +1,97 @@
+<v-container fluid class="fill-height bg-black pa-0">
+  <v-row class="fill-height ma-0">
+    <v-col cols="12" md="8" class="d-flex flex-column align-center justify-start pa-4" style="overflow-y: auto; height: 100vh;">
+      
+      <!-- Üst Kısım: Yayın Durumu -->
+      <v-card color="grey-darken-4" width="100%" max-width="600" class="pa-6 text-center rounded-xl elevation-10 mb-4">
+        <v-icon size="80" :color="isBroadcasting ? 'success' : 'grey'" class="mb-2">{{ isBroadcasting ? 'mdi-radio-tower' : 'mdi-microphone-off' }}</v-icon>
+        <h2 class="text-h5 mb-1 font-weight-bold">{{ isBroadcasting ? 'Yayındasınız' : 'Yayın Kapalı' }}</h2>
+        <p class="text-grey mb-4">Canlı dinleyici: <strong class="text-white text-h6">{{ listenerCount }}</strong></p>
+        
+        <v-btn size="x-large" width="250" :color="isBroadcasting ? 'error' : 'success'" @click="toggleBroadcast" rounded="pill">
+          <v-icon start>{{ isBroadcasting ? 'mdi-stop' : 'mdi-play' }}</v-icon>
+          {{ isBroadcasting ? 'Yayını Bitir' : 'Yayına Başla' }}
+        </v-btn>
+      </v-card>
+
+      <!-- DJ Mikser Alanı -->
+      <v-card color="grey-darken-4" width="100%" max-width="600" class="pa-4 rounded-xl elevation-10 border">
+        <v-card-title class="text-h6 text-primary mb-2"><v-icon start>mdi-mixer</v-icon> DJ Mikser</v-card-title>
+        
+        <!-- Mikrofon Kontrolü -->
+        <div class="bg-black pa-3 rounded-lg mb-4">
+          <div class="d-flex align-center justify-space-between mb-1">
+            <strong class="text-white"><v-icon start>mdi-microphone</v-icon> Mikrofon</strong>
+            <v-btn icon size="small" :color="micEnabled ? 'success' : 'error'" variant="tonal" @click="toggleMic">
+              <v-icon>{{ micEnabled ? 'mdi-microphone' : 'mdi-microphone-off' }}</v-icon>
+            </v-btn>
+          </div>
+          <v-slider v-model="micVolume" min="0" max="2" step="0.05" hide-details thumb-label color="primary">
+            <template v-slot:prepend><v-icon color="grey">mdi-volume-medium</v-icon></template>
+          </v-slider>
+        </div>
+
+        <!-- Playlist Kontrolü -->
+        <div class="bg-black pa-3 rounded-lg">
+          <div class="d-flex align-center justify-space-between mb-2">
+            <strong class="text-white"><v-icon start>mdi-music-box-multiple</v-icon> Müzik & Playlist</strong>
+            <v-file-input v-model="playlistFiles" multiple accept="audio/*" density="compact" hide-details prepend-icon="" prepend-inner-icon="mdi-plus" label="MP3 Ekle" @change="onFilesAdded" style="max-width: 150px;"></v-file-input>
+          </div>
+          <v-slider v-model="musicVolume" min="0" max="2" step="0.05" hide-details thumb-label color="info">
+             <template v-slot:prepend><v-icon color="grey">mdi-volume-medium</v-icon></template>
+          </v-slider>
+          
+          <!-- Player Butonları -->
+          <div class="d-flex justify-center align-center mt-3 mb-2" v-if="playlist.length > 0">
+            <v-btn icon="mdi-skip-previous" variant="text" color="grey" @click="playPrev"></v-btn>
+            <v-btn icon size="large" :color="isMusicPlaying ? 'warning' : 'success'" class="mx-4" elevation="4" @click="toggleMusicPlay">
+              <v-icon size="30">{{ isMusicPlaying ? 'mdi-pause' : 'mdi-play' }}</v-icon>
+            </v-btn>
+            <v-btn icon="mdi-skip-next" variant="text" color="grey" @click="playNext"></v-btn>
+          </div>
+          
+          <!-- Şarkı Listesi -->
+          <v-list bg-color="transparent" density="compact" v-if="playlist.length > 0" class="mt-2" style="max-height: 200px; overflow-y: auto;">
+            <v-list-item v-for="(track, index) in playlist" :key="index" :active="currentTrackIndex === index" @click="playTrack(index)" class="rounded-lg mb-1" :class="currentTrackIndex === index ? 'bg-grey-darken-3' : ''">
+              <template v-slot:prepend>
+                <v-icon :color="currentTrackIndex === index && isMusicPlaying ? 'success' : 'grey'">
+                  {{ currentTrackIndex === index && isMusicPlaying ? 'mdi-equalizer' : 'mdi-music-note' }}
+                </v-icon>
+              </template>
+              <v-list-item-title :class="currentTrackIndex === index ? 'text-success font-weight-bold' : 'text-grey-lighten-1'">
+                {{ track.name }}
+              </v-list-item-title>
+              <template v-slot:append>
+                 <v-btn icon="mdi-delete" size="x-small" variant="text" color="error" @click.stop="removeTrack(index)"></v-btn>
+              </template>
+            </v-list-item>
+          </v-list>
+          <div v-else class="text-center text-grey py-4 text-caption">
+            Yayın sırasında çalmak için bilgisayarınızdan MP3/Müzik dosyaları ekleyin.
+          </div>
+        </div>
+
+      </v-card>
+    </v-col>
+    
+    <v-col cols="12" md="4" class="bg-grey-darken-4 d-flex flex-column pa-0" style="border-left: 1px solid #333;">
+      <v-card-title class="bg-primary text-white py-4">
+        <v-icon start>mdi-forum</v-icon> Radyo Sohbeti
+      </v-card-title>
+      <v-card-text class="flex-grow-1 pa-4" style="overflow-y: auto;" ref="chatBox">
+        <div v-for="msg in messages" :key="msg.ts" class="mb-3 bg-grey-darken-3 pa-3 rounded-lg">
+          <strong :class="msg.isHost ? 'text-warning' : 'text-primary'">{{ msg.sender }}</strong>
+          <v-chip v-if="msg.isHost" size="x-small" color="warning" class="ml-2" variant="flat">Yayıncı</v-chip>
+          <div class="mt-1 text-body-1">{{ msg.text }}</div>
+        </div>
+      </v-card-text>
+      <v-card-actions class="pa-3 bg-black">
+        <v-text-field v-model="chatInput" density="compact" hide-details variant="solo-filled" bg-color="grey-darken-3" placeholder="Mesaj yaz..." @keyup.enter="sendChat">
+          <template v-slot:append-inner>
+            <v-btn icon="mdi-send" color="primary" size="small" variant="text" @click="sendChat"></v-btn>
+          </template>
+        </v-text-field>
+      </v-card-actions>
+    </v-col>
+  </v-row>
+</v-container>

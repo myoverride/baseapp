@@ -1,0 +1,9 @@
+{
+  "name": "Meet Signaling API",
+  "route_pattern": "/api/meet/signal",
+  "priority": 100,
+  "active": 1,
+  "is_public": 1,
+  "hashtags": "[\"#meet\"]",
+  "type": "http"
+}

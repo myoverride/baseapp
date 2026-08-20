@@ -1,0 +1,43 @@
+{
+  "id": 12,
+  "name": "Yapay Zeka Günlük Raporları",
+  "slug": "ai_reports",
+  "schema": {
+    "date": {
+      "type": "string",
+      "label": "Tarih (YYYY-MM-DD)",
+      "rules": {
+        "required": true
+      },
+      "isPrimary": false,
+      "showInTable": true,
+      "_order": 0
+    },
+    "report_text": {
+      "type": "string",
+      "label": "Sentezlenmiş Brifing Metni",
+      "rules": {
+        "required": true
+      },
+      "isPrimary": false,
+      "showInTable": true,
+      "_order": 1
+    },
+    "is_read": {
+      "type": "boolean",
+      "default": false,
+      "label": "Kullanıcı Tarafından Okundu mu?",
+      "rules": {
+        "required": false
+      },
+      "isPrimary": false,
+      "showInTable": true,
+      "_order": 2
+    }
+  },
+  "created_at": "2026-07-03 20:50:40",
+  "updated_at": "2026-07-07 07:55:54",
+  "created_by": null,
+  "updated_by": null,
+  "hashtags": "[\"#assistant_ai\"]"
+}

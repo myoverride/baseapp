@@ -27,7 +27,7 @@
         :entity-id="entity.id" @edit="(f, i) => $emit('editField', entity, f, i)" />
     </div>
     <div v-else class="er-entity-empty">
-      <span class="text-grey text-caption">{{ $t('common.noData') || 'Alan yok' }}</span>
+      <span class="text-grey text-caption">{{ $t('common.noData') }}</span>
     </div>
 
     <!-- Footer: field count -->

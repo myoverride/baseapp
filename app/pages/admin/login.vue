@@ -11,12 +11,12 @@
           </v-toolbar>
           <v-card-text class="pa-6">
             <v-alert type="warning" variant="tonal" class="mb-6 text-caption">
-              {{ $t('login.safeModeWarning') || 'Sistem kurtarma (Safe Mode) modundasınız. Bu form veritabanından bağımsız olarak çalışır. Sadece yetkili yöneticiler giriş yapmalıdır.' }}
+              {{ $t('login.safeModeWarning') }}
             </v-alert>
             <v-form @submit.prevent="handleLogin" ref="form">
               <v-text-field
                 v-model="username"
-                :label="$t('common.username') || 'Kullanıcı Adı'"
+                :label="$t('common.username')"
                 prepend-inner-icon="mdi-account"
                 variant="outlined"
                 density="comfortable"
@@ -25,7 +25,7 @@
               
               <v-text-field
                 v-model="password"
-                :label="$t('common.password') || 'Şifre'"
+                :label="$t('common.password')"
                 prepend-inner-icon="mdi-lock"
                 type="password"
                 variant="outlined"
@@ -41,7 +41,7 @@
                 :loading="loading"
                 class="mt-2 text-none"
               >
-                {{ $t('action.login') || 'Giriş Yap' }}
+                {{ $t('action.login') }}
               </v-btn>
             </v-form>
           </v-card-text>
@@ -96,7 +96,7 @@ const handleLogin = async () => {
       window.location.href = '/admin/pages';
     }
   } catch (err: any) {
-    const msg = err?.data?.message || err?.statusMessage || t('error.loginFailed') || 'Giriş başarısız';
+    const msg = err?.data?.message || err?.statusMessage || t('error.loginFailed');
     if ($toast) $toast.error(msg);
   } finally {
     loading.value = false;

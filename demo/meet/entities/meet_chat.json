@@ -1,0 +1,56 @@
+{
+  "id": 4,
+  "name": "Meet Chat",
+  "slug": "meet_chat",
+  "schema": {
+    "room_id": {
+      "label": "Oda",
+      "type": "string",
+      "rules": {
+        "required": true,
+        "unique": false
+      },
+      "isPrimary": false,
+      "showInTable": true,
+      "_order": 0
+    },
+    "sender": {
+      "label": "Gönderen",
+      "type": "string",
+      "rules": {
+        "required": true,
+        "unique": false
+      },
+      "isPrimary": false,
+      "showInTable": true,
+      "_order": 1
+    },
+    "message": {
+      "label": "Mesaj",
+      "type": "string",
+      "rules": {
+        "required": true,
+        "unique": false
+      },
+      "isPrimary": true,
+      "showInTable": true,
+      "_order": 2
+    },
+    "timestamp": {
+      "label": "Zaman",
+      "type": "number",
+      "rules": {
+        "required": true,
+        "unique": false
+      },
+      "isPrimary": false,
+      "showInTable": true,
+      "_order": 3
+    }
+  },
+  "hashtags": "[\"#meet\"]",
+  "created_at": "2026-07-09 14:57:08",
+  "updated_at": "2026-07-09 14:52:34",
+  "created_by": null,
+  "updated_by": null
+}

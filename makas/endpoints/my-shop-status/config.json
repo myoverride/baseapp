@@ -1,8 +1,0 @@
-{
-  "name": "Makas Shop Status",
-  "route_pattern": "/api/custom/makas-shop-status",
-  "type": "http",
-  "is_public": 1,
-  "active": 1,
-  "hashtags": "[\"#makas\"]"
-}
